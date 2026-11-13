@@ -59,5 +59,8 @@
       <span class="h-c-sub">${esc(c.period)}</span></a>`;
   $("h-countries").innerHTML =
     `<h3 class="h-grp">Droites radicales au pouvoir</h3><div class="h-cgrid">${C.filter(c => !c.cmp).map(card).join("")}</div>
-     <h3 class="h-grp">Pour comparer</h3><div class="h-cgrid">${C.filter(c => c.cmp).map(card).join("")}</div>`;
+     <h3 class="h-grp">Pour comparer</h3><div class="h-cgrid">${C.filter(c => c.cmp).map(card).join("")}</div>
+     <h3 class="h-grp">La gauche au pouvoir</h3>
+     <div class="h-cgrid">${G.length ? G.map(card).join("")
+       : `<a class="h-c h-slot" href="analyses-internationales.html#gauche"><span class="h-c-code mono">…</span><span class="h-c-name">En construction</span><span class="h-c-sub">Pays à déterminer</span></a>`}</div>`;
 })();

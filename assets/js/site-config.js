@@ -23,6 +23,10 @@ window.SITE = {
   /* Dernières analyses et mises à jour, de la plus récente à la plus ancienne. */
   updates: [
     { date: "2026-11-13", tag: "Plateforme",
+      title: "Analyses internationales : deux onglets",
+      desc: "« L’extrême droite au pouvoir » reprend les analyses existantes. « La gauche au pouvoir » est créé et attend le choix des pays.",
+      href: "analyses-internationales.html#gauche" },
+    { date: "2026-11-13", tag: "Plateforme",
       title: "Mise en ligne de la page d’accueil et du menu de navigation",
       desc: "Nouvelle page d’accueil, menu à deux entrées et identité graphique provisoire. Les analyses existantes sont inchangées.",
       href: "analyses-internationales.html" },

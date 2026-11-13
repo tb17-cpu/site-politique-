@@ -8,7 +8,7 @@ Le nom et l’identité graphique sont provisoires.
 
 ```
 index.html                       Page d’accueil
-analyses-internationales.html    Analyses de 14 pays + 2 cas de comparaison
+analyses-internationales.html    Deux onglets : L’extrême droite au pouvoir (14 pays + 2 comparaisons) et La gauche au pouvoir (en construction)
 modele-page.html                 Modèle pour créer une nouvelle page (non indexé)
 assets/
   css/base.css                   Identité visuelle (variables de couleur et de police), bandeau, pied de page
@@ -17,7 +17,9 @@ assets/
   js/site-config.js              Configuration centrale : nom, menu, publications, indicateurs de l’accueil, thèmes, pied de page
   js/layout.js                   Bandeau et pied de page partagés
   js/utils.js                    Fonctions communes (mise en forme, marqueurs de fiabilité)
-  js/data-analyses.js            Toutes les données des fiches pays et les constats transversaux
+  js/data-analyses.js            Données de l’onglet « L’extrême droite au pouvoir » et constats transversaux
+  js/data-gauche.js              Données de l’onglet « La gauche au pouvoir » (liste G, vide pour l’instant)
+  js/tabs.js                     Gestion des onglets de la page d’analyses
   js/analyses.js                 Affichage de la page d’analyses
   js/home.js                     Affichage de l’accueil (lit data-analyses.js et site-config.js)
   img/logo.svg                   Logo provisoire
@@ -34,7 +36,8 @@ Le site est statique : aucun outil de compilation n’est nécessaire. Il suffit
 | Ajouter une publication dans « Dernières analyses » | liste `updates` de `site-config.js` |
 | Changer les chiffres marquants de l’accueil | liste `featured` de `site-config.js` (pays + rang de l’indicateur) |
 | Ajouter ou modifier un thème | liste `themes` de `site-config.js` |
-| Ajouter un pays ou corriger un chiffre | `assets/js/data-analyses.js` (le tableau `C`) |
+| Corriger un chiffre ou ajouter un pays à l’onglet « extrême droite » | `assets/js/data-analyses.js` (le tableau `C`) |
+| Ajouter un pays à l’onglet « gauche » | `assets/js/data-gauche.js` (le tableau `G`, même format que `C`) |
 | Ajouter une page au menu | copier `modele-page.html`, puis ajouter une ligne dans `nav` de `site-config.js` |
 
 Les chiffres de l’accueil ne sont jamais recopiés : ils sont lus dans `data-analyses.js`. Corriger un chiffre à cet endroit le corrige partout.

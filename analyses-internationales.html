@@ -18,11 +18,23 @@
 <a class="skip" href="#contenu">Aller au contenu</a>
 <div id="site-header"></div>
 
-<nav class="chips-nav" aria-label="Navigation par pays"><div class="wrap" id="nav"></div></nav>
+<!-- Barre fixe : onglets + navigation par pays. Le bandeau du site, lui, défile et disparaît. -->
+<div class="a-bar" id="a-bar">
+  <nav class="a-tabs" aria-label="Onglets des analyses internationales"><div class="wrap">
+    <a id="tab-extreme" href="#extreme-droite" aria-current="page">L’extrême droite au pouvoir</a>
+    <a id="tab-gauche" href="#gauche">La gauche au pouvoir</a>
+  </div></nav>
+  <nav class="chips-nav" aria-label="Navigation par pays"><div class="wrap" id="nav"></div></nav>
+</div>
 
 <main id="contenu">
 <div class="wrap">
   <p class="crumb"><a href="index.html">Accueil</a> <span aria-hidden="true">/</span> Analyses internationales</p>
+</div>
+
+<!-- Onglet 1 : contenu d’origine, inchangé -->
+<div class="a-panel" id="extreme-droite">
+<div class="wrap">
   <header class="a-hero" id="top">
     <p class="label">Dossier · données arrêtées au 11 novembre 2026</p>
     <h1>Droites radicales au pouvoir</h1>
@@ -65,6 +77,31 @@
     </div>
   </section>
 </div>
+</div>
+
+<!-- Onglet 2 : en construction. Les fiches viennent de assets/js/data-gauche.js -->
+<div class="a-panel" id="gauche" hidden>
+<div class="wrap">
+  <header class="a-hero">
+    <p class="label">Analyses internationales · en construction</p>
+    <h1>La gauche au pouvoir</h1>
+    <p class="lede">Cet onglet recevra les analyses de gouvernements de gauche, avec la même fiche que l’onglet « L’extrême droite au pouvoir » : situation avant le mandat, indicateurs, indices de libertés, bilan positif, mitigé et négatif. Les pays et les périodes restent à choisir.</p>
+  </header>
+  <section id="g-empty" aria-labelledby="g-empty-h">
+    <h2 class="sec" id="g-empty-h">Périmètre à définir</h2>
+    <div class="g-slot">
+      <p><b>Aucun pays n’est encore sélectionné.</b> Avant de remplir cet onglet, il reste à décider :</p>
+      <ul>
+        <li>quels gouvernements entrent dans le périmètre, et ce que « de gauche » signifie ici ;</li>
+        <li>la période étudiée pour chaque pays ;</li>
+        <li>les indicateurs à comparer, pour garder la même grille que l’autre onglet.</li>
+      </ul>
+      <p class="g-note">Pour ajouter un pays : une entrée dans assets/js/data-gauche.js, au même format que data-analyses.js. La fiche apparaît ici automatiquement.</p>
+    </div>
+  </section>
+  <div id="countries-gauche"></div>
+</div>
+</div>
 </main>
 <noscript><p class="nojs wrap">Cette page affiche ses données avec JavaScript. Activez-le pour la consulter.</p></noscript>
 <div id="site-footer"></div>
@@ -73,6 +110,8 @@
 <script src="assets/js/utils.js"></script>
 <script src="assets/js/layout.js"></script>
 <script src="assets/js/data-analyses.js"></script>
+<script src="assets/js/data-gauche.js"></script>
 <script src="assets/js/analyses.js"></script>
+<script src="assets/js/tabs.js"></script>
 </body>
 </html>
