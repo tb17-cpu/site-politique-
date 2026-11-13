@@ -24,7 +24,7 @@ window.SITE = {
   updates: [
     { date: "2026-11-13", tag: "Plateforme",
       title: "Analyses internationales : deux onglets",
-      desc: "« L’extrême droite au pouvoir » reprend les analyses existantes. « La gauche au pouvoir » est créé et attend le choix des pays.",
+      desc: "« La droite radicale au pouvoir » reprend les analyses existantes. « La gauche au pouvoir » est créé et attend le choix des pays.",
       href: "analyses-internationales.html#gauche" },
     { date: "2026-11-13", tag: "Plateforme",
       title: "Mise en ligne de la page d’accueil et du menu de navigation",
