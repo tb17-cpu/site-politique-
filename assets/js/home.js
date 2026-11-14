@@ -35,15 +35,6 @@
   $("h-findings").innerHTML = FINDINGS.map(f =>
     `<article><h4>${esc(f[0])}</h4><p>${fm(f[1])}</p></article>`).join("");
 
-  /* Dernières analyses et mises à jour */
-  $("h-updates").innerHTML = S.updates.map(u => u.placeholder
-    ? `<article class="h-up h-slot"><span class="h-up-date label">À venir</span>
-        <div><h3>${esc(u.title)}</h3><p>${esc(u.desc)}</p></div></article>`
-    : `<article class="h-up"><time class="h-up-date label" datetime="${u.date}">${fmtDate(u.date)}</time>
-        <div><span class="h-tag">${esc(u.tag)}</span>
-          <h3><a href="${u.href}">${esc(u.title)}</a></h3><p>${esc(u.desc)}</p></div>
-        <a class="h-up-go" href="${u.href}" aria-label="Ouvrir : ${esc(u.title)}">Lire →</a></article>`).join("");
-
   /* Grandes thématiques */
   $("h-themes").innerHTML = S.themes.map(t => t.placeholder
     ? `<div class="h-theme h-slot"><h3>${esc(t.title)}</h3><p>${esc(t.text)}</p></div>`

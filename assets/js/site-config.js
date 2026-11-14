@@ -3,7 +3,6 @@
    C’est le seul fichier à modifier pour :
    - changer le nom et la devise du projet (identité provisoire) ;
    - ajouter une page au menu (liste « nav ») ;
-   - ajouter une publication récente (liste « updates ») ;
    - changer les indicateurs mis en avant sur l’accueil (liste « featured ») ;
    - changer les thématiques (liste « themes ») ;
    - modifier les textes du pied de page (« footer »).
@@ -18,29 +17,6 @@ window.SITE = {
   nav: [
     { id: "home",     label: "Accueil",                 href: "index.html" },
     { id: "analyses", label: "Analyses internationales", href: "analyses-internationales.html" }
-  ],
-
-  /* Dernières analyses et mises à jour, de la plus récente à la plus ancienne. */
-  updates: [
-    { date: "2026-11-13", tag: "Plateforme",
-      title: "Analyses internationales : deux onglets",
-      desc: "« La droite radicale au pouvoir » reprend les analyses existantes. « La gauche au pouvoir » est créé et attend le choix des pays.",
-      href: "analyses-internationales.html#gauche" },
-    { date: "2026-11-13", tag: "Plateforme",
-      title: "Mise en ligne de la page d’accueil et du menu de navigation",
-      desc: "Nouvelle page d’accueil, menu à deux entrées et identité graphique provisoire. Les analyses existantes sont inchangées.",
-      href: "analyses-internationales.html" },
-    { date: "2026-11-12", tag: "Comparaison",
-      title: "France (dix ans de Macron) et Espagne (gauche de Sánchez)",
-      desc: "Deux fiches hors périmètre, au même format que les autres, pour servir de points de repère.",
-      href: "analyses-internationales.html#fr" },
-    { date: "2026-11-11", tag: "Analyses internationales",
-      title: "Quatorze pays dans leur période « droite radicale »",
-      desc: "Situation avant le mandat, indicateurs, indices de libertés et bilan positif, mitigé et négatif pour chaque pays.",
-      href: "analyses-internationales.html#overview" },
-    { placeholder: true,
-      title: "Emplacement éditorial : prochaine publication",
-      desc: "Ajouter une entrée dans la liste « updates » de assets/js/site-config.js pour la faire apparaître ici." }
   ],
 
   /* Indicateurs de l’accueil : { id du pays, rang de l’indicateur dans sa liste « k » }.

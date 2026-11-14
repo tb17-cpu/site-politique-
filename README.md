@@ -14,7 +14,7 @@ assets/
   css/base.css                   Identité visuelle (variables de couleur et de police), bandeau, pied de page
   css/home.css                   Style de l’accueil
   css/analyses.css               Style des fiches pays
-  js/site-config.js              Configuration centrale : nom, menu, publications, indicateurs de l’accueil, thèmes, pied de page
+  js/site-config.js              Configuration centrale : nom, menu, indicateurs de l’accueil, thèmes, pied de page
   js/layout.js                   Bandeau et pied de page partagés
   js/utils.js                    Fonctions communes (mise en forme, marqueurs de fiabilité)
   js/data-analyses.js            Données de l’onglet « La droite radicale au pouvoir » et constats transversaux
@@ -33,7 +33,6 @@ Le site est statique : aucun outil de compilation n’est nécessaire. Il suffit
 |---|---|
 | Changer le nom, la devise ou le pied de page | `assets/js/site-config.js` |
 | Changer les couleurs ou les polices | variables en haut de `assets/css/base.css` |
-| Ajouter une publication dans « Dernières analyses » | liste `updates` de `site-config.js` |
 | Changer les chiffres marquants de l’accueil | liste `featured` de `site-config.js` (pays + rang de l’indicateur) |
 | Ajouter ou modifier un thème | liste `themes` de `site-config.js` |
 | Corriger un chiffre ou ajouter un pays à l’onglet « droite radicale » | `assets/js/data-analyses.js` (le tableau `C`) |

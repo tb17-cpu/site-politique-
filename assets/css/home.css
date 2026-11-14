@@ -48,20 +48,6 @@
 .h-findings h4{font-family:var(--f-display);font-size:19px;font-weight:600;margin:0 0 6px;line-height:1.2}
 .h-findings p{font-size:13.5px;color:var(--fg-2)}
 
-/* Bande « papier » : blanc cassé, texte bleu nuit */
-.h-band--paper{--bg:#eeebe3;--fg:#0c1a30;--fg-2:#3b475b;--muted:#586377;--line:#cdc8ba;--accent:#2b4b82;background:var(--bg);color:var(--fg)}
-.h-up{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:8px 28px;padding:22px 0;border-top:1px solid var(--line)}
-.h-up h3{font-size:24px;margin:8px 0 6px}
-.h-up h3 a{color:var(--fg);text-decoration:none}
-.h-up h3 a:hover{color:var(--accent);text-decoration:underline}
-.h-up p{font-size:14.5px;color:var(--fg-2);max-width:68ch}
-.h-up-date{padding-top:3px}
-.h-up-go{align-self:center;font-size:13.5px;white-space:nowrap;font-weight:500}
-.h-tag{display:inline-block;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);padding:1px 6px}
-.h-up.h-slot{border:1px dashed var(--muted);padding:16px 18px;margin-top:22px;grid-template-columns:150px minmax(0,1fr)}
-.h-up.h-slot h3{font-size:18px;margin-top:0;color:var(--fg-2)}
-@media (max-width:700px){.h-up,.h-up.h-slot{grid-template-columns:minmax(0,1fr)}.h-up-go{align-self:start}}
-
 /* Thématiques */
 .h-themes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line)}
 .h-theme{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:22px 20px 18px;min-width:0}
