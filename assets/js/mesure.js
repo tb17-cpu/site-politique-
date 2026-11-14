@@ -45,7 +45,7 @@
   const run = () => {
     const id = decodeURIComponent(location.hash.slice(1));
     if (!id) { $("f-name").textContent = "Mesure"; $("f-lede").textContent = ""; $("f-body").innerHTML = UI.emptyHtml("Aucune mesure sélectionnée. <a href=\"thematiques.html\">Parcourir les thématiques</a>."); return; }
-    UI.mount($("f-body"), () => DB.measure(id), render, { loading: "Chargement de la mesure…", empty: "Cette mesure n’existe pas ou n’est pas publiée. <a href=\"thematiques.html\">Parcourir les thématiques</a>." });
+    UI.mount($("f-body"), async () => { const m = await DB.measure(id); const cd = m && m.program_versions && m.program_versions.programs && m.program_versions.programs.candidacies; if (cd) Election.use(cd.election_id); return m; }, render, { loading: "Chargement de la mesure…", empty: "Cette mesure n’existe pas ou n’est pas publiée. <a href=\"thematiques.html\">Parcourir les thématiques</a>." });
   };
   run();
   window.addEventListener("hashchange", run);

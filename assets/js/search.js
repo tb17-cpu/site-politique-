@@ -6,12 +6,12 @@
   const idx = [];
   const add = (type, title, sub, href, extra) => idx.push({ type, title, sub, href, text: norm([title, sub, extra].join(" ")) });
 
-  [["Les candidats", "Candidatures publiées", "candidats.html"], ["Comparateur", "Comparer les mesures", "comparateur.html"],
+  [["Les candidats", "Candidatures publiées de l’élection", "candidats.html"], ["Programmes", "Programmes publiés de l’élection", "programmes.html"], ["Comparateur", "Comparer les mesures", "comparateur.html"],
    ["Indicateurs", "Données et sources", "indicateurs.html"], ["Méthodologie", "Principes, sources, limites", "methodologie.html"]].forEach(p => add("Rubrique", p[0], p[1], p[2], ""));
   C.concat(G).forEach(c => add("Analyse internationale", c.name + " · " + c.leader, c.period, "analyses-internationales.html#" + c.id, c.code));
 
   let loaded = null, failed = false;
-  const load = () => loaded || (loaded = DB.searchIndex().then(d => {
+  const load = () => loaded || (loaded = Election.ready.then(() => DB.searchIndex(Election.current() && Election.current().id)).then(d => {
     const fam = new Map(d.themes.filter(t => !t.parent_id).map(t => [t.id, t]));
     d.themes.forEach(t => add(t.parent_id ? "Sous-thématique" : "Thématique", t.name, t.parent_id && fam.get(t.parent_id) ? fam.get(t.parent_id).name : "", "thematiques.html#" + encodeURIComponent(t.slug), t.description || ""));
     d.measures.forEach(m => add("Mesure", m.title, "", "mesure.html#" + encodeURIComponent(m.id), ""));

@@ -5,7 +5,5 @@
 window.SUPABASE_CONFIG = {
   url: "https://yucpwplvgbpixdkbkboh.supabase.co",
   key: "sb_publishable_3I-XQ_VcOQxp--dGPVZGbQ_uA9HiJZi",
-  timeoutMs: 12000,
-  /* Élection affichée par défaut : présidentielle française de 2027 */
-  election: { iso2: "FR", year: 2027 }
+  timeoutMs: 12000
 };

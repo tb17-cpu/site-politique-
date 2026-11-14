@@ -22,38 +22,35 @@
     const f = v => { const k = norm(v); return k === "" ? { label: "Non précisé", known: false, raw: "" } : map[k] ? { label: map[k], known: true, raw: String(v) } : { label: fallback, known: false, raw: String(v) }; };
     return f;
   };
+  /* Valeurs constatées dans la base (novembre 2026). Toute autre valeur : libellé de repli, jamais de traduction supposée. */
   const CANDIDACY = table({
-    unconfirmed: "Non confirmée", rumored: "Candidature évoquée", declared: "Candidature déclarée",
-    nominated: "Candidat investi", qualified: "Qualifié pour le premier tour", withdrawn: "Candidature retirée", rejected: "Candidature rejetée"
+    declared: "Candidature déclarée", unconfirmed: "Candidature non confirmée",
+    /* Valeurs prévues par la maquette éditoriale, pas encore constatées en base : */
+    rumored: "Candidature évoquée", nominated: "Candidat investi", qualified: "Qualifié pour le premier tour",
+    withdrawn: "Candidature retirée", rejected: "Candidature rejetée"
   }, "Statut à préciser");
+  /* « claimed_threshold » = seuil REVENDIQUÉ, jamais « validé officiellement ». */
   const SPONSORSHIP = table({
-    not_started: "Collecte non commencée", in_progress: "Collecte en cours", collecting: "Collecte en cours",
-    claimed: "Parrainages annoncés, non validés", validated: "Parrainages validés officiellement", qualified: "Parrainages validés officiellement",
-    insufficient: "Seuil non atteint", failed: "Seuil non atteint", unknown: "Non connu", not_applicable: "Sans objet"
+    collecting: "Collecte des parrainages en cours", claimed_threshold: "Seuil de 500 parrainages revendiqué", unknown: "Situation non documentée"
   }, "Statut des parrainages à préciser");
   const SECOND = table({
-    not_applicable: "Sans objet", not_started: "Pas encore concerné", unknown: "Non déterminé", pending: "En attente du résultat du premier tour",
-    qualified: "Qualifié pour le second tour", not_qualified: "Non qualifié pour le second tour", eliminated: "Éliminé au premier tour", withdrawn: "Retiré avant le second tour"
+    not_reached: "Second tour non encore déterminé"
   }, "Situation au second tour à préciser");
-  const RELATION = table({
-    similar: "Mesures similaires", complementary: "Mesures complémentaires", opposed: "Mesures opposées", opposite: "Mesures opposées",
-    contradictory: "Mesures opposées", no_equivalent: "Sans équivalent direct", none: "Sans équivalent direct"
-  }, "Relation à préciser");
+  /* measure_relations est vide : aucune valeur n'est présumée. */
+  const RELATION = table({}, "Relation entre mesures");
   const SOURCE_TYPE = table({
-    official_program: "Programme officiel", program: "Programme officiel", programme: "Programme officiel", official_document: "Document officiel",
-    official_website: "Site officiel", website: "Site web", press: "Article de presse", press_article: "Article de presse", article: "Article de presse",
-    interview: "Interview", speech: "Discours", social_media: "Réseaux sociaux", report: "Rapport", study: "Étude", statistics: "Statistiques officielles",
-    legal_text: "Texte juridique", law: "Texte juridique", other: "Autre source"
+    official_document: "Document officiel", press_article: "Article de presse", public_report: "Rapport public", other: "Autre"
   }, "Type de source à préciser");
   const SOURCE_LINK = table({
-    announcement: "Annonce de candidature", declaration: "Déclaration de candidature", investiture: "Investiture", nomination: "Investiture",
-    sponsorship: "Parrainages", official_list: "Liste officielle", biography: "Biographie", other: "Autre"
+    other: "Autre", press_confirmation: "Confirmation par la presse", sponsorship_claim: "Déclaration de parrainages"
   }, "Nature du lien à préciser");
   const wrap = f => v => f(v).label;
   U.formatCandidacyStatus = wrap(CANDIDACY);
   U.formatSponsorshipStatus = wrap(SPONSORSHIP);
   U.formatSecondRoundStatus = wrap(SECOND);
   U.formatRelationType = wrap(RELATION);
+  /* Type de relation : libellé générique + valeur technique visible, sans traduction arbitraire. */
+  U.relationHtml = v => { const f = RELATION(v); return f.raw ? `${e(f.label)} <small title="Valeur technique">(type : ${e(f.raw)})</small>` : e(f.label); };
   U.formatSourceType = wrap(SOURCE_TYPE);
   U.formatSourceLink = wrap(SOURCE_LINK);
   U.isKnownCandidacyStatus = v => CANDIDACY(v).known;
@@ -112,9 +109,56 @@
     }
   };
 
-  /* Cartes de personne : photo si disponible. */
-  U.avatar = (p, big) => p && U.safeUrl(p.photo_url)
-    ? `<img class="avatar${big ? " avatar-lg" : ""}" src="${e(U.safeUrl(p.photo_url))}" alt="${e("Portrait de " + U.person(p))}" loading="lazy" width="64" height="64" referrerpolicy="no-referrer" onerror="this.remove()">` : `<span class="avatar${big ? " avatar-lg" : ""} avatar-ph" aria-hidden="true">${e((p && p.last_name || "?").charAt(0))}</span>`;
+  /* ---------- Données de démonstration (candidats fictifs de test) ----------
+     TEMPORAIRE : à retirer quand les candidats de test seront supprimés de la base. */
+  const nk = v => String(v == null ? "" : v).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+  const TD = (window.SITE && window.SITE.testData) || { fictionalPeople: [], positions: {} };
+  const isFictional = p => !!p && (TD.fictionalPeople || []).some(n => nk(n) === nk(U.person(p)));
+
+  /* ---------- Portrait ----------
+     Photographie officielle si une URL est publiée ; sinon emplacement neutre avec indication explicite.
+     Cadrage identique pour tous : 3/4, recadrage par le haut. Aucune image n'est jamais inventée. */
+  const SIL = '<svg viewBox="0 0 90 120" aria-hidden="true" focusable="false"><circle cx="45" cy="42" r="19"/><path d="M8 120c0-28 16-44 37-44s37 16 37 44z"/></svg>';
+  U.portrait = (p, size) => {
+    const sz = size === "lg" ? "portrait--lg" : "portrait--sm", name = U.person(p) || "Candidat";
+    const fic = isFictional(p);
+    const ph = `<span class="portrait-ph${fic ? " portrait-ph--fic" : ""}" role="img" aria-label="${e(fic ? "Visuel provisoire : candidat fictif de test, aucune photographie" : "Photographie officielle non disponible")}">${SIL}</span>`;
+    const cap = fic ? "Visuel provisoire · candidat fictif" : (p && U.safeUrl(p.photo_url) ? "" : "Photographie officielle non disponible");
+    const img = p && U.safeUrl(p.photo_url)
+      ? `<img src="${e(U.safeUrl(p.photo_url))}" alt="${e("Photographie de " + name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=this.dataset.ph" data-ph="${e(ph)}">` : ph;
+    return `<figure class="portrait ${sz}"><div class="portrait-box">${img}</div>${cap ? `<figcaption>${e(cap)}</figcaption>` : ""}</figure>`;
+  };
+  U.avatar = (p, big) => U.portrait(p, big ? "lg" : "sm");
+
+  /* ---------- Positionnement politique (échelle gauche-droite en cinq niveaux) ----------
+     Lecture éditoriale d'Au résultat : distincte de l'étiquette du candidat, jamais déduite du nom du parti.
+     Source des données, par ordre : colonnes de la candidature (political_position, political_position_note,
+     political_position_uncertain) si elles existent un jour ; sinon table de démonstration (site-config.js). */
+  const SCALE = [
+    { key: "left", label: "Gauche", color: "#c8323c" },
+    { key: "center_left", label: "Centre gauche", color: "#e585a2" },
+    { key: "center", label: "Centre", color: "#efc83a" },
+    { key: "center_right", label: "Centre droit", color: "#7db8e8" },
+    { key: "right", label: "Droite", color: "#1b4a9b" }
+  ];
+  U.positionOf = c => {
+    if (!c) return null;
+    const k = nk(c.political_position).replace(/[\s-]+/g, "_");
+    if (SCALE.some(x => x.key === k)) return { key: k, note: c.political_position_note, uncertain: !!c.political_position_uncertain, demo: false };
+    const t = c.people && (TD.positions || {})[Object.keys(TD.positions || {}).find(n => nk(n) === nk(U.person(c.people)))];
+    return t ? { key: t.key, note: t.note, uncertain: !!t.uncertain, demo: true } : null;
+  };
+  U.positionBlock = c => {
+    const pos = U.positionOf(c), i = pos ? SCALE.findIndex(x => x.key === pos.key) : -1;
+    const intro = `<p class="quiet">Lecture éditoriale d’Au résultat, distincte de l’étiquette revendiquée par le candidat. Elle ne se déduit pas du nom du parti : elle repose sur des éléments documentés (programme, déclarations, trajectoire politique).</p>`;
+    if (i < 0) return `<section class="blk"><header><b>Positionnement politique</b><span>Lecture éditoriale d’Au résultat</span></header><div><p class="p-sub quiet">Positionnement non renseigné pour cette candidature. ${""}</p>${intro}</div></section>`;
+    const cur = SCALE[i], why = pos.note ? e(pos.note) : "Aucune justification n’est encore publiée pour ce positionnement.";
+    return `<section class="blk"><header><b>Positionnement politique</b><span>Lecture éditoriale d’Au résultat</span></header><div>
+      <p class="pos-line">Positionnement : <strong style="--c:${cur.color}"><i class="pos-dot" aria-hidden="true"></i>${e(cur.label)}</strong>${pos.uncertain ? ' <span class="pos-unc">Positionnement incertain ou contesté</span>' : ""}${pos.demo ? ' <span class="pos-demo">Donnée de démonstration · candidat fictif</span>' : ""}</p>
+      <ol class="pos-scale" aria-label="${e("Échelle de la gauche à la droite : " + cur.label)}">${SCALE.map((x, n) =>
+        `<li class="${n === i ? "on" : ""}"${n === i ? ` aria-current="true" title="${e(pos.note || cur.label)}"` : ""}><span class="seg" style="background:${x.color}"></span><span class="lab">${e(x.label)}</span>${n === i ? '<span class="mark" aria-hidden="true">▲</span>' : ""}</li>`).join("")}</ol>
+      <details class="pos-why"><summary>Pourquoi ce positionnement ?</summary><p>${why}</p></details>${intro}</div></section>`;
+  };
 
   window.UI = U;
 })();

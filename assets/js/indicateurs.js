@@ -3,9 +3,12 @@
   const S = window.SITE, $ = id => document.getElementById(id), e = esc;
   const byId = Object.fromEntries(C.concat(G).map(c => [c.id, c])), link = id => `analyses-internationales.html#${id}`;
 
+  Election.need($("i-domains")).then(el => { if (!el) return;
+  const cname = el.countries && el.countries.name;
   UI.mount($("i-domains"), async () => {
     const [ind, obs] = await Promise.all([DB.indicators(), DB.observations()]);
-    return { ind, obs };
+    /* Observations rattachées au pays de l'élection active uniquement. */
+    return { ind, obs: obs.filter(o => String(o.country_id) === String(el.country_id)) };
   }, d => {
     const doms = [...new Set(d.ind.map(i => i.domain || ""))];
     $("i-index").innerHTML = doms.map((x, k) => `<li><a href="#dom-${k}">${e(UI.humanize(x) || "Autres")}</a></li>`).join("");
@@ -18,9 +21,10 @@
             <td>${e(v.countries ? v.countries.name : "")}</td><td>${e([UI.date(v.period_start), UI.date(v.period_end)].filter(Boolean).join(" → "))}</td>
             <td>${e(v.value ?? "")} ${e(i.unit || "")}</td><td>${e(v.geographic_scope || "")}</td>
             <td>${v.sources ? (UI.link(v.sources.url, v.sources.title) || e(v.sources.title)) : ""}</td></tr>`).join("")}</tbody></table></div>`
-            : `<p class="p-sub" style="margin-top:8px">Aucune observation publiée pour cet indicateur.</p>`}</article>`;
+            : `<p class="p-sub" style="margin-top:8px">Aucune observation publiée pour cet indicateur${cname ? " (" + e(cname) + ")" : ""}.</p>`}</article>`;
       }).join("") + `</div>`).join("");
   }, { loading: "Chargement des indicateurs…", isEmpty: d => !d.ind.length, empty: "<p><b>Aucun indicateur n’est publié pour l’instant.</b></p><p style=\"margin-top:8px\">Chaque indicateur sera publié avec sa définition, son unité, sa source et sa date.</p>" });
+  });
 
   /* Premiers chiffres disponibles : dossiers internationaux (données du site, avec mention de fiabilité). */
   $("h-tiles").innerHTML = S.featured.map(f => {

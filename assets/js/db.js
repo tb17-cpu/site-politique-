@@ -75,6 +75,8 @@
     .filter(r => !WITH_STATUS.has(table) || (r && r.publication_status === PUBLISHED))
     .map(r => clean(r)).filter(r => r !== null);
   /* Une mesure n'est présentée que si toute sa chaîne parente est visible : version, programme, candidature, candidat. */
+  /* Filtre par élection : la candidature de la mesure doit appartenir à l'élection active (sans élection : tout). */
+  const inElection = electionId => m => !electionId || String(m.program_versions.programs.candidacies.election_id) === String(electionId);
   const chainOk = m => !!(m && m.program_versions && m.program_versions.programs && m.program_versions.programs.candidacies && m.program_versions.programs.candidacies.people);
 
   async function rows(table, o) {
@@ -102,11 +104,14 @@
     /* Thèmes : familles (parent_id nul) et sous-thèmes. */
     themes: () => rows("themes", { order: "display_order.asc,name.asc" }),
 
-    /* Élection par défaut (France 2027), avec son pays. */
-    election: () => one("elections", {
-      select: "*,countries!inner(id,name,iso2,publication_status)",
-      filter: { "countries.iso2": "eq." + CFG.election.iso2, year: "eq." + CFG.election.year }
-    }),
+    /* Élections publiées, avec leur pays. Aucune élection n'est codée en dur : tout vient de la base. */
+    elections: () => rows("elections", { select: "*,countries(id,name,iso2,publication_status)", order: "scheduled_date.asc.nullslast,year.asc" }),
+
+    /* Programmes publiés d'une élection, avec leurs versions et mesures. */
+    programs: electionId => rows("programs", {
+      select: `*,candidacies!inner(id,election_id,candidacy_status,publication_status,${PERSON},${PARTY}),program_versions(id,version_number,version_label,publication_date,publication_status,measures(id,title,reliability_level,display_order,publication_status))`,
+      filter: { "candidacies.election_id": "eq." + electionId }
+    }).then(r => r.filter(p => p.candidacies && p.candidacies.people && String(p.candidacies.election_id) === String(electionId))),
 
     /* Une candidature dont le candidat n'est pas visible n'est pas présentée. */
     candidacies: electionId => rows("candidacies", {
@@ -119,32 +124,32 @@
     }).then(r => (r[0] && r[0].people) ? r[0] : null),
 
     measure: id => rows("measures", { limit: 1,
-      select: `*,program_versions(*,programs(*,candidacies(id,candidacy_status,${PERSON},${PARTY}))),measure_themes(themes(id,name,slug,parent_id,publication_status)),measure_sources(*,sources(*)),analyses(*,analysis_sources(*,sources(*)))`,
+      select: `*,program_versions(*,programs(*,candidacies(id,election_id,candidacy_status,${PERSON},${PARTY}))),measure_themes(themes(id,name,slug,parent_id,publication_status)),measure_sources(*,sources(*)),analyses(*,analysis_sources(*,sources(*)))`,
       filter: { id: "eq." + id }
     }).then(r => chainOk(r[0]) ? r[0] : null),
 
     /* Mesures (avec candidat) pour un ensemble de thèmes. */
-    measuresByThemes: themeIds => rows("measures", {
-      select: `id,title,reliability_level,publication_status,program_versions(version_label,publication_status,programs(publication_status,candidacies(id,publication_status,${PERSON}))),measure_themes!inner(theme_id)`,
+    measuresByThemes: (themeIds, electionId) => rows("measures", {
+      select: `id,title,reliability_level,publication_status,program_versions(version_label,publication_status,programs(publication_status,candidacies(id,election_id,publication_status,${PERSON}))),measure_themes!inner(theme_id)`,
       filter: { "measure_themes.theme_id": `in.(${themeIds.join(",")})` }, order: "display_order.asc"
-    }).then(r => r.filter(chainOk)),
+    }).then(r => r.filter(chainOk).filter(inElection(electionId))),
 
     /* Mesures détaillées pour le comparateur. */
-    measuresForCompare: themeIds => rows("measures", {
-      select: `*,program_versions(version_label,publication_status,programs(publication_status,candidacies(id,publication_status,${PERSON},${PARTY}))),measure_themes!inner(theme_id)`,
+    measuresForCompare: (themeIds, electionId) => rows("measures", {
+      select: `*,program_versions(version_label,publication_status,programs(publication_status,candidacies(id,election_id,publication_status,${PERSON},${PARTY}))),measure_themes!inner(theme_id)`,
       filter: { "measure_themes.theme_id": `in.(${themeIds.join(",")})` }, order: "display_order.asc"
-    }).then(r => r.filter(chainOk)),
+    }).then(r => r.filter(chainOk).filter(inElection(electionId))),
     relations: ids => rows("measure_relations", { filter: { or: `(measure_a_id.in.(${ids.join(",")}),measure_b_id.in.(${ids.join(",")}))` } }),
 
     indicators: () => rows("indicators", { order: "domain.asc,name.asc" }),
     observations: () => rows("indicator_observations", { select: "*,countries(name,iso2,publication_status),sources(title,url,publication_status)", order: "period_end.desc.nullslast" }),
 
     /* Recherche : jeu léger chargé à la demande. */
-    searchIndex: async () => {
+    searchIndex: async electionId => {
       const [themes, measures, cands] = await Promise.all([
         D.themes(),
-        rows("measures", { select: "id,title,publication_status,program_versions(publication_status,programs(publication_status,candidacies(id,publication_status,people(id,publication_status))))" }).then(r => r.filter(chainOk)),
-        rows("candidacies", { select: `id,publication_status,${PERSON}` }).then(r => r.filter(c => c.people))
+        rows("measures", { select: "id,title,publication_status,program_versions(publication_status,programs(publication_status,candidacies(id,election_id,publication_status,people(id,publication_status))))" }).then(r => r.filter(chainOk).filter(inElection(electionId))),
+        rows("candidacies", { select: `id,election_id,publication_status,${PERSON}` }).then(r => r.filter(c => c.people && (!electionId || String(c.election_id) === String(electionId))))
       ]);
       return { themes, measures, cands };
     }

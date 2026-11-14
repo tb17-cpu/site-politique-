@@ -35,7 +35,7 @@
       ])}
       ${c.description ? `<p class="long desc">${e(c.description)}</p>` : ""}
       ${p.biography ? `<h3 class="h-h3 sub-h">Biographie</h3><p class="long desc">${e(p.biography)}</p>` : ""}
-    </div></section>` + sponsorBlock();
+    </div></section>` + UI.positionBlock(c) + sponsorBlock();
 
     const progs = c.programs || [];
     h += `<section class="blk"><header><b>Programme</b><span>Propositions publiées, par version du programme</span></header><div>` +
@@ -53,7 +53,7 @@
     const cs = c.candidacy_sources || [];
     h += `<section class="blk"><header><b>Sources justificatives</b><span>Documents sur lesquels repose la fiche</span></header><div>` +
       (cs.length ? `<ul class="refs">${cs.map(s => `<li>${s.sources ? UI.link(s.sources.url, s.sources.title) || e(s.sources.title) : "Source"}
-        <small>${[s.sources && s.sources.publisher, s.relation_type && UI.formatSourceLink(s.relation_type), UI.date(s.evidence_date || (s.sources && s.sources.publication_date))].filter(Boolean).map(e).join(" · ")}</small>
+        <small>${[s.sources && s.sources.publisher, s.sources && s.sources.source_type && UI.formatSourceType(s.sources.source_type), s.relation_type && UI.formatSourceLink(s.relation_type), UI.date(s.evidence_date || (s.sources && s.sources.publication_date))].filter(Boolean).map(e).join(" · ")}</small>
         ${s.evidence_excerpt ? `<small>« ${e(s.evidence_excerpt)} »</small>` : ""}${s.notes ? `<small>${e(s.notes)}</small>` : ""}
         <small>${UI.reliability(s.reliability_level)}</small></li>`).join("")}</ul>` : `<p class="p-sub" style="margin-top:12px">Aucune source publiée pour cette candidature.</p>`) + `</div></section>`;
     return h;
@@ -62,7 +62,7 @@
   const run = () => {
     const id = decodeURIComponent(location.hash.slice(1));
     if (!id) { $("f-name").textContent = "Fiche candidat"; $("f-lede").textContent = ""; $("f-body").innerHTML = UI.emptyHtml("Aucune candidature sélectionnée. <a href=\"candidats.html\">Voir la liste des candidats</a>."); return; }
-    UI.mount($("f-body"), () => DB.candidacy(id), render, { loading: "Chargement de la fiche…", empty: "Cette candidature n’existe pas ou n’est pas publiée. <a href=\"candidats.html\">Voir la liste des candidats</a>." });
+    UI.mount($("f-body"), async () => { const c = await DB.candidacy(id); if (c) Election.use(c.election_id); return c; }, render, { loading: "Chargement de la fiche…", empty: "Cette candidature n’existe pas ou n’est pas publiée. <a href=\"candidats.html\">Voir la liste des candidats</a>." });
   };
   run();
   window.addEventListener("hashchange", run);

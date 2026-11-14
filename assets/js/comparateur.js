@@ -1,7 +1,7 @@
 /* Comparateur : mesures d'une même sous-thématique, côte à côte. Aucune comparaison artificielle si les données sont insuffisantes. */
 (function () {
   const $ = id => document.getElementById(id), e = esc;
-  let themes = [], measures = [], rel = [];
+  let themes = [], measures = [], rel = [], ELEC = null;
   const MAX = 4;
   const who = m => { const c = m.program_versions && m.program_versions.programs && m.program_versions.programs.candidacies; return c ? (UI.person(c.people) || "Candidature") : ""; };
   const cid = m => { const c = m.program_versions && m.program_versions.programs && m.program_versions.programs.candidacies; return c && c.id; };
@@ -33,7 +33,7 @@
       const rr = rel.filter(r => set.has(r.measure_a_id) && set.has(r.measure_b_id));
       const t = id => (sel.find(m => m.id === id) || {}).title;
       out.insertAdjacentHTML("beforeend", `<h3 class="h-h3 cmp-h">Relations entre ces mesures</h3>` +
-        (rr.length ? `<ul class="refs">${rr.map(r => `<li><b>${e(UI.formatRelationType(r.relation_type))}</b> : ${e(t(r.measure_a_id))} / ${e(t(r.measure_b_id))}${r.explanation ? `<small>${e(r.explanation)}</small>` : ""}</li>`).join("")}</ul>` : `<p class="p-sub">Aucune relation n’est enregistrée entre ces mesures.</p>`));
+        (rr.length ? `<ul class="refs">${rr.map(r => `<li><b>${UI.relationHtml(r.relation_type)}</b> : ${e(t(r.measure_a_id))} / ${e(t(r.measure_b_id))}${r.explanation ? `<small>${e(r.explanation)}</small>` : ""}</li>`).join("")}</ul>` : `<p class="p-sub">Aucune relation n’est enregistrée entre ces mesures.</p>`));
     } catch (err) { out.insertAdjacentHTML("beforeend", UI.errorHtml(err)); }
   }
 
@@ -50,7 +50,7 @@
     out.innerHTML = ""; box.innerHTML = ""; setStatus("");
     if (!id) return;
     history.replaceState(null, "", "#" + encodeURIComponent((themes.find(t => String(t.id) === id) || {}).slug || ""));
-    await UI.mount(box, async () => { measures = await DB.measuresForCompare([id]); return measures; }, ms => {
+    await UI.mount(box, async () => { measures = await DB.measuresForCompare([id], ELEC.id); return measures; }, ms => {
       const on = preselect(ms);
       return ms.map(m => `<label><input type="checkbox" value="${e(m.id)}"${on.has(String(m.id)) ? " checked" : ""}><span>${e(m.title)}<br><small class="who">${e(who(m))}</small></span></label>`).join("");
     }, { loading: "Chargement des mesures…", isEmpty: () => false });
@@ -64,6 +64,7 @@
     box.onchange = table; table();
   }
 
+  Election.need($("cmp-start")).then(el => { if (!el) return; ELEC = el;
   UI.mount($("cmp-start"), async () => { themes = await DB.themes(); return themes; }, all => {
     const byOrder = (a, b) => (a.display_order || 0) - (b.display_order || 0);
     const fams = all.filter(t => !t.parent_id).sort(byOrder);
@@ -75,4 +76,5 @@
     s.addEventListener("change", pick);
     if (s.value) pick();
   } });
+  });
 })();

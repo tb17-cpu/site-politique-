@@ -14,7 +14,8 @@
         <img src="${logo}" alt="" width="30" height="30"><span class="brand-name">${esc(S.name)}</span>
         <span class="brand-tag">${esc(S.tagline)}</span></a>
       <nav class="site-nav" aria-label="Navigation principale"><ul>${nav}</ul></nav>
-    </div></header>`;
+      <div class="elec-pick"><label for="elec-select">Élection</label><select id="elec-select" aria-label="Choisir l’élection"><option>Chargement…</option></select></div>
+    </div></header><div id="elec-bar"></div>`;
 
   const F = S.footer;
   const f = document.getElementById("site-footer");
@@ -23,7 +24,7 @@
       <div class="f-grid">
         <div><div class="f-brand"><img src="${logo}" alt="" width="26" height="26"><b>${esc(S.name)}</b></div>
           <p>${esc(F.about)}</p></div>
-        <div><h2>Explorer</h2><ul>${S.nav.map(n => `<li><a href="${n.href}">${esc(n.label)}</a></li>`).join("")}</ul></div>
+        <div><h2>Explorer</h2><ul>${S.nav.concat(S.electionNav).map(n => `<li><a href="${n.href}">${esc(n.label)}</a></li>`).join("")}</ul></div>
         <div><h2>Méthodologie</h2><p>${esc(F.method)}</p>
           <p><a href="methodologie.html">Lire la méthodologie complète</a></p></div>
         <div><h2>Sources</h2><p>${esc(F.sources)}</p>

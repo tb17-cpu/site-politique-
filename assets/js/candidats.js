@@ -9,11 +9,10 @@
       <h3>${e(name)}</h3><p>${e(party)}</p>${c.updated_at ? `<p>Actualisé le ${e(UI.date(c.updated_at))}</p>` : ""}
       ${UI.reliability(c.reliability_level)}</div></a>`;
   };
-  UI.mount($("c-list"), async () => {
-    const el = await DB.election();
-    return { election: el, list: el ? await DB.candidacies(el.id) : [] };
-  }, d => {
-    if (d.election && $("c-election")) $("c-election").textContent = d.election.name;
+  const mount = $("c-list");
+  Election.need(mount).then(el => { if (!el) return;
+  if ($("c-election")) $("c-election").textContent = Election.name(el);
+  UI.mount(mount, async () => ({ election: el, list: await DB.candidacies(el.id) }), d => {
     /* Ordre d'affichage : du plus avancé au moins avancé ; valeurs inconnues à la fin. */
     const ORDER = ["qualified", "nominated", "declared", "rumored", "unconfirmed", "withdrawn", "rejected"];
     const rank = g => { const i = ORDER.indexOf(String(g).trim().toLowerCase()); return i < 0 ? ORDER.length : i; };
@@ -23,7 +22,7 @@
   }, {
     loading: "Chargement des candidatures…",
     isEmpty: d => !d.list.length,
-    empty: "<p><b>Aucune candidature n’est publiée pour l’instant.</b></p><p style=\"margin-top:8px\">Une candidature n’apparaît ici qu’après vérification de ses sources officielles. Visibilité médiatique et candidature officielle ne sont jamais confondues.</p>"
-  });
+    empty: "<p><b>Aucune candidature n’est publiée pour cette élection pour l’instant.</b></p><p style=\"margin-top:8px\">Une candidature n’apparaît ici qu’après vérification de ses sources officielles. Visibilité médiatique et candidature officielle ne sont jamais confondues.</p>"
+  }); });
   const lg = $("c-legend"); if (lg) lg.innerHTML = UI.reliabilityLegend();
 })();

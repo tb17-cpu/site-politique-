@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Comprendre les programmes, comparer les propositions · Au résultat</title>
-<meta name="description" content="Plateforme indépendante d’information et de comparaison des programmes politiques et des politiques publiques. Premier périmètre : la présidentielle française de 2027.">
+<meta name="description" content="Plateforme indépendante d’information et de comparaison des programmes politiques et des politiques publiques. Une entrée par élection.">
 <meta property="og:title" content="Comprendre les programmes, comparer les propositions · Au résultat">
-<meta property="og:description" content="Plateforme indépendante d’information et de comparaison des programmes politiques et des politiques publiques. Premier périmètre : la présidentielle française de 2027.">
+<meta property="og:description" content="Plateforme indépendante d’information et de comparaison des programmes politiques et des politiques publiques. Une entrée par élection.">
 
 <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,8 +27,8 @@
     <div class="wrap">
       <p class="label" id="h-meta">Plateforme indépendante · programmes politiques et politiques publiques</p>
       <h1 id="intro-h"><span>Comprendre les programmes.</span> <span>Comparer les propositions.</span> <span>Évaluer les politiques publiques.</span></h1>
-      <p class="h-lede">Au résultat est une plateforme indépendante d’information et de comparaison des programmes politiques et des politiques publiques. Elle recense et structure les propositions des candidats pour permettre à chacun d’en comprendre les mécanismes, de les confronter aux expériences menées ailleurs et de vérifier les sources. Premier terrain d’application : l’élection présidentielle française de 2027.</p>
-      <p class="h-status">Le contenu des programmes est en cours de constitution. Aucune proposition n’est publiée tant qu’elle n’est pas établie à partir d’une source officielle citée.</p>
+      <p class="h-lede">Au résultat est une plateforme indépendante d’information et de comparaison des programmes politiques et des politiques publiques. Elle recense et structure les propositions des candidats pour permettre à chacun d’en comprendre les mécanismes, de les confronter aux expériences menées ailleurs et de vérifier les sources. Chaque élection publiée dispose de sa propre entrée.</p>
+      <p class="h-status">Les contenus sont publiés au fur et à mesure. Aucune proposition n’apparaît tant qu’elle n’est pas établie à partir d’une source officielle citée.</p>
       <div class="h-search" id="h-search" role="search">
         <form id="h-search-form" autocomplete="off">
           <label class="skip" for="h-q">Rechercher</label>
@@ -41,30 +41,15 @@
     </div>
   </section>
 
-  <!-- 2. Trois portes d’entrée -->
-  <section class="h-band" id="portes" aria-labelledby="portes-h">
+  <!-- 2. Choix de l’élection -->
+  <section class="h-band" id="elections" aria-labelledby="elections-h">
     <div class="wrap">
       <header class="h-sec-head">
         <p class="label">Par où commencer</p>
-        <h2 id="portes-h">Trois façons d’entrer</h2>
+        <h2 id="elections-h">Choisir une élection</h2>
+        <p class="h-sec-sub">Chaque élection a ses candidats, ses programmes, ses mesures et ses indicateurs. Le sélecteur de l’en-tête permet de changer de scrutin depuis n’importe quelle page.</p>
       </header>
-      <div class="h-doors">
-        <a class="h-door" href="candidats.html">
-          <span class="h-state" id="h-door1-state">Chargement…</span>
-          <h3>Explorer les candidats</h3>
-          <p>Découvrir les programmes et les propositions de chaque candidat, avec son statut de candidature et ses sources officielles.</p>
-          <span class="h-go">Les candidats →</span></a>
-        <a class="h-door" href="comparateur.html">
-          <span class="h-state" id="h-door2-state">Chargement…</span>
-          <h3>Comparer les mesures</h3>
-          <p>Confronter les propositions sur une même thématique et identifier leurs différences, y compris quand les intitulés se ressemblent.</p>
-          <span class="h-go">Le comparateur →</span></a>
-        <a class="h-door" href="analyses-internationales.html">
-          <span class="h-state" id="h-door3-state">Disponible</span>
-          <h3>Comprendre les politiques publiques</h3>
-          <p>Découvrir les expériences internationales, les indicateurs et les résultats observés, pour éclairer les propositions.</p>
-          <span class="h-go">Les analyses internationales →</span></a>
-      </div>
+      <div id="h-elections"></div>
     </div>
   </section>
 
@@ -138,6 +123,7 @@
 <script src="assets/js/supabase-config.js"></script>
 <script src="assets/js/db.js"></script>
 <script src="assets/js/ui.js"></script>
+<script src="assets/js/election.js"></script>
 <script src="assets/js/data-analyses.js"></script>
 <script src="assets/js/data-gauche.js"></script>
 <script src="assets/js/search.js"></script>

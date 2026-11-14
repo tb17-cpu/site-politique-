@@ -73,3 +73,4 @@
 
 .nojs{padding:16px;border:1px dashed var(--line);color:var(--fg-2);margin-block:24px}
 @media (max-width:760px){.h-hero{padding-block:42px 38px}.h-search button{padding:0 14px}}
+.h-door .h-count{font-size:13px;color:var(--fg-2)}

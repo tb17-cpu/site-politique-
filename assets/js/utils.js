@@ -1,5 +1,5 @@
 /* ---------- helpers ---------- */
-const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 const DV = '<i class="dot v" role="img" aria-label="source consultée"></i>';
 const DE = '<i class="dot e" role="img" aria-label="estimation à confirmer"></i>';
 const fm = s => s==null ? "" : esc(s).replace(/\^/g,DV).replace(/~/g,DE);

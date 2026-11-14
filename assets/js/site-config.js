@@ -15,13 +15,31 @@ window.SITE = {
 
   /* Menu principal. Pour ajouter une page : une ligne ici + un fichier HTML (voir modele-page.html). */
   nav: [
-    { id: "home",       label: "Accueil",                  href: "index.html" },
-    { id: "candidats",  label: "Les candidats",            href: "candidats.html" },
-    { id: "thematiques",label: "Les thématiques",          href: "thematiques.html" },
-    { id: "comparateur",label: "Comparateur",              href: "comparateur.html" },
-    { id: "analyses",   label: "Analyses internationales", href: "analyses-internationales.html" },
-    { id: "indicateurs",label: "Indicateurs",              href: "indicateurs.html" }
+    { id: "home",        label: "Accueil",                  href: "index.html" },
+    { id: "analyses",    label: "Analyses internationales", href: "analyses-internationales.html" },
+    { id: "methodologie",label: "Méthodologie",             href: "methodologie.html" }
   ],
+
+  /* Rubriques propres à l'élection active (barre sous l'en-tête). Chaque lien reçoit ?e=<élection>. */
+  electionNav: [
+    { id: "election",    label: "Vue d’ensemble", href: "election.html" },
+    { id: "candidats",   label: "Candidats",      href: "candidats.html" },
+    { id: "programmes",  label: "Programmes",     href: "programmes.html" },
+    { id: "thematiques", label: "Thématiques",    href: "thematiques.html" },
+    { id: "comparateur", label: "Comparateur",    href: "comparateur.html" },
+    { id: "indicateurs", label: "Indicateurs",    href: "indicateurs.html" }
+  ],
+
+  /* DONNÉES DE DÉMONSTRATION : candidats fictifs de test créés dans Supabase.
+     Sert uniquement à afficher un visuel « fictif » et un positionnement d'exemple tant que la base n'a pas de
+     colonne dédiée. À SUPPRIMER avec les candidats de test. Aucune personne réelle ne doit figurer ici. */
+  testData: {
+    fictionalPeople: ["Marc Valmont", "Claire Montel"],
+    positions: {
+      "Marc Valmont": { key: "right", note: "Positionnement de démonstration attribué à un candidat fictif de test." },
+      "Claire Montel": { key: "left", note: "Positionnement de démonstration attribué à une candidate fictive de test." }
+    }
+  },
 
   /* Chiffres de la page Indicateurs : { id du pays, rang de l’indicateur dans sa liste « k » }.
      Valeurs, libellés et sources viennent de data-analyses.js. */
@@ -31,7 +49,7 @@ window.SITE = {
   ],
 
   footer: {
-    about: "Plateforme indépendante d’information et de comparaison des programmes politiques et des politiques publiques. Premier périmètre : l’élection présidentielle française de 2027.",
+    about: "Plateforme indépendante d’information et de comparaison des programmes politiques et des politiques publiques. Chaque élection dispose de ses candidats, programmes, mesures et indicateurs.",
     method: "Même grille de lecture pour tous les candidats, sources traçables, distinction entre faits, déclarations et estimations. Un point plein signale un chiffre lu dans une source consultée, un point creux une estimation à confirmer.",
     sources: "Chaque fiche des analyses internationales liste ses sources en bas de page. Les propositions des candidats seront publiées avec leurs sources officielles.",
     sourcesSlot: "Page de sources consolidée : à venir.",

@@ -4,7 +4,6 @@
   const main = C.filter(c => !c.cmp), cmp = C.filter(c => c.cmp);
 
   /* Dossiers internationaux : données du site (non issues de la base). */
-  $("h-door3-state").textContent = `Disponible · ${C.length + G.length} fiches pays`;
   $("h-res-an").textContent = `${main.length} pays étudiés dans leur période de gouvernement de droite radicale, plus ${cmp.length} cas de comparaison (${cmp.map(c => c.name).join(", ")}). Chaque fiche applique la même grille : situation avant le mandat, indicateurs, indices de libertés, bilan.`;
   $("h-dossiers").innerHTML =
     `<li><a href="analyses-internationales.html#extreme-droite"><b>La droite radicale au pouvoir</b></a> · ${main.length} pays, disponible</li>
@@ -23,11 +22,17 @@
     }).join("");
   }, { loading: "Chargement des thématiques…", empty: "Aucune thématique publiée pour l’instant." });
 
-  /* Compteurs honnêtes : nombre de contenus réellement publiés. */
-  const plural = (n, s, p, none) => n ? `${n} ${n > 1 ? p : s}` : none;
-  const state = (id, fn) => fn().then(t => { $(id).textContent = t; }).catch(() => { $(id).textContent = "Indisponible pour le moment"; });
-  state("h-door1-state", async () => plural(await DB.count("candidacies"), "candidature publiée", "candidatures publiées", "Aucune candidature publiée pour l’instant"));
-  state("h-door2-state", async () => plural(await DB.count("measures"), "mesure publiée", "mesures publiées", "Aucune mesure publiée pour l’instant"));
+  /* Élections publiées : liste lue dans Supabase, une carte par élection, avec ses compteurs réels. */
+  const plural = (n, s1, p, none) => n ? `${n} ${n > 1 ? p : s1}` : none;
+  UI.mount($("h-elections"), () => Election.load(), list => `<div class="h-doors">${list.map(el => { const st = Election.status(el), w = Election.when(el);
+    return `<a class="h-door" href="${e(Election.hrefFor("election.html", el.id))}"><span class="h-state">${e(st.label)}${w ? " · " + e(w) : ""}</span>
+      <h3>${e(Election.name(el))}</h3>${el.description ? `<p>${e(el.description)}</p>` : ""}
+      <span class="h-count" data-el="${e(el.id)}">Chargement…</span><span class="h-go">Ouvrir l’élection →</span></a>`; }).join("")}</div>`,
+    { loading: "Chargement des élections…", empty: "<p><b>Aucune élection n’est publiée pour l’instant.</b></p>",
+      after: (box, list) => list.forEach(el => DB.count("candidacies", { election_id: "eq." + el.id })
+        .then(n => plural(n, "candidature publiée", "candidatures publiées", "Aucune candidature publiée pour l’instant"))
+        .catch(() => "Compteur indisponible")
+        .then(t => { const x = box.querySelector(`[data-el="${CSS.escape(String(el.id))}"]`); if (x) x.textContent = t; })) });
 
   /* Indicateurs */
   DB.indicators().then(ind => {
