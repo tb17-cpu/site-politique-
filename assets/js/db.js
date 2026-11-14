@@ -53,8 +53,8 @@
      quand l'objet publié qu'elles relient (source, thème) n'est pas visible. */
   const PUBLISHED = "published";
   const WITH_STATUS = new Set(["countries", "elections", "people", "parties", "candidacies", "programs", "program_versions",
-    "themes", "measures", "sources", "analyses", "indicators", "indicator_observations"]);
-  const REQUIRED_EMBED = { measure_sources: "sources", analysis_sources: "sources", candidacy_sources: "sources", measure_themes: "themes" };
+    "themes", "measures", "sources", "analyses", "indicators", "indicator_observations", "policy_cases", "case_outcomes"]);
+  const REQUIRED_EMBED = { case_measure_relations: "policy_cases", policy_case_sources: "sources", case_outcome_sources: "sources", measure_sources: "sources", analysis_sources: "sources", candidacy_sources: "sources", measure_themes: "themes" };
 
   /* Nettoyage récursif des données imbriquées : un objet imbriqué portant un statut autre que « published »
      devient null ; une ligne de liaison dont l'objet requis est absent disparaît. */
@@ -124,7 +124,7 @@
     }).then(r => (r[0] && r[0].people) ? r[0] : null),
 
     measure: id => rows("measures", { limit: 1,
-      select: `*,program_versions(*,programs(*,candidacies(id,election_id,candidacy_status,${PERSON},${PARTY}))),measure_themes(themes(id,name,slug,parent_id,publication_status)),measure_sources(*,sources(*)),analyses(*,analysis_sources(*,sources(*)))`,
+      select: `*,program_versions(*,programs(*,candidacies(id,election_id,candidacy_status,${PERSON},${PARTY}))),measure_themes(themes(id,name,slug,parent_id,publication_status)),measure_sources(*,sources(*)),analyses(*,analysis_sources(*,sources(*))),case_measure_relations(*,policy_cases(*,countries(*),case_outcomes(*,case_outcome_sources(*,sources(*))),policy_case_sources(*,sources(*))))`,
       filter: { id: "eq." + id }
     }).then(r => chainOk(r[0]) ? r[0] : null),
 

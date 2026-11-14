@@ -15,7 +15,7 @@
     return d + (code || "");
   };
 
-  const TABLES = ["countries", "elections", "people", "parties", "candidacies", "candidacy_sources", "candidacy_sponsorship_territories", "programs", "program_versions", "themes", "measures", "sources", "measure_sources", "measure_themes", "measure_relations", "analyses", "analysis_sources", "indicators", "indicator_observations"];
+  const TABLES = ["countries", "elections", "people", "parties", "candidacies", "candidacy_sources", "candidacy_sponsorship_territories", "programs", "program_versions", "themes", "measures", "sources", "measure_sources", "measure_themes", "measure_relations", "analyses", "analysis_sources", "indicators", "indicator_observations", "policy_cases", "case_measure_relations", "case_outcomes", "policy_case_sources", "case_outcome_sources"];
   /* Tables possédant une colonne publication_status (schéma réel). Les autres sont des tables de liaison. */
   const WITH_STATUS = ["countries", "elections", "people", "parties", "candidacies", "programs", "program_versions", "themes", "measures", "sources", "analyses", "indicators", "indicator_observations"];
   const PAGE = 1000;   /* limite par défaut de l'API : au-delà, la lecture est incomplète */
@@ -53,8 +53,8 @@
       /* E. Comptages (les 19 tables) : une erreur reste « non vérifiable », jamais zéro */
       for (const t of TABLES) { try { counts[t] = await DB.count(t); } catch (err) { counts[t] = null; } }
       const failed = TABLES.filter(t => counts[t] === null);
-      add("Comptages", "Nombre de lignes visibles dans les 19 tables", failed.length ? NA : OK,
-        failed.length ? "Comptage impossible pour : " + failed.join(", ") : "19 tables comptées");
+      add("Comptages", "Nombre de lignes visibles dans les " + TABLES.length + " tables", failed.length ? NA : OK,
+        failed.length ? "Comptage impossible pour : " + failed.join(", ") : TABLES.length + " tables comptées");
 
       /* B. Thématiques (lecture brute, sans filtre navigateur) */
       let th = null;
@@ -90,9 +90,20 @@
           return bad.length ? [KO, `${bad.length} ligne(s) non publiée(s) accessible(s) : ${uniq(bad.map(x => x.publication_status === null ? "statut absent" : x.publication_status)).join(", ")}`] : [OK, `${r.length} ligne(s), toutes « published »`];
         });
       }
+      /* Comparaisons internationales : colonnes de statut éventuelles, colonnes réellement reçues (pour lever toute ambiguïté) */
+      for (const t of ["policy_cases", "case_measure_relations", "case_outcomes", "policy_case_sources", "case_outcome_sources"]) {
+        await guard("Comparaisons internationales", `${t} : lignes publiées, colonnes reçues`, async () => {
+          const r = await DB.raw(t, { select: "*", limit: PAGE });
+          if (r.length >= PAGE) return [NA, "Lecture limitée : vérification incomplète"];
+          if (!r.length) return [OK, "aucune ligne visible (table vide, ou lignes non publiées protégées par RLS)"];
+          const cols = Object.keys(r[0]).join(", "), st = r.filter(x => Object.prototype.hasOwnProperty.call(x, "publication_status"));
+          const bad = st.filter(x => x.publication_status !== "published");
+          return bad.length ? [KO, `${bad.length} ligne(s) non publiée(s) accessible(s) · colonnes : ${cols}`] : [OK, `${r.length} ligne(s)${st.length ? ", toutes « published »" : ", table sans statut propre"} · colonnes : ${cols}`];
+        });
+      }
       const NESTED = [
         ["candidacies", "candidacies", "id,publication_status,people(publication_status),parties(publication_status),programs(publication_status,program_versions(publication_status,measures(publication_status))),candidacy_sources(sources(publication_status)),candidacy_sponsorship_territories(sources(publication_status))"],
-        ["measures", "measures", "id,publication_status,program_versions(publication_status,programs(publication_status,candidacies(publication_status,people(publication_status),parties(publication_status)))),measure_themes(themes(publication_status)),measure_sources(sources(publication_status)),analyses(publication_status,analysis_sources(sources(publication_status)))"],
+        ["measures", "measures", "id,publication_status,program_versions(publication_status,programs(publication_status,candidacies(publication_status,people(publication_status),parties(publication_status)))),measure_themes(themes(publication_status)),measure_sources(sources(publication_status)),analyses(publication_status,analysis_sources(sources(publication_status))),case_measure_relations(policy_cases(publication_status,countries(publication_status),case_outcomes(publication_status,case_outcome_sources(sources(publication_status))),policy_case_sources(sources(publication_status))))"],
         ["indicator_observations", "indicator_observations", "id,publication_status,indicators(publication_status),countries(publication_status),sources(publication_status)"]
       ];
       for (const [label, t, sel] of NESTED) {

@@ -39,6 +39,7 @@
         ${kv([["Évaluation générale", a.assessment], ["Faisabilité", a.feasibility_assessment], ["Effets attendus", a.expected_effects], ["Risques et limites", a.risks_and_limitations], ["Incertitudes", a.uncertainties], ["Méthodologie", a.methodology]])}
         <h4 class="label" style="margin:14px 0 4px">Sources de l’analyse</h4>${srcList(a.analysis_sources || [], "evidence_excerpt")}
       </div></section>`).join("") : UI.emptyHtml("Aucune analyse publiée pour cette mesure."));
+    h += Cases.section(m.case_measure_relations);
     return h;
   };
 

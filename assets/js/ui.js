@@ -120,11 +120,13 @@
      Photographie officielle si une URL est publiée ; sinon emplacement neutre avec indication explicite.
      Cadrage identique pour tous : 3/4, recadrage par le haut. Aucune image n'est jamais inventée. */
   const SIL = '<svg viewBox="0 0 90 120" aria-hidden="true" focusable="false"><circle cx="45" cy="42" r="19"/><path d="M8 120c0-28 16-44 37-44s37 16 37 44z"/></svg>';
+  /* Une page de fichier Wikimedia Commons (…/wiki/File:Nom.jpg) n'est pas une image : on utilise le lien direct officiel Special:FilePath. */
+  const imgUrl = u => { const m = /^https?:\/\/commons\.wikimedia\.org\/wiki\/(File:[^?#]+)/i.exec(u || ""); return m ? "https://commons.wikimedia.org/wiki/Special:FilePath/" + m[1].slice(5) + "?width=600" : u; };
   U.portrait = (p, size) => {
     const lg = size === "lg", name = U.person(p) || "Candidat", has = !!(p && U.safeUrl(p.photo_url));
     const ph = `<span class="portrait-ph" role="img" aria-label="Photographie non disponible">${SIL}</span>`;
     const img = has
-      ? `<img src="${e(U.safeUrl(p.photo_url))}" alt="${e("Photographie de " + name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=this.dataset.ph" data-ph="${e(ph)}">` : ph;
+      ? `<img src="${e(imgUrl(U.safeUrl(p.photo_url)))}" alt="${e("Photographie de " + name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=this.dataset.ph" data-ph="${e(ph)}">` : ph;
     /* Crédit et source de la photographie : affichés quand ils sont renseignés (fiche détaillée). */
     const credit = has && lg && p.photo_credit ? e(p.photo_credit) : "", src = has && lg && U.safeUrl(p.photo_source_url);
     const cap = !has ? "Photographie non disponible" : "";
