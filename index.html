@@ -3,10 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Au résultat · Politiques publiques et comparaisons internationales</title>
-<meta name="description" content="Plateforme d’analyse des politiques publiques : comparer les expériences internationales et confronter les discours politiques aux résultats observés.">
-<meta property="og:title" content="Au résultat · Politiques publiques et comparaisons internationales">
-<meta property="og:description" content="Comparer les expériences internationales et confronter les discours politiques aux résultats observés.">
+<title>Comprendre les programmes, comparer les propositions · Au résultat</title>
+<meta name="description" content="Plateforme indépendante d’information et de comparaison des programmes politiques et des politiques publiques. Premier périmètre : la présidentielle française de 2027.">
+<meta property="og:title" content="Comprendre les programmes, comparer les propositions · Au résultat">
+<meta property="og:description" content="Plateforme indépendante d’information et de comparaison des programmes politiques et des politiques publiques. Premier périmètre : la présidentielle française de 2027.">
+
 <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,73 +21,112 @@
 
 <main id="contenu">
 
-  <!-- 1. Introduction -->
+  <!-- 1. Identité, promesse et recherche -->
   <section class="h-hero" aria-labelledby="intro-h">
     <div class="wrap">
-      <p class="label" id="h-meta"></p>
-      <h1 id="intro-h">Confronter les discours politiques aux résultats observés</h1>
-      <p class="h-lede">Une plateforme d’information et d’analyse des politiques publiques. Elle compare les expériences internationales avec la même grille de lecture et s’appuie sur des statistiques officielles et des indices indépendants.</p>
-      <div class="h-cta">
-        <a class="btn btn--primary" href="analyses-internationales.html">Parcourir les analyses internationales</a>
-        <a class="btn" href="analyses-internationales.html#methode">Lire la méthodologie</a>
+      <p class="label" id="h-meta">Plateforme indépendante · programmes politiques et politiques publiques</p>
+      <h1 id="intro-h"><span>Comprendre les programmes.</span> <span>Comparer les propositions.</span> <span>Évaluer les politiques publiques.</span></h1>
+      <p class="h-lede">Au résultat est une plateforme indépendante d’information et de comparaison des programmes politiques et des politiques publiques. Elle recense et structure les propositions des candidats pour permettre à chacun d’en comprendre les mécanismes, de les confronter aux expériences menées ailleurs et de vérifier les sources. Premier terrain d’application : l’élection présidentielle française de 2027.</p>
+      <p class="h-status">Le contenu des programmes est en cours de constitution. Aucune proposition n’est publiée tant qu’elle n’est pas établie à partir d’une source officielle citée.</p>
+      <div class="h-search" id="h-search" role="search">
+        <form id="h-search-form" autocomplete="off">
+          <label class="skip" for="h-q">Rechercher</label>
+          <input id="h-q" type="search" placeholder="Rechercher un candidat, une mesure ou une thématique…" aria-controls="h-results" aria-expanded="false">
+          <button type="submit">Rechercher</button>
+        </form>
+        <div class="h-results" id="h-results" role="region" aria-live="polite" hidden></div>
+        <p class="h-search-note" id="h-search-note"></p>
       </div>
-      <ul class="h-vocation">
-        <li><span class="label">Analyser</span><b>Les politiques publiques</b><p>Décrites par leurs indicateurs avant, pendant et après un mandat, en tenant compte de la tendance du pays.</p></li>
-        <li><span class="label">Comparer</span><b>Les expériences internationales</b><p>Une même fiche pour chaque pays : contexte, chiffres, indices de libertés, bilan positif, mitigé et négatif.</p></li>
-        <li><span class="label">Confronter</span><b>Les discours aux résultats</b><p>En distinguant les chiffres vérifiés dans une source des estimations à confirmer.</p></li>
-      </ul>
     </div>
   </section>
 
-  <!-- 2. Tableau de bord -->
-  <section class="h-band" id="chiffres" aria-labelledby="chiffres-h">
+  <!-- 2. Trois portes d’entrée -->
+  <section class="h-band" id="portes" aria-labelledby="portes-h">
     <div class="wrap">
       <header class="h-sec-head">
-        <p class="label">Tableau de bord</p>
-        <h2 id="chiffres-h">Chiffres marquants</h2>
-        <p class="h-sec-sub">Extraits des analyses publiées. Chaque indicateur renvoie à la fiche du pays.</p>
+        <p class="label">Par où commencer</p>
+        <h2 id="portes-h">Trois façons d’entrer</h2>
       </header>
-      <div class="h-tiles" id="h-tiles"></div>
-      <div class="h-two">
-        <div>
-          <h3 class="h-h3">Freedom House : dernier score connu</h3>
-          <p class="h-note">Score sur 100, par pays. Un point creux signale une estimation à confirmer. L’année est indiquée quand ce n’est pas l’édition 2026.</p>
-          <div id="h-fh" role="group" aria-label="Scores Freedom House par pays"></div>
-        </div>
-        <div>
-          <h3 class="h-h3">Constats transversaux</h3>
-          <p class="h-note">Lecture croisée des fiches pays.</p>
-          <div class="h-findings" id="h-findings"></div>
-        </div>
+      <div class="h-doors">
+        <a class="h-door" href="candidats.html">
+          <span class="h-state">Structure prête · fiches à venir</span>
+          <h3>Explorer les candidats</h3>
+          <p>Découvrir les programmes et les propositions de chaque candidat, avec son statut de candidature et ses sources officielles.</p>
+          <span class="h-go">Les candidats →</span></a>
+        <a class="h-door" href="comparateur.html">
+          <span class="h-state">Structure prête · mesures à venir</span>
+          <h3>Comparer les mesures</h3>
+          <p>Confronter les propositions sur une même thématique et identifier leurs différences, y compris quand les intitulés se ressemblent.</p>
+          <span class="h-go">Le comparateur →</span></a>
+        <a class="h-door" href="analyses-internationales.html">
+          <span class="h-state" id="h-door3-state">Disponible</span>
+          <h3>Comprendre les politiques publiques</h3>
+          <p>Découvrir les expériences internationales, les indicateurs et les résultats observés, pour éclairer les propositions.</p>
+          <span class="h-go">Les analyses internationales →</span></a>
       </div>
     </div>
   </section>
 
-  <!-- 3. Grandes thématiques -->
-  <section class="h-band" id="thematiques" aria-labelledby="thematiques-h">
+  <!-- 3. Thématiques -->
+  <section class="h-band h-band--surface" id="thematiques" aria-labelledby="thematiques-h">
     <div class="wrap">
       <header class="h-sec-head">
         <p class="label">Thématiques</p>
-        <h2 id="thematiques-h">Lire les analyses par thème</h2>
-        <p class="h-sec-sub">Chaque thème renvoie aux fiches pays qui l’éclairent le mieux.</p>
+        <h2 id="thematiques-h">Explorer par grande politique publique</h2>
+        <p class="h-sec-sub">Onze familles, chacune découpée en sous-thèmes. Cette classification sert à ranger les mesures, quel que soit le candidat.</p>
       </header>
       <div class="h-themes" id="h-themes"></div>
+      <p class="h-more"><a href="thematiques.html">Voir toutes les thématiques et leurs sous-thèmes →</a></p>
     </div>
   </section>
 
-  <!-- 4. Accès aux analyses internationales -->
-  <section class="h-band h-band--surface" id="pays" aria-labelledby="pays-h">
+  <!-- 4. Méthode et indépendance -->
+  <section class="h-band" id="methode" aria-labelledby="methode-h">
     <div class="wrap">
       <header class="h-sec-head">
-        <p class="label">Analyses internationales</p>
-        <h2 id="pays-h">Une fiche par pays</h2>
-        <p class="h-sec-sub">Quatorze pays dans leur période de pouvoir de la droite radicale, puis deux cas de comparaison.</p>
+        <p class="label">Méthode et indépendance</p>
+        <h2 id="methode-h">Les règles que le site s’impose</h2>
+        <p class="h-sec-sub">Évaluer les politiques sur leurs mécanismes et leurs résultats, pas sur leurs étiquettes politiques.</p>
       </header>
-      <div id="h-countries"></div>
+      <ol class="h-principles">
+        <li><span class="mono">01</span><b>Même grille pour tous</b><p>Mêmes champs, même exigence pour chaque candidat et chaque famille politique.</p></li>
+        <li><span class="mono">02</span><b>Sources traçables</b><p>Chaque chiffre et chaque affirmation importante renvoie à une source accessible.</p></li>
+        <li><span class="mono">03</span><b>Faits, déclarations, estimations</b><p>Ce qui est vérifié, ce qui est annoncé et ce qui est estimé ne sont jamais mélangés.</p></li>
+        <li><span class="mono">04</span><b>Des mécanismes, pas des slogans</b><p>Une mesure est décrite par ce qu’elle fait, ce qu’elle coûte et à quelles conditions.</p></li>
+        <li><span class="mono">05</span><b>Résultats et limites</b><p>Les effets observés ailleurs sont présentés avec leurs limites et leurs différences de contexte.</p></li>
+        <li><span class="mono">06</span><b>Contexte national et international</b><p>Une politique se juge par rapport à la situation de départ et à la tendance du pays.</p></li>
+      </ol>
+      <p class="h-more"><a href="methodologie.html">Lire la méthodologie complète →</a></p>
     </div>
   </section>
 
-  <noscript><p class="nojs wrap">Cette page affiche ses données avec JavaScript. Activez-le pour la consulter, ou ouvrez directement les <a href="analyses-internationales.html">analyses internationales</a>.</p></noscript>
+  <!-- 5. Ressources complémentaires -->
+  <section class="h-band h-band--surface" id="ressources" aria-labelledby="ressources-h">
+    <div class="wrap">
+      <header class="h-sec-head">
+        <p class="label">Pour approfondir</p>
+        <h2 id="ressources-h">Ressources complémentaires</h2>
+      </header>
+      <div class="h-res">
+        <div>
+          <p class="label">Analyses internationales</p>
+          <h3>Des études de cas pour éclairer les propositions</h3>
+          <p id="h-res-an"></p>
+          <ul id="h-dossiers"></ul>
+          <a href="analyses-internationales.html">Ouvrir la bibliothèque d’analyses →</a>
+        </div>
+        <div>
+          <p class="label">Indicateurs</p>
+          <h3>Des données sourcées pour situer les pays</h3>
+          <p id="h-res-in"></p>
+          <ul id="h-domains"></ul>
+          <a href="indicateurs.html">Voir les indicateurs →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <noscript><p class="nojs wrap">Cette page affiche une partie de ses données avec JavaScript. Activez-le pour la consulter, ou ouvrez directement les <a href="candidats.html">candidats</a>, les <a href="thematiques.html">thématiques</a> ou les <a href="analyses-internationales.html">analyses internationales</a>.</p></noscript>
 </main>
 
 <div id="site-footer"></div>
@@ -96,6 +136,10 @@
 <script src="assets/js/layout.js"></script>
 <script src="assets/js/data-analyses.js"></script>
 <script src="assets/js/data-gauche.js"></script>
+<script src="assets/js/data-themes.js"></script>
+<script src="assets/js/data-france2027.js"></script>
+<script src="assets/js/data-indicateurs.js"></script>
+<script src="assets/js/search.js"></script>
 <script src="assets/js/home.js"></script>
 </body>
 </html>

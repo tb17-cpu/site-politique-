@@ -25,9 +25,9 @@
           <p>${esc(F.about)}</p></div>
         <div><h2>Explorer</h2><ul>${S.nav.map(n => `<li><a href="${n.href}">${esc(n.label)}</a></li>`).join("")}</ul></div>
         <div><h2>Méthodologie</h2><p>${esc(F.method)}</p>
-          <p><a href="analyses-internationales.html#methode">Lire la méthode et les limites</a></p></div>
+          <p><a href="methodologie.html">Lire la méthodologie complète</a></p></div>
         <div><h2>Sources</h2><p>${esc(F.sources)}</p>
-          <p><a href="analyses-internationales.html#overview">Voir les analyses et leurs sources</a></p>
+          <p><a href="analyses-internationales.html#overview">Voir les analyses internationales et leurs sources</a></p>
           <p class="f-slot">${esc(F.sourcesSlot)}</p></div>
       </div>
       <div class="f-bottom"><span>${esc(F.legal)}</span><span>${esc(F.identity)}</span></div>

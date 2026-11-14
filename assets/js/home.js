@@ -1,57 +1,20 @@
-/* Page d’accueil : tout le contenu chiffré est lu dans data-analyses.js (C, FINDINGS) et site-config.js. */
+/* Page d’accueil : blocs alimentés par les données (data-themes.js, data-analyses.js, data-indicateurs.js). */
 (function () {
-  const S = window.SITE;
-  const byId = Object.fromEntries(C.map(c => [c.id, c]));
-  const link = id => `analyses-internationales.html#${id}`;
   const $ = id => document.getElementById(id);
-  const fmtDate = iso => new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const main = C.filter(c => !c.cmp), cmp = C.filter(c => c.cmp);
 
-  const nMain = C.filter(c => !c.cmp).length, nCmp = C.filter(c => c.cmp).length;
-  $("h-meta").textContent = `Données arrêtées au ${S.dataAsOf} · ${nMain} pays analysés et ${nCmp} cas de comparaison`;
+  $("h-themes").innerHTML = THEMES.map(t => `<a class="h-theme" href="thematiques.html#${t.id}">
+      <span class="h-n">${t.subs.length} sous-thèmes</span><h3>${esc(t.title)}</h3>
+      <p>${esc(t.subs.slice(0, 3).join(" · "))}…</p></a>`).join("");
 
-  /* Chiffres marquants */
-  $("h-tiles").innerHTML = S.featured.map(f => {
-    const c = byId[f.id], k = c && c.k[f.k];
-    if (!k) return "";
-    return `<a class="h-tile" href="${link(c.id)}">
-      <span class="label">${esc(c.name)}</span>
-      <strong class="h-val ${k[3]}">${esc(k[1])}</strong>
-      <span class="h-lab">${esc(k[0])}</span>
-      <span class="h-sub">${fm(k[2])}</span></a>`;
-  }).join("");
+  $("h-door3-state").textContent = `Disponible · ${C.length + G.length} fiches pays`;
+  $("h-res-an").textContent = `${main.length} pays étudiés dans leur période de gouvernement de droite radicale, plus ${cmp.length} cas de comparaison (${cmp.map(c => c.name).join(", ")}). Chaque fiche applique la même grille : situation avant le mandat, indicateurs, indices de libertés, bilan.`;
+  $("h-dossiers").innerHTML =
+    `<li><a href="analyses-internationales.html#extreme-droite"><b>La droite radicale au pouvoir</b></a> · ${main.length} pays, disponible</li>
+     <li><a href="analyses-internationales.html#gauche"><b>La gauche au pouvoir</b></a> · ${G.length ? G.length + " pays" : "en construction"}</li>`;
 
-  /* Freedom House : dernier score connu */
-  $("h-fh").innerHTML = C.filter(c => c.ov && c.ov.fh)
-    .sort((a, b) => b.ov.fh[0] - a.ov.fh[0])
-    .map(c => {
-      const [v, y, ok] = c.ov.fh;
-      return `<a class="fh-row" href="${link(c.id)}">
-        <span class="fh-n">${esc(c.name)}</span>
-        <span class="fh-bar" aria-hidden="true"><i class="${ok ? "" : "est"}" style="width:${v}%"></i></span>
-        <span class="fh-v">${v}${y !== 2026 ? ` <u>(${y})</u>` : ""}${ok ? DV : DE}</span></a>`;
-    }).join("");
-
-  /* Constats transversaux (textes d’origine, inchangés) */
-  $("h-findings").innerHTML = FINDINGS.map(f =>
-    `<article><h4>${esc(f[0])}</h4><p>${fm(f[1])}</p></article>`).join("");
-
-  /* Grandes thématiques */
-  $("h-themes").innerHTML = S.themes.map(t => t.placeholder
-    ? `<div class="h-theme h-slot"><h3>${esc(t.title)}</h3><p>${esc(t.text)}</p></div>`
-    : `<div class="h-theme"><h3>${esc(t.title)}</h3><p>${esc(t.text)}</p>
-        <ul>${t.ids.filter(id => byId[id]).map(id =>
-          `<li><a href="${link(id)}"><span class="mono">${byId[id].code}</span> ${esc(byId[id].name)}</a></li>`).join("")}</ul></div>`).join("");
-
-  /* Accès aux analyses par pays */
-  const card = c => `<a class="h-c" href="${link(c.id)}">
-      <span class="h-c-code mono">${c.code}</span>
-      <span class="h-c-name">${esc(c.name)}</span>
-      <span class="h-c-sub">${esc(c.leader)}</span>
-      <span class="h-c-sub">${esc(c.period)}</span></a>`;
-  $("h-countries").innerHTML =
-    `<h3 class="h-grp">Droites radicales au pouvoir</h3><div class="h-cgrid">${C.filter(c => !c.cmp).map(card).join("")}</div>
-     <h3 class="h-grp">Pour comparer</h3><div class="h-cgrid">${C.filter(c => c.cmp).map(card).join("")}</div>
-     <h3 class="h-grp">La gauche au pouvoir</h3>
-     <div class="h-cgrid">${G.length ? G.map(card).join("")
-       : `<a class="h-c h-slot" href="analyses-internationales.html#gauche"><span class="h-c-code mono">…</span><span class="h-c-name">En construction</span><span class="h-c-sub">Pays à déterminer</span></a>`}</div>`;
+  $("h-res-in").textContent = `${INDIC_DOMAINS.length} domaines d’indicateurs sont prévus, chacun avec définition, unité, source et date. Les premiers chiffres disponibles sont ceux des dossiers internationaux.`;
+  const shown = INDIC_DOMAINS.slice(0, 5);
+  $("h-domains").innerHTML = shown.map(d => `<li>${esc(d.title)}</li>`).join("") +
+    `<li>et ${INDIC_DOMAINS.length - shown.length} autres domaines</li>`;
 })();
