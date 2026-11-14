@@ -25,8 +25,8 @@
       return x + `</div></section>`;
     };
     const second = has(c.second_round_status) ? UI.statusText("second", c.second_round_status) + (c.second_round_qualified_at ? ` (${e(UI.date(c.second_round_qualified_at))})` : "") : "";
-    let h = `<section class="blk"><header><b>Candidature</b><span>${UI.reliability(c.reliability_level, { notes: c.reliability_notes })}</span></header><div>
-      <div class="fiche-head">${UI.avatar(c.people, true)}<div>${UI.statusBadge("cand", c.candidacy_status)}${pt ? `<p class="fh-party">${e(pt.name + (pt.acronym ? ` (${pt.acronym})` : ""))}</p>` : ""}</div></div>
+    let h = `<section class="blk blk--party"${UI.partyColor(pt) ? ` style="--pc:${UI.partyColor(pt)}"` : ""}><header><b>Candidature</b><span>${UI.reliability(c.reliability_level, { notes: c.reliability_notes })}</span></header><div>
+      <div class="fiche-head">${UI.avatar(c.people, true)}<div>${UI.statusBadge("cand", c.candidacy_status)}${pt ? `<p class="fh-party">${UI.partyDot(pt)}${e(pt.name + (pt.acronym ? ` (${pt.acronym})` : ""))}</p>` : ""}</div></div>
       ${kv([
         ["Candidature annoncée le", UI.date(c.announcement_date)],
         ["Site officiel", UI.safeUrl(p.official_website) ? UI.link(p.official_website, p.official_website) : "", true],

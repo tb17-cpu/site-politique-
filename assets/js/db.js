@@ -96,8 +96,8 @@
   }
 
   /* ---- Fonctions par entité ---- */
-  const PERSON = "people(id,first_name,last_name,photo_url,biography,official_website,publication_status)";
-  const PARTY = "parties(id,name,acronym,website_url,publication_status)";
+  const PERSON = "people(id,first_name,last_name,photo_url,biography,official_website,photo_source_url,photo_credit,publication_status)";
+  const PARTY = "parties(id,name,acronym,website_url,political_color,publication_status)";
   const D = {
     DbError, humanMessage, rows, raw, one, count,
 

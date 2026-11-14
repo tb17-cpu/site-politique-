@@ -33,7 +33,7 @@ Le sélecteur de l'en-tête liste les élections publiées de Supabase (aucune n
 ## Portraits et positionnement politique
 
 - Portrait : `people.photo_url` s'il est publié, sinon un emplacement neutre explicite. Aucune image n'est inventée.
-- Positionnement gauche-droite (cinq niveaux, libellé toujours affiché) : aucune colonne dédiée n'existe encore. L'interface lit `political_position`, `political_position_note` et `political_position_uncertain` sur la candidature si ces colonnes sont créées un jour. En attendant, `testData` de `site-config.js` porte un exemple pour les deux candidats fictifs ; à supprimer avec eux.
+- Positionnement gauche-droite (cinq niveaux, libellé toujours affiché) : aucune colonne dédiée n'existe encore. L’échelle lit `political_position`, `political_position_note` et `political_position_uncertain` sur la candidature ; la couleur du parti vient de `parties.political_color`, le crédit de `people.photo_credit` et `photo_source_url`. Données lues dans la base (`candidacies.political_position*`).
 
 ## Opérations courantes
 

@@ -4,9 +4,9 @@
   const card = c => {
     const name = UI.person(c.people) || "Candidature";
     const party = c.parties ? (c.parties.name + (c.parties.acronym ? ` (${c.parties.acronym})` : "")) : "";
-    return `<a class="cand" href="candidat.html#${encodeURIComponent(c.id)}">${UI.avatar(c.people)}
+    return `<a class="cand"${UI.partyColor(c.parties) ? ` style="--pc:${UI.partyColor(c.parties)}"` : ""} href="candidat.html#${encodeURIComponent(c.id)}">${UI.avatar(c.people)}
       <div>${UI.statusBadge("cand", c.candidacy_status)}
-      <h3>${e(name)}</h3><p>${e(party)}</p>${c.updated_at ? `<p>Actualisé le ${e(UI.date(c.updated_at))}</p>` : ""}
+      <h3>${e(name)}</h3><p>${UI.partyDot(c.parties)}${e(party)}</p>${c.updated_at ? `<p>Actualisé le ${e(UI.date(c.updated_at))}</p>` : ""}
       ${UI.reliability(c.reliability_level)}</div></a>`;
   };
   const mount = $("c-list");

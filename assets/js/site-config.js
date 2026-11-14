@@ -30,17 +30,6 @@ window.SITE = {
     { id: "indicateurs", label: "Indicateurs",    href: "indicateurs.html" }
   ],
 
-  /* DONNÉES DE DÉMONSTRATION : candidats fictifs de test créés dans Supabase.
-     Sert uniquement à afficher un visuel « fictif » et un positionnement d'exemple tant que la base n'a pas de
-     colonne dédiée. À SUPPRIMER avec les candidats de test. Aucune personne réelle ne doit figurer ici. */
-  testData: {
-    fictionalPeople: ["Marc Valmont", "Claire Montel"],
-    positions: {
-      "Marc Valmont": { key: "right", note: "Positionnement de démonstration attribué à un candidat fictif de test." },
-      "Claire Montel": { key: "left", note: "Positionnement de démonstration attribué à une candidate fictive de test." }
-    }
-  },
-
   /* Chiffres de la page Indicateurs : { id du pays, rang de l’indicateur dans sa liste « k » }.
      Valeurs, libellés et sources viennent de data-analyses.js. */
   featured: [

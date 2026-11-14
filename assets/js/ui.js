@@ -109,31 +109,33 @@
     }
   };
 
-  /* ---------- Données de démonstration (candidats fictifs de test) ----------
-     TEMPORAIRE : à retirer quand les candidats de test seront supprimés de la base. */
   const nk = v => String(v == null ? "" : v).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
-  const TD = (window.SITE && window.SITE.testData) || { fictionalPeople: [], positions: {} };
-  const isFictional = p => !!p && (TD.fictionalPeople || []).some(n => nk(n) === nk(U.person(p)));
+
+  /* Couleur du parti : lue dans parties.political_color, jamais codée en dur ; absente ou invalide : style neutre.
+     Elle est indépendante du positionnement gauche-droite. */
+  U.partyColor = pt => { const c = pt && String(pt.political_color || "").trim(); return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c) ? c : ""; };
+  U.partyDot = pt => U.partyColor(pt) ? `<i class="party-dot" style="--pc:${U.partyColor(pt)}" aria-hidden="true"></i>` : "";
 
   /* ---------- Portrait ----------
      Photographie officielle si une URL est publiée ; sinon emplacement neutre avec indication explicite.
      Cadrage identique pour tous : 3/4, recadrage par le haut. Aucune image n'est jamais inventée. */
   const SIL = '<svg viewBox="0 0 90 120" aria-hidden="true" focusable="false"><circle cx="45" cy="42" r="19"/><path d="M8 120c0-28 16-44 37-44s37 16 37 44z"/></svg>';
   U.portrait = (p, size) => {
-    const sz = size === "lg" ? "portrait--lg" : "portrait--sm", name = U.person(p) || "Candidat";
-    const fic = isFictional(p);
-    const ph = `<span class="portrait-ph${fic ? " portrait-ph--fic" : ""}" role="img" aria-label="${e(fic ? "Visuel provisoire : candidat fictif de test, aucune photographie" : "Photographie officielle non disponible")}">${SIL}</span>`;
-    const cap = fic ? "Visuel provisoire · candidat fictif" : (p && U.safeUrl(p.photo_url) ? "" : "Photographie officielle non disponible");
-    const img = p && U.safeUrl(p.photo_url)
+    const lg = size === "lg", name = U.person(p) || "Candidat", has = !!(p && U.safeUrl(p.photo_url));
+    const ph = `<span class="portrait-ph" role="img" aria-label="Photographie non disponible">${SIL}</span>`;
+    const img = has
       ? `<img src="${e(U.safeUrl(p.photo_url))}" alt="${e("Photographie de " + name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML=this.dataset.ph" data-ph="${e(ph)}">` : ph;
-    return `<figure class="portrait ${sz}"><div class="portrait-box">${img}</div>${cap ? `<figcaption>${e(cap)}</figcaption>` : ""}</figure>`;
+    /* Crédit et source de la photographie : affichés quand ils sont renseignés (fiche détaillée). */
+    const credit = has && lg && p.photo_credit ? e(p.photo_credit) : "", src = has && lg && U.safeUrl(p.photo_source_url);
+    const cap = !has ? "Photographie non disponible" : "";
+    const tail = (credit || src) ? `<figcaption class="credit">${credit ? "Photo : " + credit : ""}${credit && src ? " · " : ""}${src ? `<a href="${e(src)}" target="_blank" rel="noopener">Source de la photo</a>` : ""}</figcaption>` : (cap ? `<figcaption>${e(cap)}</figcaption>` : "");
+    return `<figure class="portrait ${lg ? "portrait--lg" : "portrait--sm"}"><div class="portrait-box">${img}</div>${tail}</figure>`;
   };
   U.avatar = (p, big) => U.portrait(p, big ? "lg" : "sm");
 
   /* ---------- Positionnement politique (échelle gauche-droite en cinq niveaux) ----------
      Lecture éditoriale d'Au résultat : distincte de l'étiquette du candidat, jamais déduite du nom du parti.
-     Source des données, par ordre : colonnes de la candidature (political_position, political_position_note,
-     political_position_uncertain) si elles existent un jour ; sinon table de démonstration (site-config.js). */
+     Données : colonnes de la candidature (political_position, political_position_note, political_position_uncertain) : propre à l'élection. */
   const SCALE = [
     { key: "left", label: "Gauche", color: "#c8323c" },
     { key: "center_left", label: "Centre gauche", color: "#e585a2" },
@@ -144,9 +146,7 @@
   U.positionOf = c => {
     if (!c) return null;
     const k = nk(c.political_position).replace(/[\s-]+/g, "_");
-    if (SCALE.some(x => x.key === k)) return { key: k, note: c.political_position_note, uncertain: !!c.political_position_uncertain, demo: false };
-    const t = c.people && (TD.positions || {})[Object.keys(TD.positions || {}).find(n => nk(n) === nk(U.person(c.people)))];
-    return t ? { key: t.key, note: t.note, uncertain: !!t.uncertain, demo: true } : null;
+    return SCALE.some(x => x.key === k) ? { key: k, note: c.political_position_note, uncertain: !!c.political_position_uncertain } : null;
   };
   U.positionBlock = c => {
     const pos = U.positionOf(c), i = pos ? SCALE.findIndex(x => x.key === pos.key) : -1;
@@ -154,7 +154,7 @@
     if (i < 0) return `<section class="blk"><header><b>Positionnement politique</b><span>Lecture éditoriale d’Au résultat</span></header><div><p class="p-sub quiet">Positionnement non renseigné pour cette candidature. ${""}</p>${intro}</div></section>`;
     const cur = SCALE[i], why = pos.note ? e(pos.note) : "Aucune justification n’est encore publiée pour ce positionnement.";
     return `<section class="blk"><header><b>Positionnement politique</b><span>Lecture éditoriale d’Au résultat</span></header><div>
-      <p class="pos-line">Positionnement : <strong style="--c:${cur.color}"><i class="pos-dot" aria-hidden="true"></i>${e(cur.label)}</strong>${pos.uncertain ? ' <span class="pos-unc">Positionnement incertain ou contesté</span>' : ""}${pos.demo ? ' <span class="pos-demo">Donnée de démonstration · candidat fictif</span>' : ""}</p>
+      <p class="pos-line">Positionnement : <strong style="--c:${cur.color}"><i class="pos-dot" aria-hidden="true"></i>${e(cur.label)}</strong>${pos.uncertain ? ' <span class="pos-unc">Positionnement incertain ou contesté</span>' : ""}</p>
       <ol class="pos-scale" aria-label="${e("Échelle de la gauche à la droite : " + cur.label)}">${SCALE.map((x, n) =>
         `<li class="${n === i ? "on" : ""}"${n === i ? ` aria-current="true" title="${e(pos.note || cur.label)}"` : ""}><span class="seg" style="background:${x.color}"></span><span class="lab">${e(x.label)}</span>${n === i ? '<span class="mark" aria-hidden="true">▲</span>' : ""}</li>`).join("")}</ol>
       <details class="pos-why"><summary>Pourquoi ce positionnement ?</summary><p>${why}</p></details>${intro}</div></section>`;
