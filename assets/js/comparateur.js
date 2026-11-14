@@ -7,42 +7,61 @@
   const cid = m => { const c = m.program_versions && m.program_versions.programs && m.program_versions.programs.candidacies; return c && c.id; };
   const cell = v => v ? `<td>${e(v)}</td>` : `<td class="na">Non renseigné</td>`;
 
+  const cost = m => m.announced_cost != null && m.announced_cost !== "" ? `${m.announced_cost}${m.cost_currency ? " " + m.cost_currency : ""}${m.cost_period ? " · " + m.cost_period : ""}` : "";
+  const selected = () => { const ids = [...document.querySelectorAll("#cmp-pick input:checked")].map(i => i.value); return measures.filter(m => ids.includes(String(m.id))); };
+  const setStatus = (html, kind) => { const st = $("cmp-status"); st.className = "cmp-status" + (kind ? " " + kind : ""); st.innerHTML = html; };
+
+  /* Une comparaison exige au moins deux candidats distincts parmi les mesures cochées (quatre mesures au plus). */
   async function table() {
-    const ids = [...document.querySelectorAll("#cmp-pick input:checked")].map(i => i.value);
-    const sel = measures.filter(m => ids.includes(String(m.id)));
-    const out = $("cmp-table");
-    if (sel.length < 2) { out.innerHTML = UI.emptyHtml("Sélectionnez au moins deux mesures."); return; }
-    const cost = m => m.announced_cost != null && m.announced_cost !== "" ? `${m.announced_cost}${m.cost_currency ? " " + m.cost_currency : ""}${m.cost_period ? " · " + m.cost_period : ""}` : "";
+    const sel = selected(), out = $("cmp-table"), cands = new Set(sel.map(cid));
+    const boxes = [...document.querySelectorAll("#cmp-pick input")];
+    boxes.forEach(b => { b.disabled = !b.checked && sel.length >= MAX; });
+    out.innerHTML = "";
+    if (sel.length < 2) { setStatus(`<b>${sel.length} mesure sélectionnée.</b> Cochez au moins deux mesures, issues de candidats différents.`); return; }
+    if (cands.size < 2) { setStatus(`<b>Comparaison inter-candidats impossible.</b> Les mesures cochées viennent toutes du même candidat. Cochez au moins une mesure d’un autre candidat.`, "warn"); return; }
+    setStatus(`<b>${sel.length} mesures comparées</b>, ${cands.size} candidats. Quatre mesures au plus.`, "ok");
     const rows = [["Candidat", m => who(m), 0], ["Formulation originale", m => m.original_text, 1], ["Objectif annoncé", m => m.announced_objective, 1], ["Coût annoncé", cost, 1], ["Financement annoncé", m => m.announced_funding, 1],
       ["Mécanisme (Au résultat)", m => m.mechanism, 0], ["Publics concernés (Au résultat)", m => m.target_groups, 0], ["Modalités (Au résultat)", m => m.implementation_details, 0]];
     out.innerHTML = `<div class="scroll"><table class="cmp"><thead><tr><th scope="col">Champ</th>${sel.map(m => `<th scope="col"><a href="mesure.html#${encodeURIComponent(m.id)}">${e(m.title)}</a></th>`).join("")}</tr></thead><tbody>
-      ${rows.map(r => `<tr><th scope="row">${e(r[0])}${r[2] ? '<br><small style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--mix)">déclaré par le candidat</small>' : ""}</th>${sel.map(m => cell(r[1](m))).join("")}</tr>`).join("")}
-      <tr><th scope="row">Fiabilité</th>${sel.map(m => `<td>${UI.reliability(m.reliability_level, { notes: m.reliability_notes })}</td>`).join("")}</tr></tbody></table></div>`;
+      ${rows.map(r => `<tr><th scope="row">${e(r[0])}${r[2] ? '<small class="decl">déclaré par le candidat</small>' : ""}</th>${sel.map(m => cell(r[1](m))).join("")}</tr>`).join("")}
+      <tr><th scope="row">Fiabilité</th>${sel.map(m => `<td>${UI.reliability(m.reliability_level, { notes: m.reliability_notes, checked: m.reliability_checked_at })}</td>`).join("")}</tr></tbody></table></div>`;
+    const mine = sel.map(m => m.id).join(",");
     try {
       rel = await DB.relations(sel.map(m => m.id));
+      if (selected().map(m => m.id).join(",") !== mine) return;   /* la sélection a changé pendant le chargement */
       const set = new Set(sel.map(m => m.id));
       const rr = rel.filter(r => set.has(r.measure_a_id) && set.has(r.measure_b_id));
       const t = id => (sel.find(m => m.id === id) || {}).title;
-      out.innerHTML += `<h3 class="h-h3" style="margin:26px 0 8px;font-size:21px">Relations entre ces mesures</h3>` +
-        (rr.length ? `<ul class="refs">${rr.map(r => `<li><b>${e(UI.humanize(r.relation_type))}</b> : ${e(t(r.measure_a_id))} / ${e(t(r.measure_b_id))}${r.explanation ? `<small>${e(r.explanation)}</small>` : ""}</li>`).join("")}</ul>` : `<p class="p-sub">Aucune relation n’est enregistrée entre ces mesures.</p>`);
-    } catch (err) { out.innerHTML += UI.errorHtml(err); }
+      out.insertAdjacentHTML("beforeend", `<h3 class="h-h3 cmp-h">Relations entre ces mesures</h3>` +
+        (rr.length ? `<ul class="refs">${rr.map(r => `<li><b>${e(UI.formatRelationType(r.relation_type))}</b> : ${e(t(r.measure_a_id))} / ${e(t(r.measure_b_id))}${r.explanation ? `<small>${e(r.explanation)}</small>` : ""}</li>`).join("")}</ul>` : `<p class="p-sub">Aucune relation n’est enregistrée entre ces mesures.</p>`));
+    } catch (err) { out.insertAdjacentHTML("beforeend", UI.errorHtml(err)); }
   }
+
+  /* Présélection : une mesure par candidat d'abord, pour que la comparaison soit inter-candidats d'emblée. */
+  const preselect = ms => {
+    const chosen = [], seen = new Set();
+    ms.forEach(m => { if (chosen.length < MAX && !seen.has(cid(m))) { seen.add(cid(m)); chosen.push(m.id); } });
+    ms.forEach(m => { if (chosen.length < MAX && !chosen.includes(m.id)) chosen.push(m.id); });
+    return new Set(chosen.map(String));
+  };
 
   async function pick() {
     const id = $("cmp-sel").value, box = $("cmp-pick"), out = $("cmp-table");
-    out.innerHTML = ""; box.innerHTML = "";
+    out.innerHTML = ""; box.innerHTML = ""; setStatus("");
     if (!id) return;
     history.replaceState(null, "", "#" + encodeURIComponent((themes.find(t => String(t.id) === id) || {}).slug || ""));
     await UI.mount(box, async () => { measures = await DB.measuresForCompare([id]); return measures; }, ms => {
-      if (ms.length < 2) return "";
-      return ms.map((m, i) => `<label><input type="checkbox" value="${e(m.id)}"${i < MAX ? " checked" : ""}><span>${e(m.title)}<br><small style="color:var(--muted)">${e(who(m))}</small></span></label>`).join("");
+      const on = preselect(ms);
+      return ms.map(m => `<label><input type="checkbox" value="${e(m.id)}"${on.has(String(m.id)) ? " checked" : ""}><span>${e(m.title)}<br><small class="who">${e(who(m))}</small></span></label>`).join("");
     }, { loading: "Chargement des mesures…", isEmpty: () => false });
-    if (measures.length < 2) {
-      box.innerHTML = UI.emptyHtml(`<p><b>Comparaison impossible pour l’instant.</b></p><p style="margin-top:8px">${measures.length ? "Une seule mesure" : "Aucune mesure"} publiée dans cette sous-thématique : il en faut au moins deux, de candidats différents, pour comparer.</p>`);
+    if (!measures.length) { box.innerHTML = ""; setStatus(`<b>Aucune mesure publiée</b> dans cette sous-thématique pour l’instant.`); return; }
+    if (new Set(measures.map(cid)).size < 2) {
+      /* Pas de comparaison possible : on liste les mesures, sans cases à cocher. */
+      box.innerHTML = `<ul class="refs">${measures.map(m => `<li><a href="mesure.html#${encodeURIComponent(m.id)}">${e(m.title)}</a><small>${e(who(m))}</small></li>`).join("")}</ul>`;
+      setStatus(`<b>Comparaison impossible pour l’instant.</b> Une comparaison demande des mesures publiées par au moins deux candidats différents dans la même sous-thématique. Ici, un seul candidat a des mesures publiées.`);
       return;
     }
-    if (new Set(measures.map(cid)).size < 2) box.insertAdjacentHTML("beforebegin", `<p class="p-sub">Toutes ces mesures viennent du même candidat.</p>`);
-    box.addEventListener("change", table); table();
+    box.onchange = table; table();
   }
 
   UI.mount($("cmp-start"), async () => { themes = await DB.themes(); return themes; }, all => {

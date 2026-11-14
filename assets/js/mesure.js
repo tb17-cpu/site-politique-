@@ -1,9 +1,14 @@
 /* Fiche détaillée d'une mesure (mesure.html#identifiant) : déclarations du candidat, description structurée et analyses d'Au résultat, distinguées visuellement. */
 (function () {
   const $ = id => document.getElementById(id), e = esc;
-  const kv = rows => { const r = rows.filter(x => x[1] !== "" && x[1] != null); return r.length ? `<dl class="kv">${r.map(x => `<dt>${e(x[0])}</dt><dd class="long">${x[2] ? x[1] : e(x[1])}</dd>`).join("")}</dl>` : `<p class="p-sub" style="margin:12px 0">Non renseigné.</p>`; };
+  /* Champs vides : jamais présentés comme « le candidat n'a rien proposé » ; ils sont simplement signalés comme non documentés. */
+  const kv = (rows, who) => {
+    const r = rows.filter(x => x[1] !== "" && x[1] != null), miss = rows.filter(x => x[1] === "" || x[1] == null).map(x => x[0]);
+    const note = miss.length ? `<p class="p-sub quiet">${r.length ? "Pas encore documenté" : "Aucune information documentée pour l’instant"} : ${e(miss.join(", ").toLowerCase())}.${who === "decl" ? " Cela ne signifie pas que le candidat n’a rien proposé : l’information n’a simplement pas encore été saisie." : ""}</p>` : "";
+    return (r.length ? `<dl class="kv">${r.map(x => `<dt>${e(x[0])}</dt><dd class="long">${x[2] ? x[1] : e(x[1])}</dd>`).join("")}</dl>` : "") + note;
+  };
   const srcList = (arr, quoteKey, locKey) => arr.length ? `<ul class="refs">${arr.map(s => `<li>${s.sources ? (UI.link(s.sources.url, s.sources.title) || e(s.sources.title)) : "Source"}
-      <small>${[s.sources && s.sources.publisher, s.sources && UI.humanize(s.sources.source_type), locKey && s[locKey], UI.date(s.evidence_date || (s.sources && s.sources.publication_date))].filter(Boolean).map(e).join(" · ")}</small>
+      <small>${[s.sources && s.sources.publisher, s.sources && UI.formatSourceType(s.sources.source_type), locKey && s[locKey], UI.date(s.evidence_date || (s.sources && s.sources.publication_date))].filter(Boolean).map(e).join(" · ")}</small>
       ${quoteKey && s[quoteKey] ? `<small>« ${e(s[quoteKey])} »</small>` : ""}${s.notes ? `<small>${e(s.notes)}</small>` : ""}
       <small>${UI.reliability(s.reliability_level)}</small></li>`).join("")}</ul>` : `<p class="p-sub" style="margin:12px 0">Aucune source publiée.</p>`;
 
@@ -17,7 +22,7 @@
     let h = `<p style="margin-bottom:18px">${UI.reliability(m.reliability_level, { notes: m.reliability_notes, checked: m.reliability_checked_at, full: true })}</p>
       <section class="blk blk--decl"><header><b>Déclaré par le candidat</b><span>Formulation et éléments annoncés dans le programme</span></header><div>
         ${m.original_text ? `<blockquote class="quote">${e(m.original_text)}</blockquote>` : ""}
-        ${kv([["Objectif annoncé", m.announced_objective], ["Coût annoncé", cost], ["Financement annoncé", m.announced_funding]])}
+        ${kv([["Objectif annoncé", m.announced_objective], ["Coût annoncé", cost], ["Financement annoncé", m.announced_funding]], "decl")}
         ${pv ? `<p class="p-sub" style="margin:8px 0 0;font-size:13px">${e(pg && pg.title || "Programme")} · version ${e(pv.version_label || pv.version_number || "")}${pv.publication_date ? " · " + e(UI.date(pv.publication_date)) : ""}</p>` : ""}
       </div></section>
       <section class="blk blk--ar"><header><b>Description structurée par Au résultat</b><span>Reformulation et mise en forme éditoriales, sans jugement</span></header><div>

@@ -11,6 +11,7 @@
   const humanMessage = e => {
     if (!(e instanceof DbError)) return "Une erreur inattendue est survenue.";
     if (e.kind === "timeout") return "La base de données met trop de temps à répondre.";
+    if (e.kind === "incomplete") return "La base de données a renvoyé une réponse incomplète.";
     if (e.kind === "network") return "Impossible de joindre la base de données. Vérifiez votre connexion.";
     if (e.status === 401 || e.status === 403) return "L’accès à ces données est refusé.";
     if (e.status === 404) return "Cette donnée est introuvable.";
@@ -44,12 +45,41 @@
     return `${table}?${p.join("&")}`;
   }
 
-  /* Garde-fou : jamais d'affichage d'une ligne explicitement en brouillon, même si une règle RLS était trop large. */
-  const visible = rows => rows.filter(r => !r || r.publication_status !== "draft");
+  /* ---- Filtrage complémentaire côté navigateur (la protection principale reste RLS) ----
+     Tables ayant une colonne publication_status : seules les lignes dont le statut vaut exactement « published »
+     sont conservées (statut absent, brouillon, archivé ou inconnu : écartés).
+     Tables de liaison sans statut propre (measure_sources, measure_themes, measure_relations, analysis_sources,
+     candidacy_sources, candidacy_sponsorship_territories) : pas de filtre de statut ; leurs lignes sont écartées
+     quand l'objet publié qu'elles relient (source, thème) n'est pas visible. */
+  const PUBLISHED = "published";
+  const WITH_STATUS = new Set(["countries", "elections", "people", "parties", "candidacies", "programs", "program_versions",
+    "themes", "measures", "sources", "analyses", "indicators", "indicator_observations"]);
+  const REQUIRED_EMBED = { measure_sources: "sources", analysis_sources: "sources", candidacy_sources: "sources", measure_themes: "themes" };
+
+  /* Nettoyage récursif des données imbriquées : un objet imbriqué portant un statut autre que « published »
+     devient null ; une ligne de liaison dont l'objet requis est absent disparaît. */
+  function clean(v, key) {
+    if (Array.isArray(v)) {
+      const need = REQUIRED_EMBED[key];
+      return v.map(x => clean(x)).filter(x => x !== null && !(need && x && typeof x === "object" && x[need] == null));
+    }
+    if (v && typeof v === "object") {
+      if (Object.prototype.hasOwnProperty.call(v, "publication_status") && v.publication_status !== PUBLISHED) return null;
+      const o = {};
+      for (const k of Object.keys(v)) o[k] = clean(v[k], k);
+      return o;
+    }
+    return v;
+  }
+  const visible = (table, rows) => rows
+    .filter(r => !WITH_STATUS.has(table) || (r && r.publication_status === PUBLISHED))
+    .map(r => clean(r)).filter(r => r !== null);
+  /* Une mesure n'est présentée que si toute sa chaîne parente est visible : version, programme, candidature, candidat. */
+  const chainOk = m => !!(m && m.program_versions && m.program_versions.programs && m.program_versions.programs.candidacies && m.program_versions.programs.candidacies.people);
 
   async function rows(table, o) {
     const key = url(table, o);
-    if (!memo.has(key)) memo.set(key, call(key).then(r => r.json()).then(visible).catch(e => { memo.delete(key); throw e; }));
+    if (!memo.has(key)) memo.set(key, call(key).then(r => r.json()).then(r => visible(table, r)).catch(e => { memo.delete(key); throw e; }));
     return memo.get(key);
   }
   /* Sans le garde-fou : réservé au diagnostic, pour constater ce que RLS laisse passer. */
@@ -59,12 +89,13 @@
   async function count(table, filter) {
     const res = await call(url(table, { select: "*", filter }), { head: true, headers: { Prefer: "count=exact", Range: "0-0", "Range-Unit": "items" } });
     const m = /\/(\d+)$/.exec(res.headers.get("content-range") || "");
-    return m ? +m[1] : 0;
+    if (!m) throw new DbError("incomplete", "Réponse sans total");
+    return +m[1];
   }
 
   /* ---- Fonctions par entité ---- */
-  const PERSON = "people(id,first_name,last_name,photo_url,biography,official_website)";
-  const PARTY = "parties(id,name,acronym,website_url)";
+  const PERSON = "people(id,first_name,last_name,photo_url,biography,official_website,publication_status)";
+  const PARTY = "parties(id,name,acronym,website_url,publication_status)";
   const D = {
     DbError, humanMessage, rows, raw, one, count,
 
@@ -73,46 +104,47 @@
 
     /* Élection par défaut (France 2027), avec son pays. */
     election: () => one("elections", {
-      select: "*,countries!inner(id,name,iso2)",
+      select: "*,countries!inner(id,name,iso2,publication_status)",
       filter: { "countries.iso2": "eq." + CFG.election.iso2, year: "eq." + CFG.election.year }
     }),
 
+    /* Une candidature dont le candidat n'est pas visible n'est pas présentée. */
     candidacies: electionId => rows("candidacies", {
       select: `*,${PERSON},${PARTY}`, filter: { election_id: "eq." + electionId }, order: "announcement_date.asc.nullslast"
-    }),
+    }).then(r => r.filter(c => c.people)),
 
-    candidacy: id => one("candidacies", {
-      select: `*,${PERSON},${PARTY},elections(id,name,year),candidacy_sources(*,sources(*)),candidacy_sponsorship_territories(*,sources(title,url)),programs(*,program_versions(*,measures(id,title,reliability_level,display_order,publication_status)))`,
+    candidacy: id => rows("candidacies", { limit: 1,
+      select: `*,${PERSON},${PARTY},elections(id,name,year,publication_status),candidacy_sources(*,sources(*)),candidacy_sponsorship_territories(*,sources(title,url,publication_status)),programs(*,program_versions(*,measures(id,title,reliability_level,display_order,publication_status)))`,
       filter: { id: "eq." + id }
-    }),
+    }).then(r => (r[0] && r[0].people) ? r[0] : null),
 
-    measure: id => one("measures", {
-      select: `*,program_versions(*,programs(*,candidacies(id,candidacy_status,${PERSON},${PARTY}))),measure_themes(themes(id,name,slug,parent_id)),measure_sources(*,sources(*)),analyses(*,analysis_sources(*,sources(*)))`,
+    measure: id => rows("measures", { limit: 1,
+      select: `*,program_versions(*,programs(*,candidacies(id,candidacy_status,${PERSON},${PARTY}))),measure_themes(themes(id,name,slug,parent_id,publication_status)),measure_sources(*,sources(*)),analyses(*,analysis_sources(*,sources(*)))`,
       filter: { id: "eq." + id }
-    }),
+    }).then(r => chainOk(r[0]) ? r[0] : null),
 
     /* Mesures (avec candidat) pour un ensemble de thèmes. */
     measuresByThemes: themeIds => rows("measures", {
-      select: `id,title,reliability_level,program_versions(version_label,programs(candidacies(id,${PERSON}))),measure_themes!inner(theme_id)`,
+      select: `id,title,reliability_level,publication_status,program_versions(version_label,publication_status,programs(publication_status,candidacies(id,publication_status,${PERSON}))),measure_themes!inner(theme_id)`,
       filter: { "measure_themes.theme_id": `in.(${themeIds.join(",")})` }, order: "display_order.asc"
-    }),
+    }).then(r => r.filter(chainOk)),
 
     /* Mesures détaillées pour le comparateur. */
     measuresForCompare: themeIds => rows("measures", {
-      select: `*,program_versions(version_label,programs(candidacies(id,${PERSON},${PARTY}))),measure_themes!inner(theme_id)`,
+      select: `*,program_versions(version_label,publication_status,programs(publication_status,candidacies(id,publication_status,${PERSON},${PARTY}))),measure_themes!inner(theme_id)`,
       filter: { "measure_themes.theme_id": `in.(${themeIds.join(",")})` }, order: "display_order.asc"
-    }),
+    }).then(r => r.filter(chainOk)),
     relations: ids => rows("measure_relations", { filter: { or: `(measure_a_id.in.(${ids.join(",")}),measure_b_id.in.(${ids.join(",")}))` } }),
 
     indicators: () => rows("indicators", { order: "domain.asc,name.asc" }),
-    observations: () => rows("indicator_observations", { select: "*,countries(name,iso2),sources(title,url)", order: "period_end.desc.nullslast" }),
+    observations: () => rows("indicator_observations", { select: "*,countries(name,iso2,publication_status),sources(title,url,publication_status)", order: "period_end.desc.nullslast" }),
 
     /* Recherche : jeu léger chargé à la demande. */
     searchIndex: async () => {
       const [themes, measures, cands] = await Promise.all([
         D.themes(),
-        rows("measures", { select: "id,title" }),
-        rows("candidacies", { select: `id,${PERSON}` })
+        rows("measures", { select: "id,title,publication_status,program_versions(publication_status,programs(publication_status,candidacies(id,publication_status,people(id,publication_status))))" }).then(r => r.filter(chainOk)),
+        rows("candidacies", { select: `id,publication_status,${PERSON}` }).then(r => r.filter(c => c.people))
       ]);
       return { themes, measures, cands };
     }

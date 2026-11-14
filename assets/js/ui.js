@@ -13,6 +13,57 @@
   U.person = p => p ? [p.first_name, p.last_name].filter(Boolean).join(" ") : "";
   /* « second_round » → « Second round » : affichage lisible d'une valeur technique sans en inventer le sens. */
   U.humanize = s => s ? String(s).replace(/[_-]+/g, " ").replace(/^./, c => c.toUpperCase()) : "";
+  /* ---------- Libellés français des champs de statut ----------
+     Chaque champ a sa propre table : une même valeur technique (« qualified ») n'a pas le même sens
+     pour une candidature, des parrainages ou le second tour. Valeur inconnue : libellé de repli,
+     jamais de traduction inventée ; la valeur technique reste visible dans l'infobulle. */
+  const norm = v => String(v == null ? "" : v).trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const table = (map, fallback) => {
+    const f = v => { const k = norm(v); return k === "" ? { label: "Non précisé", known: false, raw: "" } : map[k] ? { label: map[k], known: true, raw: String(v) } : { label: fallback, known: false, raw: String(v) }; };
+    return f;
+  };
+  const CANDIDACY = table({
+    unconfirmed: "Non confirmée", rumored: "Candidature évoquée", declared: "Candidature déclarée",
+    nominated: "Candidat investi", qualified: "Qualifié pour le premier tour", withdrawn: "Candidature retirée", rejected: "Candidature rejetée"
+  }, "Statut à préciser");
+  const SPONSORSHIP = table({
+    not_started: "Collecte non commencée", in_progress: "Collecte en cours", collecting: "Collecte en cours",
+    claimed: "Parrainages annoncés, non validés", validated: "Parrainages validés officiellement", qualified: "Parrainages validés officiellement",
+    insufficient: "Seuil non atteint", failed: "Seuil non atteint", unknown: "Non connu", not_applicable: "Sans objet"
+  }, "Statut des parrainages à préciser");
+  const SECOND = table({
+    not_applicable: "Sans objet", not_started: "Pas encore concerné", unknown: "Non déterminé", pending: "En attente du résultat du premier tour",
+    qualified: "Qualifié pour le second tour", not_qualified: "Non qualifié pour le second tour", eliminated: "Éliminé au premier tour", withdrawn: "Retiré avant le second tour"
+  }, "Situation au second tour à préciser");
+  const RELATION = table({
+    similar: "Mesures similaires", complementary: "Mesures complémentaires", opposed: "Mesures opposées", opposite: "Mesures opposées",
+    contradictory: "Mesures opposées", no_equivalent: "Sans équivalent direct", none: "Sans équivalent direct"
+  }, "Relation à préciser");
+  const SOURCE_TYPE = table({
+    official_program: "Programme officiel", program: "Programme officiel", programme: "Programme officiel", official_document: "Document officiel",
+    official_website: "Site officiel", website: "Site web", press: "Article de presse", press_article: "Article de presse", article: "Article de presse",
+    interview: "Interview", speech: "Discours", social_media: "Réseaux sociaux", report: "Rapport", study: "Étude", statistics: "Statistiques officielles",
+    legal_text: "Texte juridique", law: "Texte juridique", other: "Autre source"
+  }, "Type de source à préciser");
+  const SOURCE_LINK = table({
+    announcement: "Annonce de candidature", declaration: "Déclaration de candidature", investiture: "Investiture", nomination: "Investiture",
+    sponsorship: "Parrainages", official_list: "Liste officielle", biography: "Biographie", other: "Autre"
+  }, "Nature du lien à préciser");
+  const wrap = f => v => f(v).label;
+  U.formatCandidacyStatus = wrap(CANDIDACY);
+  U.formatSponsorshipStatus = wrap(SPONSORSHIP);
+  U.formatSecondRoundStatus = wrap(SECOND);
+  U.formatRelationType = wrap(RELATION);
+  U.formatSourceType = wrap(SOURCE_TYPE);
+  U.formatSourceLink = wrap(SOURCE_LINK);
+  U.isKnownCandidacyStatus = v => CANDIDACY(v).known;
+  U.isKnownSponsorshipStatus = v => SPONSORSHIP(v).known;
+  U.isKnownSecondRoundStatus = v => SECOND(v).known;
+  /* Pastille de statut : libellé français, valeur technique en infobulle. */
+  U.statusBadge = (fmt, v) => { const f = { cand: CANDIDACY, spons: SPONSORSHIP, second: SECOND }[fmt](v);
+    return `<span class="statut"${f.raw ? ` title="${e("Valeur technique : " + f.raw)}"` : ""}>${e(f.label)}</span>`; };
+  U.statusText = (fmt, v) => { const f = { cand: CANDIDACY, spons: SPONSORSHIP, second: SECOND }[fmt](v);
+    return f.raw && !f.known ? `<span title="${e("Valeur technique : " + f.raw)}">${e(f.label)}</span>` : e(f.label); };
   U.link = (u, label) => U.safeUrl(u) ? `<a href="${e(U.safeUrl(u))}" rel="noopener" target="_blank">${e(label || u)}</a>` : e(label || "");
 
   /* ---------- Fiabilité : un seul composant ---------- */
@@ -62,8 +113,8 @@
   };
 
   /* Cartes de personne : photo si disponible. */
-  U.avatar = p => p && U.safeUrl(p.photo_url)
-    ? `<img class="avatar" src="${e(U.safeUrl(p.photo_url))}" alt="" loading="lazy" width="64" height="64" referrerpolicy="no-referrer" onerror="this.remove()">` : `<span class="avatar avatar-ph" aria-hidden="true">${e((p && p.last_name || "?").charAt(0))}</span>`;
+  U.avatar = (p, big) => p && U.safeUrl(p.photo_url)
+    ? `<img class="avatar${big ? " avatar-lg" : ""}" src="${e(U.safeUrl(p.photo_url))}" alt="${e("Portrait de " + U.person(p))}" loading="lazy" width="64" height="64" referrerpolicy="no-referrer" onerror="this.remove()">` : `<span class="avatar${big ? " avatar-lg" : ""} avatar-ph" aria-hidden="true">${e((p && p.last_name || "?").charAt(0))}</span>`;
 
   window.UI = U;
 })();
