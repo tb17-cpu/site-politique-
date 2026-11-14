@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Indicateurs · Au résultat</title>
-<meta name="description" content="Domaines d’indicateurs économiques, sociaux, institutionnels et environnementaux, et premiers chiffres issus des analyses internationales.">
+<meta name="description" content="Indicateurs publiés avec définition, unité, source et date, et premiers chiffres issus des analyses internationales.">
 <meta property="og:title" content="Indicateurs · Au résultat">
-<meta property="og:description" content="Domaines d’indicateurs économiques, sociaux, institutionnels et environnementaux, et premiers chiffres issus des analyses internationales.">
+<meta property="og:description" content="Indicateurs publiés avec définition, unité, source et date, et premiers chiffres issus des analyses internationales.">
 
 <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="assets/css/base.css">
 <link rel="stylesheet" href="assets/css/pages.css">
+<link rel="stylesheet" href="assets/css/data.css">
 <link rel="stylesheet" href="assets/css/dashboard.css">
 </head>
 <body data-page="indicateurs">
@@ -25,17 +26,17 @@
 <header class="p-head"><div class="wrap">
     <p class="label">Données</p>
     <h1>Indicateurs</h1>
-    <p class="p-lede">Un espace consacré aux données qui permettent de comprendre la situation d’un pays et de comparer ses performances. Chaque indicateur sera publié avec sa définition, son unité, sa source et sa date.</p>
-    <p class="p-status">Rubrique développée progressivement. Seuls sont affichés aujourd’hui les chiffres des dossiers internationaux, avec leur niveau de fiabilité.</p>
+    <p class="p-lede">Les données qui permettent de comprendre la situation d’un pays et de comparer ses performances. Chaque indicateur est publié avec sa définition, son unité, sa source et sa date.</p>
+    <p class="p-status">Rubrique développée progressivement. Rien n’est affiché qui ne soit publié dans la base documentaire ou tiré des dossiers internationaux.</p>
 </div></header>
 <section class="p-sec" aria-labelledby="do-h"><div class="wrap">
-  <h2 id="do-h">Quinze domaines</h2>
-  <p class="p-sub">Les emplacements sont prévus ; aucune donnée n’est inventée pour les remplir.</p>
-  <div class="p-grid" id="i-domains"></div>
+  <h2 id="do-h">Indicateurs publiés</h2>
+  <ul class="fam-index" id="i-index" aria-label="Domaines d’indicateurs"></ul>
+  <div id="i-domains"></div>
 </div></section>
 <section class="p-sec" id="disponibles" aria-labelledby="di-h"><div class="wrap">
-  <h2 id="di-h">Premiers chiffres disponibles</h2>
-  <p class="p-sub">Extraits des dossiers internationaux. Chaque chiffre renvoie à la fiche du pays, où figurent sa source et son contexte. Un point plein signale un chiffre lu dans une source consultée, un point creux une estimation à confirmer.</p>
+  <h2 id="di-h">Premiers chiffres des dossiers internationaux</h2>
+  <p class="p-sub">Extraits des analyses internationales. Chaque chiffre renvoie à la fiche du pays, où figurent sa source et son contexte. Un point plein signale un chiffre lu dans une source consultée, un point creux une estimation à confirmer.</p>
   <div class="h-tiles" id="h-tiles"></div>
   <div class="h-two">
     <div>
@@ -50,7 +51,6 @@
     </div>
   </div>
 </div></section>
-<noscript><p class="nojs wrap">Cette page affiche ses données avec JavaScript.</p></noscript>
 </main>
 
 <div id="site-footer"></div>
@@ -58,9 +58,11 @@
 <script src="assets/js/site-config.js"></script>
 <script src="assets/js/utils.js"></script>
 <script src="assets/js/layout.js"></script>
+<script src="assets/js/supabase-config.js"></script>
+<script src="assets/js/db.js"></script>
+<script src="assets/js/ui.js"></script>
 <script src="assets/js/data-analyses.js"></script>
 <script src="assets/js/data-gauche.js"></script>
-<script src="assets/js/data-indicateurs.js"></script>
 <script src="assets/js/indicateurs.js"></script>
 </body>
 </html>

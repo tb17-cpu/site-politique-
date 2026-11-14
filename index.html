@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="assets/css/base.css">
 <link rel="stylesheet" href="assets/css/home.css">
+<link rel="stylesheet" href="assets/css/data.css">
 </head>
 <body data-page="home">
 <a class="skip" href="#contenu">Aller au contenu</a>
@@ -49,12 +50,12 @@
       </header>
       <div class="h-doors">
         <a class="h-door" href="candidats.html">
-          <span class="h-state">Structure prête · fiches à venir</span>
+          <span class="h-state" id="h-door1-state">Chargement…</span>
           <h3>Explorer les candidats</h3>
           <p>Découvrir les programmes et les propositions de chaque candidat, avec son statut de candidature et ses sources officielles.</p>
           <span class="h-go">Les candidats →</span></a>
         <a class="h-door" href="comparateur.html">
-          <span class="h-state">Structure prête · mesures à venir</span>
+          <span class="h-state" id="h-door2-state">Chargement…</span>
           <h3>Comparer les mesures</h3>
           <p>Confronter les propositions sur une même thématique et identifier leurs différences, y compris quand les intitulés se ressemblent.</p>
           <span class="h-go">Le comparateur →</span></a>
@@ -73,7 +74,7 @@
       <header class="h-sec-head">
         <p class="label">Thématiques</p>
         <h2 id="thematiques-h">Explorer par grande politique publique</h2>
-        <p class="h-sec-sub">Onze familles, chacune découpée en sous-thèmes. Cette classification sert à ranger les mesures, quel que soit le candidat.</p>
+        <p class="h-sec-sub" id="h-themes-sub">Chaque famille est découpée en sous-thématiques. Cette classification sert à ranger les mesures, quel que soit le candidat.</p>
       </header>
       <div class="h-themes" id="h-themes"></div>
       <p class="h-more"><a href="thematiques.html">Voir toutes les thématiques et leurs sous-thèmes →</a></p>
@@ -134,11 +135,11 @@
 <script src="assets/js/site-config.js"></script>
 <script src="assets/js/utils.js"></script>
 <script src="assets/js/layout.js"></script>
+<script src="assets/js/supabase-config.js"></script>
+<script src="assets/js/db.js"></script>
+<script src="assets/js/ui.js"></script>
 <script src="assets/js/data-analyses.js"></script>
 <script src="assets/js/data-gauche.js"></script>
-<script src="assets/js/data-themes.js"></script>
-<script src="assets/js/data-france2027.js"></script>
-<script src="assets/js/data-indicateurs.js"></script>
 <script src="assets/js/search.js"></script>
 <script src="assets/js/home.js"></script>
 </body>

@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Les thématiques · Au résultat</title>
-<meta name="description" content="Onze familles de politiques publiques et leurs sous-thèmes : économie, travail, immigration, sécurité, éducation, santé, industrie, énergie, logement, institutions, défense.">
+<meta name="description" content="Les familles de politiques publiques et leurs sous-thématiques, avec les mesures publiées et les candidats concernés.">
 <meta property="og:title" content="Les thématiques · Au résultat">
-<meta property="og:description" content="Onze familles de politiques publiques et leurs sous-thèmes : économie, travail, immigration, sécurité, éducation, santé, industrie, énergie, logement, institutions, défense.">
+<meta property="og:description" content="Les familles de politiques publiques et leurs sous-thématiques, avec les mesures publiées et les candidats concernés.">
 
 <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="assets/css/base.css">
 <link rel="stylesheet" href="assets/css/pages.css">
+<link rel="stylesheet" href="assets/css/data.css">
 </head>
 <body data-page="thematiques">
 <a class="skip" href="#contenu">Aller au contenu</a>
@@ -24,11 +25,12 @@
 <header class="p-head"><div class="wrap">
     <p class="label">Classification</p>
     <h1>Les thématiques</h1>
-    <p class="p-lede">Les politiques publiques classées en grandes familles, chacune découpée en sous-thèmes. Cette classification permet de retrouver une mesure indépendamment du candidat qui la porte, et de la comparer à d’autres.</p>
-    <p class="p-status">Première base de classification, non définitive : elle pourra être enrichie et réorganisée. Aucune mesure de candidat n’est encore rattachée aux thèmes.</p>
+    <p class="p-lede">Les politiques publiques classées en familles, chacune découpée en sous-thématiques. Chaque thématique mène aux mesures publiées et aux candidats qui les portent.</p>
+    <p class="p-status">Classification de départ, appelée à évoluer. Les mesures s’affichent à mesure de leur publication.</p>
 </div></header>
 <section class="p-sec"><div class="wrap">
   <ul class="fam-index" id="t-index" aria-label="Familles de thématiques"></ul>
+  <div class="t-detail" id="t-detail" hidden></div>
   <div id="t-list"></div>
 </div></section>
 </main>
@@ -38,10 +40,9 @@
 <script src="assets/js/site-config.js"></script>
 <script src="assets/js/utils.js"></script>
 <script src="assets/js/layout.js"></script>
-<script src="assets/js/data-analyses.js"></script>
-<script src="assets/js/data-gauche.js"></script>
-<script src="assets/js/data-themes.js"></script>
-<script src="assets/js/data-france2027.js"></script>
+<script src="assets/js/supabase-config.js"></script>
+<script src="assets/js/db.js"></script>
+<script src="assets/js/ui.js"></script>
 <script src="assets/js/thematiques.js"></script>
 </body>
 </html>

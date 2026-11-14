@@ -1,43 +1,44 @@
-/* Recherche de l’accueil. Index construit à partir des données publiées ; les candidats, mesures et
-   indicateurs y entrent dès qu’ils existent dans data-france2027.js et data-indicateurs.js. */
+/* Recherche de l'accueil. Index : rubriques et dossiers internationaux (locaux) + thématiques, mesures et candidats publiés (Supabase, chargés à la première saisie). */
 (function () {
   const form = document.getElementById("h-search-form"); if (!form) return;
   const q = document.getElementById("h-q"), out = document.getElementById("h-results"), note = document.getElementById("h-search-note");
   const norm = s => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-
   const idx = [];
   const add = (type, title, sub, href, extra) => idx.push({ type, title, sub, href, text: norm([title, sub, extra].join(" ")) });
-  CANDIDATES.forEach(c => add("Candidat", c.name, c.party || "", "candidat.html#" + encodeURIComponent(c.id), ""));
-  PROPOSITIONS.forEach(p => add("Mesure", (p.text || "").slice(0, 90), p.sub || "", "thematiques.html#" + p.theme, p.mechanism || ""));
-  THEMES.forEach(t => { add("Thématique", t.title, t.subs.length + " sous-thèmes", "thematiques.html#" + t.id, t.subs.join(" "));
-    t.subs.forEach(s => add("Sous-thème", s, t.title, "thematiques.html#" + t.id, "")); });
-  INDIC_DOMAINS.forEach(d => add("Indicateurs", d.title, d.ex, "indicateurs.html", ""));
+
+  [["Les candidats", "Candidatures publiées", "candidats.html"], ["Comparateur", "Comparer les mesures", "comparateur.html"],
+   ["Indicateurs", "Données et sources", "indicateurs.html"], ["Méthodologie", "Principes, sources, limites", "methodologie.html"]].forEach(p => add("Rubrique", p[0], p[1], p[2], ""));
   C.concat(G).forEach(c => add("Analyse internationale", c.name + " · " + c.leader, c.period, "analyses-internationales.html#" + c.id, c.code));
-  [["Les candidats", "Statuts et fiches", "candidats.html"], ["Comparateur", "Comparer les mesures", "comparateur.html"],
-   ["Méthodologie", "Principes, sources, limites", "methodologie.html"]].forEach(p => add("Rubrique", p[0], p[1], p[2], ""));
 
-  const ORDER = ["Candidat", "Mesure", "Thématique", "Sous-thème", "Analyse internationale", "Indicateurs", "Rubrique"];
-  const covered = ["thématiques", "analyses internationales", "domaines d’indicateurs"];
-  if (CANDIDATES.length) covered.unshift("candidats");
-  if (PROPOSITIONS.length) covered.unshift("mesures");
-  note.textContent = "Recherche dans : " + covered.join(", ") + (CANDIDATES.length && PROPOSITIONS.length ? "." :
-    ". Les candidats et les mesures y seront ajoutés avec la base documentaire.");
+  let loaded = null, failed = false;
+  const load = () => loaded || (loaded = DB.searchIndex().then(d => {
+    const fam = new Map(d.themes.filter(t => !t.parent_id).map(t => [t.id, t]));
+    d.themes.forEach(t => add(t.parent_id ? "Sous-thématique" : "Thématique", t.name, t.parent_id && fam.get(t.parent_id) ? fam.get(t.parent_id).name : "", "thematiques.html#" + encodeURIComponent(t.slug), t.description || ""));
+    d.measures.forEach(m => add("Mesure", m.title, "", "mesure.html#" + encodeURIComponent(m.id), ""));
+    d.cands.forEach(c => add("Candidat", UI.person(c.people) || "Candidature", "", "candidat.html#" + encodeURIComponent(c.id), ""));
+  }).catch(() => { failed = true; }));
 
+  note.textContent = "Recherche dans les thématiques, les mesures et les candidats publiés, et dans les analyses internationales.";
+  const ORDER = ["Candidat", "Mesure", "Thématique", "Sous-thématique", "Analyse internationale", "Rubrique"];
   const close = () => { out.hidden = true; q.setAttribute("aria-expanded", "false"); };
-  const run = () => {
+  const run = async () => {
     const terms = norm(q.value).split(/\s+/).filter(Boolean);
     if (!terms.length) return close();
+    out.innerHTML = `<p>Recherche…</p>`; out.hidden = false; q.setAttribute("aria-expanded", "true");
+    await load();
+    if (!terms.length || norm(q.value).split(/\s+/).filter(Boolean).join(" ") !== terms.join(" ")) return;
     const hits = idx.filter(e => terms.every(t => e.text.includes(t)));
     let html = "";
     ORDER.forEach(type => {
       const l = hits.filter(h => h.type === type).slice(0, 6);
-      if (l.length) html += `<h4>${type}</h4>` + l.map(h => `<a href="${h.href}">${esc(h.title)}<small>${esc(h.sub)}</small></a>`).join("");
+      if (l.length) html += `<h4>${type}</h4>` + l.map(h => `<a href="${h.href}">${esc(h.title)}${h.sub ? `<small>${esc(h.sub)}</small>` : ""}</a>`).join("");
     });
-    out.innerHTML = html || `<p>Aucun résultat dans les contenus publiés. Aucun candidat ni aucune mesure n’est encore enregistré${CANDIDATES.length || PROPOSITIONS.length ? " qui corresponde" : ""}.</p>`;
-    out.hidden = false; q.setAttribute("aria-expanded", "true");
+    if (failed) html += `<p>La recherche dans la base est momentanément indisponible : seuls les contenus du site sont interrogés.</p>`;
+    out.innerHTML = html || `<p>Aucun résultat dans les contenus publiés.</p>`;
   };
+  q.addEventListener("focus", load, { once: true });
   q.addEventListener("input", run);
-  form.addEventListener("submit", e => { e.preventDefault(); run(); });
-  document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
-  document.addEventListener("click", e => { if (!document.getElementById("h-search").contains(e.target)) close(); });
+  form.addEventListener("submit", ev => { ev.preventDefault(); run(); });
+  document.addEventListener("keydown", ev => { if (ev.key === "Escape") close(); });
+  document.addEventListener("click", ev => { if (!document.getElementById("h-search").contains(ev.target)) close(); });
 })();

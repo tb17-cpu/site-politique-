@@ -1,33 +1,35 @@
-/* Page « Indicateurs » : domaines prévus + premiers chiffres issus des dossiers internationaux (data-analyses.js). */
+/* Page « Indicateurs » : indicateurs et observations publiés (Supabase) + premiers chiffres des dossiers internationaux (données statiques existantes). */
 (function () {
-  const S = window.SITE, $ = id => document.getElementById(id);
-  const byId = Object.fromEntries(C.concat(G).map(c => [c.id, c]));
-  const link = id => `analyses-internationales.html#${id}`;
+  const S = window.SITE, $ = id => document.getElementById(id), e = esc;
+  const byId = Object.fromEntries(C.concat(G).map(c => [c.id, c])), link = id => `analyses-internationales.html#${id}`;
 
-  $("i-domains").innerHTML = INDIC_DOMAINS.map(d => {
-    const n = INDICATORS.filter(i => i.domain === d.id).length;
-    const tag = n ? `${n} indicateur${n > 1 ? "s" : ""}` : d.live ? "Premiers chiffres disponibles" : "À venir";
-    const inner = `<span class="tag${n || d.live ? "" : " off"}">${tag}</span><h3 style="margin-top:6px">${esc(d.title)}</h3><p>${esc(d.ex)}</p>`;
-    return d.live ? `<a class="p-cell" href="#disponibles">${inner}</a>` : `<div class="p-cell">${inner}</div>`;
-  }).join("");
+  UI.mount($("i-domains"), async () => {
+    const [ind, obs] = await Promise.all([DB.indicators(), DB.observations()]);
+    return { ind, obs };
+  }, d => {
+    const doms = [...new Set(d.ind.map(i => i.domain || ""))];
+    $("i-index").innerHTML = doms.map((x, k) => `<li><a href="#dom-${k}">${e(UI.humanize(x) || "Autres")}</a></li>`).join("");
+    return doms.map((x, k) => `<div id="dom-${k}" style="scroll-margin-top:calc(var(--header-h) + 12px)"><h3 class="h-h3" style="margin:26px 0 4px">${e(UI.humanize(x) || "Autres")}</h3>` +
+      d.ind.filter(i => (i.domain || "") === x).map(i => {
+        const o = d.obs.filter(v => v.indicator_id === i.id);
+        return `<article class="ind"><h3>${e(i.name)}</h3>
+          <dl class="kv" style="margin-top:8px">${[["Définition", i.definition], ["Unité", i.unit], ["Méthodologie", i.methodology]].filter(r => r[1]).map(r => `<dt>${r[0]}</dt><dd class="long">${e(r[1])}</dd>`).join("")}</dl>
+          ${o.length ? `<div class="scroll"><table class="obs"><thead><tr><th>Pays</th><th>Période</th><th>Valeur</th><th>Périmètre</th><th>Source</th></tr></thead><tbody>${o.map(v => `<tr>
+            <td>${e(v.countries ? v.countries.name : "")}</td><td>${e([UI.date(v.period_start), UI.date(v.period_end)].filter(Boolean).join(" → "))}</td>
+            <td>${e(v.value ?? "")} ${e(i.unit || "")}</td><td>${e(v.geographic_scope || "")}</td>
+            <td>${v.sources ? (UI.link(v.sources.url, v.sources.title) || e(v.sources.title)) : ""}</td></tr>`).join("")}</tbody></table></div>`
+            : `<p class="p-sub" style="margin-top:8px">Aucune observation publiée pour cet indicateur.</p>`}</article>`;
+      }).join("") + `</div>`).join("");
+  }, { loading: "Chargement des indicateurs…", isEmpty: d => !d.ind.length, empty: "<p><b>Aucun indicateur n’est publié pour l’instant.</b></p><p style=\"margin-top:8px\">Chaque indicateur sera publié avec sa définition, son unité, sa source et sa date.</p>" });
 
+  /* Premiers chiffres disponibles : dossiers internationaux (données du site, avec mention de fiabilité). */
   $("h-tiles").innerHTML = S.featured.map(f => {
     const c = byId[f.id], k = c && c.k[f.k];
     if (!k) return "";
-    return `<a class="h-tile" href="${link(c.id)}">
-      <span class="label">${esc(c.name)}</span>
-      <strong class="h-val ${k[3]}">${esc(k[1])}</strong>
-      <span class="h-lab">${esc(k[0])}</span>
-      <span class="h-sub">${fm(k[2])}</span></a>`;
+    return `<a class="h-tile" href="${link(c.id)}"><span class="label">${e(c.name)}</span><strong class="h-val ${k[3]}">${e(k[1])}</strong><span class="h-lab">${e(k[0])}</span><span class="h-sub">${fm(k[2])}</span></a>`;
   }).join("");
-
-  $("h-fh").innerHTML = C.filter(c => c.ov && c.ov.fh)
-    .sort((a, b) => b.ov.fh[0] - a.ov.fh[0])
-    .map(c => {
-      const [v, y, ok] = c.ov.fh;
-      return `<a class="fh-row" href="${link(c.id)}">
-        <span class="fh-n">${esc(c.name)}</span>
-        <span class="fh-bar" aria-hidden="true"><i class="${ok ? "" : "est"}" style="width:${v}%"></i></span>
-        <span class="fh-v">${v}${y !== 2026 ? ` <u>(${y})</u>` : ""}${ok ? DV : DE}</span></a>`;
-    }).join("");
+  $("h-fh").innerHTML = C.filter(c => c.ov && c.ov.fh).sort((a, b) => b.ov.fh[0] - a.ov.fh[0]).map(c => {
+    const [v, y, ok] = c.ov.fh;
+    return `<a class="fh-row" href="${link(c.id)}"><span class="fh-n">${e(c.name)}</span><span class="fh-bar" aria-hidden="true"><i class="${ok ? "" : "est"}" style="width:${v}%"></i></span><span class="fh-v">${v}${y !== 2026 ? ` <u>(${y})</u>` : ""}${ok ? DV : DE}</span></a>`;
+  }).join("");
 })();
