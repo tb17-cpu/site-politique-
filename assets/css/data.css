@@ -221,3 +221,6 @@
 .poll-list{list-style:none;margin:.6rem 0;padding:0;display:grid;gap:.35rem}
 .poll-list li{display:flex;gap:.7rem;align-items:baseline;flex-wrap:wrap}
 .poll-v{min-width:4.2em;font-variant-numeric:tabular-nums;font-weight:700}
+
+table.diag td.warn{color:#d1a24c;font-weight:600}table.diag td.inc{color:#9fb0c8}table.diag td.info{color:#6fa3d6}
+.diag-sum.warn{border-color:#d1a24c}

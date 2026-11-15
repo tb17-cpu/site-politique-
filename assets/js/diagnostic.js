@@ -7,8 +7,10 @@
 (function () {
   const out = document.getElementById("d-out"), e = esc;
   const results = [];   /* { group, name, status: "ok"|"ko"|"na", detail } */
-  const OK = "ok", KO = "ko", NA = "na";
-  const LABEL = { ok: "OK", ko: "ÉCHEC", na: "NON VÉRIFIABLE" };
+  const OK = "ok", KO = "ko", NA = "na", WARN = "warn", INC = "inc", INFO = "info";
+  /* ÉCHEC = erreur bloquante ; AVERTISSEMENT = incohérence à examiner ; INCOMPLET = contenu simplement non renseigné ;
+     ATTENDU = fonctionnalité désactivée tant qu'une migration n'est pas appliquée (jamais une erreur). */
+  const LABEL = { ok: "OK", ko: "ÉCHEC (bloquant)", warn: "AVERTISSEMENT", inc: "INCOMPLET", info: "ATTENDU", na: "NON VÉRIFIABLE" };
   const add = (group, name, status, detail) => results.push({ group, name, status, detail });
   const why = err => {
     const d = DB.humanMessage(err), code = err && (err.status ? " (HTTP " + err.status + ")" : err.kind ? " (" + err.kind + ")" : "");
@@ -58,7 +60,7 @@
 
       /* Sondages : table optionnelle (migration 002). Absente = information, jamais un échec ni un zéro. */
       try { const n = await DB.count("poll_snapshots"); add("Sondages", "Table poll_snapshots", OK, n + " ligne(s) visible(s)"); }
-      catch (err) { add("Sondages", "Table poll_snapshots", NA, err && err.status === 404 ? "Table absente : migration 002 non exécutée (attendu tant qu’elle n’est pas appliquée)" : "Vérification impossible"); }
+      catch (err) { add("Sondages", "Table poll_snapshots", err && err.status === 404 ? INFO : NA, err && err.status === 404 ? "Table absente : migration 002 non exécutée. Fonctionnalité désactivée, ce n’est pas une erreur." : "Vérification impossible"); }
 
       /* B. Thématiques (lecture brute, sans filtre navigateur) */
       let th = null;
@@ -120,6 +122,42 @@
         });
       }
 
+      /* G. Qualité des données (lecture brute) : bloquant / avertissement / incomplet, jamais mélangés */
+      const DQ = "Qualité des données", none = (a, k) => !Array.isArray(a[k]) || !a[k].length;
+      const report = (name, items, sev, okMsg, what) => add(DQ, name, items.length ? sev : OK, items.length ? `${items.length} ${what}${items.length > 1 ? "s" : ""} : ${items.slice(0, 4).join(" ; ")}${items.length > 4 ? "…" : ""}` : okMsg);
+      const ttl = x => x.title || x.name || String(x.id).slice(0, 8);
+      await guard(DQ, "Mesures : thèmes et sources", async () => {
+        const r = await DB.raw("measures", { select: "id,title,measure_themes(theme_id),measure_sources(source_id)", limit: PAGE });
+        if (r.length >= PAGE) return [NA, "Lecture limitée : vérification incomplète"];
+        const nt = r.filter(m => none(m, "measure_themes")).map(ttl), ns = r.filter(m => none(m, "measure_sources")).map(ttl);
+        report("Mesures sans thématique", nt, WARN, `${r.length} mesure(s), toutes classées`, "mesure");
+        report("Mesures sans source", ns, INC, `${r.length} mesure(s), toutes sourcées`, "mesure");
+        return [OK, "lecture effectuée"]; });
+      await guard(DQ, "Candidatures : sources et programmes", async () => {
+        const r = await DB.raw("candidacies", { select: "id,candidacy_sources(id),programs(id)", limit: PAGE });
+        if (r.length >= PAGE) return [NA, "Lecture limitée : vérification incomplète"];
+        report("Candidatures sans source", r.filter(c => none(c, "candidacy_sources")).map(c => String(c.id).slice(0, 8)), INC, `${r.length} candidature(s), toutes sourcées`, "candidature");
+        report("Candidatures sans programme", r.filter(c => none(c, "programs")).map(c => String(c.id).slice(0, 8)), INC, `${r.length} candidature(s), toutes avec programme`, "candidature");
+        return [OK, "lecture effectuée"]; });
+      await guard(DQ, "Cas comparatifs : résultats, sources, rattachement", async () => {
+        const r = await DB.raw("policy_cases", { select: "id,title,case_outcomes(id,case_outcome_sources(id)),policy_case_sources(id),case_measure_relations(id)", limit: PAGE });
+        if (r.length >= PAGE) return [NA, "Lecture limitée : vérification incomplète"];
+        report("Cas sans résultat documenté", r.filter(c => none(c, "case_outcomes")).map(ttl), WARN, `${r.length} cas, tous avec au moins un résultat`, "cas");
+        report("Cas rattaché à aucune mesure", r.filter(c => none(c, "case_measure_relations")).map(ttl), WARN, "chaque cas éclaire au moins une mesure", "cas");
+        report("Cas sans source générale", r.filter(c => none(c, "policy_case_sources")).map(ttl), INC, "tous les cas ont une source", "cas");
+        const os = r.flatMap(c => (c.case_outcomes || []).filter(o => none(o, "case_outcome_sources")).map(() => ttl(c)));
+        report("Résultats chiffrés sans source", os, WARN, "chaque résultat est relié à une source", "résultat");
+        return [OK, "lecture effectuée"]; });
+      await guard(DQ, "Relations orphelines", async () => {
+        const r = await DB.raw("case_measure_relations", { select: "id,measures(id),policy_cases(id)", limit: PAGE });
+        if (r.length >= PAGE) return [NA, "Lecture limitée : vérification incomplète"];
+        const bad = r.filter(x => !x.measures || !x.policy_cases);
+        return bad.length ? [KO, `${bad.length} relation(s) cas ↔ mesure pointant vers un objet absent ou non visible`] : [OK, `${r.length} relation(s), extrémités visibles`]; });
+      await guard(DQ, "Colonnes de statut des valeurs chiffrées (migration 001)", async () => {
+        const r = await DB.raw("case_outcomes", { select: "*", limit: 1 });
+        if (!r.length) return [OK, "aucun résultat visible : sans objet"];
+        return Object.prototype.hasOwnProperty.call(r[0], "observed_value_status") ? [OK, "colonnes présentes ; les statuts non renseignés s’affichent « Statut non vérifié »"] : [INFO, "migration 001 non appliquée : tous les chiffres s’affichent « Statut non vérifié ». Fonctionnalité désactivée, ce n’est pas une erreur."]; });
+
       /* F. Données personnelles : invisibles aujourd'hui, ce qui est conforme (brouillons) */
       for (const t of ["people", "parties", "candidacies"]) {
         const n = counts[t];
@@ -146,10 +184,10 @@
   }
 
   function render(counts) {
-    const n = s => results.filter(r => r.status === s).length, ok = n(OK), ko = n(KO), na = n(NA);
-    const cls = ko ? "ko" : na ? "na" : "ok";
-    const title = ko ? "Échecs détectés" : na ? "Diagnostic incomplet" : "Diagnostic intégralement réussi";
-    const sub = ko ? "Au moins un contrôle exécuté n'est pas conforme." : na ? "Certains contrôles n'ont pas pu être effectués : le système ne peut pas être déclaré opérationnel." : "Tous les contrôles ont été exécutés et sont conformes.";
+    const n = s => results.filter(r => r.status === s).length, ok = n(OK), ko = n(KO), na = n(NA), warn = n(WARN), inc = n(INC), info = n(INFO);
+    const cls = ko ? "ko" : na ? "na" : warn ? "warn" : "ok";
+    const title = ko ? "Erreurs bloquantes détectées" : na ? "Diagnostic incomplet" : warn ? "Avertissements à examiner" : "Aucune erreur bloquante";
+    const sub = ko ? "Au moins un contrôle exécuté n'est pas conforme." : na ? "Certains contrôles n'ont pas pu être effectués : le système ne peut pas être déclaré opérationnel." : warn ? "Aucune erreur bloquante, mais des incohérences sont à examiner (voir les avertissements)." : "Tous les contrôles ont été exécutés et sont conformes.";
     let last = "", body = "";
     results.forEach(r => {
       if (r.group !== last) { last = r.group; body += `<tr class="grp"><td colspan="3">${e(r.group)}</td></tr>`; }
@@ -157,7 +195,7 @@
     });
     const stamp = new Date().toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "medium" });
     out.innerHTML = `<div class="diag-sum ${cls}" role="status"><h2>${title}</h2><p>${e(sub)}</p>
-      <div class="nums"><span>Contrôle du ${e(stamp)}</span><span>${ok} réussi(s)</span><span>${ko} échec(s)</span><span>${na} non vérifiable(s)</span></div></div>
+      <div class="nums"><span>Contrôle du ${e(stamp)}</span><span>${ok} réussi(s)</span><span>${ko} bloquant(s)</span><span>${warn} avertissement(s)</span><span>${inc} incomplet(s)</span><span>${info} attendu(s)</span><span>${na} non vérifiable(s)</span></div></div>
       <div class="scroll"><table class="diag"><thead><tr><th>Contrôle</th><th>Résultat</th><th>Détail</th></tr></thead><tbody>${body}</tbody></table></div>
       <h3 class="h-h3" style="margin:28px 0 8px">Lignes visibles par table</h3>
       <div class="scroll"><table class="diag"><tbody>${TABLES.map(t => `<tr><td>${e(t)}</td><td class="${counts[t] === undefined || counts[t] === null ? "na" : ""}">${counts[t] === undefined || counts[t] === null ? "Non vérifiable" : e(counts[t])}</td></tr>`).join("")}</tbody></table></div>

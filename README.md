@@ -56,3 +56,5 @@ Un point plein signale un chiffre lu dans une source consultée, un point creux 
 - `002_poll_snapshots.sql` : photographies de sondages (sondages et moyennes séparés ; partis, candidatures, personnalités ou libellé libre). Le rang est calculé à l'affichage.
 
 Le site n'écrit jamais en base : ces scripts s'exécutent dans l'éditeur SQL Supabase. Le frontend est compatible avant et après leur exécution (colonnes absentes = statut non vérifié ; table absente = aucun bloc de sondages).
+- `supabase/audit_securite.sql` : audit en lecture seule (RLS, politiques, droits anon/authenticated, vues, fonctions).
+- `docs/BILAN.md` : bilan d'audit et priorités.

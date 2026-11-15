@@ -68,6 +68,10 @@ create policy poll_snapshots_public_read on public.poll_snapshots
         end
   );
 
-grant select on public.poll_snapshots to anon, authenticated;   -- lecture seule ; aucun droit d'écriture pour anon/authenticated
+-- Droits : indépendants des privilèges par défaut du rôle qui exécute la migration.
+-- 1) tout retirer explicitement à anon, authenticated (et au pseudo-rôle PUBLIC), 2) n'accorder que SELECT.
+revoke insert, update, delete, truncate, references, trigger on public.poll_snapshots from anon, authenticated;
+revoke all on public.poll_snapshots from anon, authenticated, public;
+grant select on public.poll_snapshots to anon, authenticated;
 commit;
 -- Retour arrière : drop table public.poll_snapshots;
