@@ -108,7 +108,7 @@
       const b = mount.querySelector("[data-retry]"); if (b) b.addEventListener("click", () => location.reload());
       return null;
     }
-    if (!list.length) { mount.innerHTML = UI.emptyHtml("<p><b>Aucune élection n’est publiée pour l’instant.</b></p><p style=\"margin-top:8px\">Les élections apparaissent ici dès qu’elles sont publiées.</p>"); return null; }
+    if (!list.length) { mount.innerHTML = UI.emptyHtml("<p><b>Aucune élection disponible.</b></p>"); return null; }
     if (resolve()) { refresh(); return cur; }
     mount.innerHTML = chooser(file); refresh(); return null;
   }

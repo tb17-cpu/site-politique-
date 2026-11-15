@@ -238,3 +238,6 @@ table.diag td.warn{color:#d1a24c;font-weight:600}table.diag td.inc{color:#9fb0c8
 .bar-v{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:.92rem;white-space:nowrap}
 .poll-meta{margin-top:.8rem}.poll-note{font-size:.85rem}
 @media (max-width:520px){.bars li{grid-template-columns:1fr 5.4rem;grid-template-areas:"n v" "t t"}.bar-n{grid-area:n}.bar-v{grid-area:v}.bar-t{grid-area:t}}
+
+.pos-tag{display:inline-block;margin-left:.55em;padding:.05em .6em;border:1px solid var(--line,#2a2f3a);border-radius:99px;font-size:.78rem;color:var(--fg-2,#aab);white-space:nowrap}
+.brand-inline{font-family:var(--f-display);font-weight:700;color:var(--accent,#6fa3d6);letter-spacing:-.01em;white-space:nowrap}

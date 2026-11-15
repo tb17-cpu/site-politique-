@@ -23,7 +23,7 @@
             <td>${v.sources ? (UI.link(v.sources.url, v.sources.title) || e(v.sources.title)) : ""}</td></tr>`).join("")}</tbody></table></div>`
             : `<p class="p-sub" style="margin-top:8px">Aucune observation publiée pour cet indicateur${cname ? " (" + e(cname) + ")" : ""}.</p>`}</article>`;
       }).join("") + `</div>`).join("");
-  }, { loading: "Chargement des indicateurs…", isEmpty: d => !d.ind.length, empty: "<p><b>Aucun indicateur n’est publié pour l’instant.</b></p><p style=\"margin-top:8px\">Chaque indicateur sera publié avec sa définition, son unité, sa source et sa date.</p>" });
+  }, { loading: "Chargement des indicateurs…", isEmpty: d => !d.ind.length, empty: "<p><b>Aucun indicateur disponible pour cette élection.</b></p>" });
   });
 
   /* Premiers chiffres disponibles : dossiers internationaux (données du site, avec mention de fiabilité). */

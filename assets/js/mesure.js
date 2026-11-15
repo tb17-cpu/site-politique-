@@ -4,7 +4,7 @@
   /* Champs vides : jamais présentés comme « le candidat n'a rien proposé » ; ils sont simplement signalés comme non documentés. */
   const kv = (rows, who) => {
     const r = rows.filter(x => x[1] !== "" && x[1] != null), miss = rows.filter(x => x[1] === "" || x[1] == null).map(x => x[0]);
-    const note = miss.length ? `<p class="p-sub quiet">${r.length ? "Pas encore documenté" : "Aucune information documentée pour l’instant"} : ${e(miss.join(", ").toLowerCase())}.${who === "decl" ? " Cela ne signifie pas que le candidat n’a rien proposé : l’information n’a simplement pas encore été saisie." : ""}</p>` : "";
+    const note = miss.length ? `<p class="p-sub quiet">Non documenté : ${e(miss.join(", ").toLowerCase())}.${who === "decl" ? " Cela ne signifie pas que le candidat n’a rien proposé." : ""}</p>` : "";
     return (r.length ? `<dl class="kv">${r.map(x => `<dt>${e(x[0])}</dt><dd class="long">${x[2] ? x[1] : e(x[1])}</dd>`).join("")}</dl>` : "") + note;
   };
   const srcList = (arr, quoteKey, locKey) => arr.length ? `<ul class="refs">${arr.map(s => `<li>${s.sources ? (UI.link(s.sources.url, s.sources.title) || e(s.sources.title)) : "Source"}
@@ -25,15 +25,15 @@
         ${kv([["Objectif annoncé", m.announced_objective], ["Coût annoncé", cost], ["Financement annoncé", m.announced_funding]], "decl")}
         ${pv ? `<p class="p-sub" style="margin:8px 0 0;font-size:13px">${e(pg && pg.title || "Programme")} · version ${e(pv.version_label || pv.version_number || "")}${pv.publication_date ? " · " + e(UI.date(pv.publication_date)) : ""}</p>` : ""}
       </div></section>
-      <section class="blk blk--ar"><header><b>Description structurée par Au résultat</b><span>Reformulation et mise en forme éditoriales, sans jugement</span></header><div>
+      <section class="blk blk--ar"><header><b>Description structurée par <span class="brand-inline">Au résultat</span></b><span>Reformulation et mise en forme, sans jugement</span></header><div>
         ${kv([["Reformulation explicative", m.reformulation], ["Type de mesure", UI.humanize(m.measure_type)], ["Mécanisme", m.mechanism], ["Publics concernés", m.target_groups], ["Modalités d’application", m.implementation_details], ["Précisions", m.additional_details]])}
       </div></section>`;
     if (themes.length) h += `<p class="label" style="margin:0 0 8px">Thématiques</p><ul class="fam-sub" style="margin-bottom:26px">${themes.map(t => `<li><a href="thematiques.html#${encodeURIComponent(t.slug)}">${e(t.name)}</a></li>`).join("")}</ul>`;
     h += `<section class="blk"><header><b>Sources et références</b><span>Où retrouver cette proposition</span></header><div>${srcList(m.measure_sources || [], "exact_quote", "page_reference")}</div></section>`;
 
     const an = m.analyses || [];
-    h += `<h2 style="font-size:26px;margin:34px 0 8px">Analyses</h2><p class="p-sub" style="margin-bottom:16px">Les analyses ci-dessous sont celles d’Au résultat. Elles ne sont jamais la position du candidat.</p>` +
-      (an.length ? an.map(a => `<section class="blk blk--an"><header><b>Analyse d’Au résultat</b><span>${e(UI.humanize(a.analysis_type))}${a.reviewed_at ? " · relue le " + e(UI.date(a.reviewed_at)) : ""}</span></header><div>
+    h += `<h2 style="font-size:26px;margin:34px 0 8px">Analyses</h2><p class="p-sub" style="margin-bottom:16px">Les analyses ci-dessous sont celles de <span class="brand-inline">Au résultat</span>. Elles ne sont jamais la position du candidat.</p>` +
+      (an.length ? an.map(a => `<section class="blk blk--an"><header><b>Analyse de <span class="brand-inline">Au résultat</span></b><span>${e(UI.humanize(a.analysis_type))}${a.reviewed_at ? " · relue le " + e(UI.date(a.reviewed_at)) : ""}</span></header><div>
         ${a.analysis_title ? `<h3 style="font-size:22px;margin:12px 0 4px">${e(a.analysis_title)}</h3>` : ""}
         <p style="margin:6px 0">${UI.reliability(a.reliability_level, { notes: a.reliability_notes, checked: a.reliability_checked_at })}</p>
         ${kv([["Évaluation générale", a.assessment], ["Faisabilité", a.feasibility_assessment], ["Effets attendus", a.expected_effects], ["Risques et limites", a.risks_and_limitations], ["Incertitudes", a.uncertainties], ["Méthodologie", a.methodology]])}

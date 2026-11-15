@@ -12,7 +12,9 @@
   $("countries-gauche").innerHTML = G.map(country).join("");
   $("g-empty").hidden = G.length > 0;
 
-  const gaucheIds = new Set(["gauche"].concat(G.map(c => c.id)));
+  /* Onglet « La gauche au pouvoir » : visible seulement lorsqu'il contient des fiches. */
+  if (G.length === 0 && tabs.gauche) tabs.gauche.hidden = true;
+  const gaucheIds = new Set(G.length ? ["gauche"].concat(G.map(c => c.id)) : [])
   let current = null;
   const setBarH = () => document.documentElement.style.setProperty("--bar-h", bar.offsetHeight + "px");
 

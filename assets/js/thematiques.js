@@ -41,7 +41,7 @@
         ${f.description ? `<p style="font-size:14px;color:var(--fg-2);margin-top:6px;max-width:70ch">${e(f.description)}</p>` : ""}
         <ul class="fam-sub">${subs.map(s => `<li><a href="#${encodeURIComponent(s.slug)}" data-slug="${e(s.slug)}">${e(s.name)}</a></li>`).join("")}</ul></section>`;
     }).join("");
-  }, { loading: "Chargement des thématiques…", empty: "Aucune thématique n’est publiée pour l’instant.", after: () => { detail(); } });
+  }, { loading: "Chargement des thématiques…", empty: "Aucune thématique disponible.", after: () => { detail(); } });
   });
   window.addEventListener("hashchange", () => { if (themes.length) detail(); });
 })();

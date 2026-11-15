@@ -22,16 +22,15 @@
   if (f) f.innerHTML =
     `<footer class="site-footer"><div class="wrap">
       <div class="f-grid">
-        <div><div class="f-brand"><img src="${logo}" alt="" width="26" height="26"><b>${esc(S.name)}</b></div>
+        <div><div class="f-brand"><img src="${logo}" alt="" width="26" height="26"><b class="brand-inline">${esc(S.name)}</b></div>
           <p>${esc(F.about)}</p></div>
         <div><h2>Explorer</h2><ul>${S.nav.concat(S.electionNav).map(n => `<li><a href="${n.href}">${esc(n.label)}</a></li>`).join("")}</ul></div>
         <div><h2>Méthodologie</h2><p>${esc(F.method)}</p>
           <p><a href="methodologie.html">Lire la méthodologie complète</a></p></div>
         <div><h2>Sources</h2><p>${esc(F.sources)}</p>
-          <p><a href="analyses-internationales.html#overview">Voir les analyses internationales et leurs sources</a></p>
-          <p class="f-slot">${esc(F.sourcesSlot)}</p></div>
+          <p><a href="analyses-internationales.html#overview">Voir les analyses internationales et leurs sources</a></p></div>
       </div>
-      <div class="f-bottom"><span>${esc(F.legal)}</span><span>${esc(F.identity)}</span></div>
+      <div class="f-bottom"><span><b class="brand-inline">${esc(S.name)}</b> · ${esc(S.tagline)}</span></div>
     </div></footer>`;
 
   /* Hauteur du bandeau : sert à positionner la barre de pays collée sous lui. */

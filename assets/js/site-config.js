@@ -1,7 +1,7 @@
 /* ==========================================================================
    CONFIGURATION CENTRALE DU SITE
    C’est le seul fichier à modifier pour :
-   - changer le nom et la devise du projet (identité provisoire) ;
+   - changer le nom et la devise du projet ;
    - ajouter une page au menu (liste « nav ») ;
    - changer les chiffres mis en avant sur la page Indicateurs (liste « featured ») ;
    - changer les thématiques : voir data-themes.js ;
@@ -38,11 +38,8 @@ window.SITE = {
   ],
 
   footer: {
-    about: "Plateforme indépendante d’information et de comparaison des programmes politiques et des politiques publiques. Chaque élection dispose de ses candidats, programmes, mesures et indicateurs.",
-    method: "Même grille de lecture pour tous les candidats, sources traçables, distinction entre faits, déclarations et estimations. Un point plein signale un chiffre lu dans une source consultée, un point creux une estimation à confirmer.",
-    sources: "Chaque fiche des analyses internationales liste ses sources en bas de page. Les propositions des candidats seront publiées avec leurs sources officielles.",
-    sourcesSlot: "Page de sources consolidée : à venir.",
-    legal: "Mentions légales : à compléter avant diffusion large.",
-    identity: "Nom et identité graphique provisoires."
+    about: "Analyse indépendante des programmes politiques et des politiques publiques : ce que proposent les candidats, comment leurs mesures fonctionneraient, ce qu’ont donné des politiques comparables ailleurs.",
+    method: "Même grille de lecture pour tous les candidats. Faits, déclarations et estimations sont distingués ; un point plein signale un chiffre lu dans une source, un point creux une estimation à confirmer.",
+    sources: "Chaque fiche renvoie à ses sources, avec leur nature : document officiel, déclaration, entretien ou presse. Les analyses internationales listent les leurs en bas de page."
   }
 };

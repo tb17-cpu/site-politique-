@@ -23,7 +23,7 @@
     const rows = [["Candidat", m => who(m), 0], ["Formulation originale", m => m.original_text, 1], ["Objectif annoncé", m => m.announced_objective, 1], ["Coût annoncé", cost, 1], ["Financement annoncé", m => m.announced_funding, 1],
       ["Mécanisme (Au résultat)", m => m.mechanism, 0], ["Publics concernés (Au résultat)", m => m.target_groups, 0], ["Modalités (Au résultat)", m => m.implementation_details, 0]];
     out.innerHTML = `<div class="scroll"><table class="cmp"><thead><tr><th scope="col">Champ</th>${sel.map(m => `<th scope="col"><a href="mesure.html#${encodeURIComponent(m.id)}">${e(m.title)}</a></th>`).join("")}</tr></thead><tbody>
-      ${rows.map(r => `<tr><th scope="row">${e(r[0])}${r[2] ? '<small class="decl">déclaré par le candidat</small>' : ""}</th>${sel.map(m => cell(r[1](m))).join("")}</tr>`).join("")}
+      ${rows.map(r => `<tr><th scope="row">${e(r[0]).replace(/Au résultat/g, '<span class="brand-inline">Au résultat</span>')}${r[2] ? '<small class="decl">déclaré par le candidat</small>' : ""}</th>${sel.map(m => cell(r[1](m))).join("")}</tr>`).join("")}
       <tr><th scope="row">Fiabilité</th>${sel.map(m => `<td>${UI.reliability(m.reliability_level, { notes: m.reliability_notes, checked: m.reliability_checked_at })}</td>`).join("")}</tr></tbody></table></div>`;
     const mine = sel.map(m => m.id).join(",");
     try {
@@ -54,11 +54,11 @@
       const on = preselect(ms);
       return ms.map(m => `<label><input type="checkbox" value="${e(m.id)}"${on.has(String(m.id)) ? " checked" : ""}><span>${e(m.title)}<br><small class="who">${e(who(m))}</small></span></label>`).join("");
     }, { loading: "Chargement des mesures…", isEmpty: () => false });
-    if (!measures.length) { box.innerHTML = ""; setStatus(`<b>Aucune mesure publiée</b> dans cette sous-thématique pour l’instant.`); return; }
+    if (!measures.length) { box.innerHTML = ""; setStatus(`<b>Aucune mesure dans cette sous-thématique.</b>`); return; }
     if (new Set(measures.map(cid)).size < 2) {
       /* Pas de comparaison possible : on liste les mesures, sans cases à cocher. */
       box.innerHTML = `<ul class="refs">${measures.map(m => `<li><a href="mesure.html#${encodeURIComponent(m.id)}">${e(m.title)}</a><small>${e(who(m))}</small></li>`).join("")}</ul>`;
-      setStatus(`<b>Comparaison impossible pour l’instant.</b> Une comparaison demande des mesures publiées par au moins deux candidats différents dans la même sous-thématique. Ici, un seul candidat a des mesures publiées.`);
+      setStatus(`<b>Comparaison impossible.</b> Il faut des mesures d’au moins deux candidats différents dans la même sous-thématique ; ici, un seul candidat est concerné.`);
       return;
     }
     box.onchange = table; table();

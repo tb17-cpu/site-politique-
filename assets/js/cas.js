@@ -97,7 +97,7 @@
     const l = (rels || []).filter(r => r && r.policy_cases);
     if (!l.length) return "";
     return `<h2 class="cs-h">Comparaisons avec des politiques réellement appliquées</h2>
-      <p class="p-sub cs-intro">Cas étrangers ou passés rapprochés de cette mesure, rédigés par Au résultat. Ils ne sont pas la position du candidat. Une analogie n’est pas une expérience équivalente, et un résultat négatif ou mitigé n’est jamais masqué.</p>
+      <p class="p-sub cs-intro">Cas étrangers ou passés rapprochés de cette mesure, rédigés par <span class="brand-inline">Au résultat</span>. Ils ne sont pas la position du candidat. Une analogie n’est pas une expérience équivalente, et un résultat négatif ou mitigé n’est jamais masqué.</p>
       <div class="cs-list">${l.map((r, i) => oneCase(r, i, l.length === 1)).join("")}</div>`;
   } };
 })();

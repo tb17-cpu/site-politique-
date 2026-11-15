@@ -41,6 +41,14 @@
   };
   const U_URL = u => UI.safeUrl(u);
 
+  /* Documents de référence de l'élection : titres cliquables, éditeur, date et nature du document (jamais d'URL brute). */
+  const refsBlock = el => {
+    const l = (el.election_sources || []).filter(x => x && x.sources);
+    if (!l.length) return "";
+    return `<h2 class="ov-h">Documents de référence</h2><ul class="refs">${l.map(x => { const s = x.sources;
+      return `<li>${UI.link(s.url, s.title || "Document") || e(s.title || "Document")}<small>${[s.publisher, UI.formatSourceType(s.source_type), UI.date(s.publication_date)].filter(Boolean).map(e).join(" · ")}</small></li>`; }).join("")}</ul>`;
+  };
+
   Election.need(mount).then(el => {
     if (!el) return;
     const st = Election.status(el);
@@ -51,9 +59,9 @@
     UI.mount(mount, async () => ({ cands: await DB.candidacies(el.id), progs: await DB.programs(el.id), polls: await DB.polls(el.id).catch(() => ({ missing: true, rows: [] })) }), d => {
       const nm = d.progs.reduce((n, p) => n + (p.program_versions || []).reduce((k, v) => k + (v.measures || []).length, 0), 0);
       const sections = [
-        ["candidats", "Candidats", d.cands.length ? plural(d.cands.length, "candidature publiée", "candidatures publiées") : "Aucune candidature publiée pour l’instant"],
-        ["programmes", "Programmes", d.progs.length ? plural(d.progs.length, "programme publié", "programmes publiés") : "Aucun programme publié pour l’instant"],
-        ["thematiques", "Thématiques", nm ? plural(nm, "mesure publiée", "mesures publiées") : "Aucune mesure publiée pour l’instant"],
+        ["candidats", "Candidats", d.cands.length ? plural(d.cands.length, "candidature", "candidatures") : "Aucune candidature enregistrée"],
+        ["programmes", "Programmes", d.progs.length ? plural(d.progs.length, "programme", "programmes") : "Aucun programme enregistré"],
+        ["thematiques", "Thématiques", nm ? plural(nm, "mesure", "mesures") : "Aucune mesure enregistrée"],
         ["comparateur", "Comparateur", "Comparer les mesures de candidats différents"],
         ["indicateurs", "Indicateurs", "Données et sources du pays"]];
       const hrefs = { candidats: "candidats.html", programmes: "programmes.html", thematiques: "thematiques.html", comparateur: "comparateur.html", indicateurs: "indicateurs.html" };
@@ -62,7 +70,7 @@
         <h2 class="ov-h">Calendrier</h2>
         ${kv([["Pays", el.countries && el.countries.name], ["Type de scrutin", UI.humanize(el.election_type)], ["Année", el.year],
           ["Date du scrutin", UI.date(el.scheduled_date)], ["Date effective", UI.date(el.actual_date)], ["Second tour", UI.date(el.second_round_date)],
-          ["Date limite des parrainages", UI.date(el.sponsorship_deadline)], ["Situation", st.label]]) || `<p class="p-sub quiet">Calendrier non renseigné.</p>`}`;
+          ["Date limite des parrainages", UI.date(el.sponsorship_deadline)], ["Situation", st.label]]) || `<p class="p-sub quiet">Calendrier non renseigné.</p>`}${refsBlock(el)}`;
     }, { loading: "Chargement de l’élection…", isEmpty: () => false });
   });
 })();

@@ -53,8 +53,8 @@
      quand l'objet publié qu'elles relient (source, thème) n'est pas visible. */
   const PUBLISHED = "published";
   const WITH_STATUS = new Set(["countries", "elections", "people", "parties", "candidacies", "programs", "program_versions",
-    "themes", "measures", "sources", "analyses", "indicators", "indicator_observations", "policy_cases", "case_outcomes", "poll_snapshots"]);
-  const REQUIRED_EMBED = { case_measure_relations: "policy_cases", policy_case_sources: "sources", case_outcome_sources: "sources", measure_sources: "sources", analysis_sources: "sources", candidacy_sources: "sources", measure_themes: "themes" };
+    "themes", "measures", "sources", "analyses", "indicators", "indicator_observations", "policy_cases", "case_outcomes", "poll_snapshots", "election_sources"]);
+  const REQUIRED_EMBED = { election_sources: "sources", case_measure_relations: "policy_cases", policy_case_sources: "sources", case_outcome_sources: "sources", measure_sources: "sources", analysis_sources: "sources", candidacy_sources: "sources", measure_themes: "themes" };
 
   /* Nettoyage récursif des données imbriquées : un objet imbriqué portant un statut autre que « published »
      devient null ; une ligne de liaison dont l'objet requis est absent disparaît. */
@@ -97,7 +97,7 @@
 
   /* ---- Fonctions par entité ---- */
   const PERSON = "people(id,first_name,last_name,photo_url,biography,official_website,photo_source_url,photo_credit,publication_status)";
-  const PARTY = "parties(id,name,acronym,website_url,political_color,publication_status)";
+  const PARTY = "parties(id,name,acronym,website_url,political_color,political_position_label,publication_status)";
   const D = {
     DbError, humanMessage, rows, raw, one, count,
 
@@ -115,7 +115,12 @@
     themes: () => rows("themes", { order: "display_order.asc,name.asc" }),
 
     /* Élections publiées, avec leur pays. Aucune élection n'est codée en dur : tout vient de la base. */
-    elections: () => rows("elections", { select: "*,countries(id,name,iso2,publication_status)", order: "scheduled_date.asc.nullslast,year.asc" }),
+    elections: () => {
+      const q = sel => rows("elections", { select: sel, order: "scheduled_date.asc.nullslast,year.asc" });
+      const base = "*,countries(id,name,iso2,publication_status)";
+      /* Sources de l'élection (election_sources → sources). Si la relation est indisponible, l'élection reste lisible sans ses sources. */
+      return q(base + ",election_sources(*,sources(*))").catch(e => { if (e instanceof DbError && (e.status === 400 || e.status === 404)) return q(base); throw e; });
+    },
 
     /* Programmes publiés d'une élection, avec leurs versions et mesures. */
     programs: electionId => rows("programs", {
