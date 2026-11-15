@@ -62,4 +62,4 @@ Le site n'écrit jamais en base : ces scripts s'exécutent dans l'éditeur SQL S
 ## Candidats et sondage
 
 - Ordre de la page Candidats : `candidacies.display_order` (saisi dans Supabase), sans aucun calcul ; les lignes sans ordre viennent après.
-- Page élection : un seul sondage (OpinionWay, scénario « Hypothèse 1 ») en graphique, scores tels que publiés ; une valeur inférieure à 1 s’affiche « moins de 1 
+- Page élection : un seul sondage (OpinionWay, scénario « Hypothèse 1 ») en graphique, scores tels que publiés ; une valeur inférieure à 1 s’affiche « moins de 1 % ». Critères de sélection : constante `FEATURED` dans `assets/js/election-vue.js`.
