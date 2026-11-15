@@ -26,8 +26,11 @@
   /* Niveau (élevé, moyen…) traduit s'il est connu ; sinon le texte tel quel. */
   const lv = v => { const f = LEVEL(v); return f.known ? f.t : String(v); };
   const num = (v, unit) => has(v) ? `${v}${has(unit) ? " " + unit : ""}` : "";
-  /* Une valeur chiffrée est observée si sa période est passée ; prévisionnelle (objectif, projection) si elle se situe dans le futur. */
-  const futureYear = p => { const m = String(p == null ? "" : p).match(/\d{4}/g); return !!m && Math.max(...m.map(Number)) > new Date().getFullYear(); };
+  /* Statut d'une valeur chiffrée (observée, projetée, objectif, estimée) : lu UNIQUEMENT dans une colonne dédiée,
+     jamais déduit de la date. Sans colonne renseignée : « Statut non vérifié ». */
+  const VST = { observed: ["Résultat observé", "obs"], projected: ["Projection", "proj"], target: ["Objectif annoncé", "tgt"], estimated: ["Estimation", "est"] };
+  const vst = v => VST[norm(v)] || ["Statut non vérifié", "unk"];
+  const vbadge = v => { const x = vst(v); return `<span class="vs vs-${x[1]}">${x[0]}</span>`; };
 
   const srcList = arr => {
     const l = (arr || []).filter(x => x && x.sources);
@@ -44,17 +47,15 @@
     return has(a) && has(b) ? (String(a) === String(b) ? String(a) : `${a}–${b}`) : has(a) ? `depuis ${a}` : has(b) ? `jusqu’en ${b}` : ""; };
 
   const OUT_USED = new Set(["title", "result_assessment", "baseline_value", "baseline_period", "observed_value", "observed_period", "value_unit", "effect_magnitude", "fiscal_cost", "fiscal_revenue", "fiscal_currency", "fiscal_period",
-    "direct_effects", "indirect_effects", "side_effects", "causal_evidence_level", "methodology", "limitations", "interpretation"]);
+    "baseline_value_status", "observed_value_status", "fiscal_value_status", "fiscal_cost_status", "fiscal_revenue_status", "direct_effects", "indirect_effects", "side_effects", "causal_evidence_level", "methodology", "limitations", "interpretation"]);
   const outcome = o => {
-    const as = o.result_assessment, ev = o.causal_evidence_level, fut = futureYear(o.observed_period), unit = o.value_unit;
+    const as = o.result_assessment, ev = o.causal_evidence_level, unit = o.value_unit;
     const fiscal = [has(o.fiscal_cost) ? "Coût : " + num(o.fiscal_cost, o.fiscal_currency) : "", has(o.fiscal_revenue) ? "Recettes : " + num(o.fiscal_revenue, o.fiscal_currency) : ""].filter(Boolean).join(" · ") + (has(o.fiscal_period) && (has(o.fiscal_cost) || has(o.fiscal_revenue)) ? ` (${o.fiscal_period})` : "");
     const base = has(o.baseline_value) ? num(o.baseline_value, unit) + (has(o.baseline_period) ? ` (${o.baseline_period})` : "") : "";
     const obs = has(o.observed_value) ? num(o.observed_value, unit) + (has(o.observed_period) ? ` (${o.observed_period})` : "") : "";
-    /* Présentation honnête des chiffres : observation mesurée ou valeur prévisionnelle, jamais confondues. */
-    const obsLabel = !has(o.observed_value) ? "" : fut ? "Valeur prévisionnelle (objectif ou projection, non observée)" : has(o.observed_period) ? "Résultat chiffré observé" : "Valeur chiffrée (période non précisée)";
     return `<article class="cs-out ${as ? tone(as) : ""}"><header><b>${e(o.title || "Résultat")}</b>
-        ${as ? `<span class="cs-eval ${tone(as)}">Évaluation : ${e(ASSESS(as).t)}</span>` : ""}<span class="cs-ev">Niveau de preuve causale : ${ev ? e(EVID(ev).t) : "non précisé"}</span>${fut ? '<span class="cs-eval mix">Prévisionnel</span>' : ""}</header>
-      ${kv([["Situation de référence", base], [obsLabel, obs], ["Ampleur de l’effet", o.effect_magnitude], ["Coûts et recettes documentés", fiscal],
+        ${as ? `<span class="cs-eval ${tone(as)}">Évaluation : ${e(ASSESS(as).t)}</span>` : ""}<span class="cs-ev">Niveau de preuve causale : ${ev ? e(EVID(ev).t) : "non précisé"}</span></header>
+      ${kv([["Situation de référence", base ? e(base) + " " + vbadge(o.baseline_value_status) : "", true], ["Valeur chiffrée", obs ? e(obs) + " " + vbadge(o.observed_value_status) : "", true], ["Ampleur de l’effet", o.effect_magnitude], ["Coûts et recettes", fiscal ? e(fiscal) + " " + vbadge(o.fiscal_value_status || o.fiscal_cost_status) : "", true],
         ["Effets directs", o.direct_effects], ["Effets indirects", o.indirect_effects], ["Effets secondaires", o.side_effects], ["Méthodologie", o.methodology], ["Limites", o.limitations], ["Interprétation", o.interpretation]].filter(r => r[0]))}
       ${rest(o, OUT_USED)}
       <p class="cs-rel">${U.reliability(o.reliability_level, { notes: o.reliability_notes, checked: o.reliability_checked_at })}</p>

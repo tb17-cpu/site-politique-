@@ -211,3 +211,7 @@
 .cs-rel{margin:10px 0 0}
 .cs-more{margin:8px 0;font-size:13px;color:var(--muted)}
 .cs-more summary{cursor:pointer;color:var(--accent)}
+
+/* Statut d'une valeur chiffrée (cas comparatifs) */
+.vs{display:inline-block;margin-left:.4em;padding:.05em .55em;border-radius:99px;font-size:.72rem;font-weight:600;border:1px solid currentColor;white-space:nowrap;vertical-align:middle}
+.vs-obs{color:#5fae7a}.vs-proj{color:#6fa3d6}.vs-tgt{color:#d1a24c}.vs-est{color:#a58ad6}.vs-unk{color:#9a9a9a}
