@@ -215,3 +215,9 @@
 /* Statut d'une valeur chiffrée (cas comparatifs) */
 .vs{display:inline-block;margin-left:.4em;padding:.05em .55em;border-radius:99px;font-size:.72rem;font-weight:600;border:1px solid currentColor;white-space:nowrap;vertical-align:middle}
 .vs-obs{color:#5fae7a}.vs-proj{color:#6fa3d6}.vs-tgt{color:#d1a24c}.vs-est{color:#a58ad6}.vs-unk{color:#9a9a9a}
+
+.poll{margin:1rem 0;padding:1rem 1.1rem;border:1px solid var(--line,#2a2f3a);border-radius:10px}
+.poll h3{margin:0 0 .25rem;font-size:1rem}
+.poll-list{list-style:none;margin:.6rem 0;padding:0;display:grid;gap:.35rem}
+.poll-list li{display:flex;gap:.7rem;align-items:baseline;flex-wrap:wrap}
+.poll-v{min-width:4.2em;font-variant-numeric:tabular-nums;font-weight:700}

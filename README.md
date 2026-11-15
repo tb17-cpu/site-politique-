@@ -48,3 +48,10 @@ Le sélecteur de l'en-tête liste les élections publiées de Supabase (aucune n
 ## Fiabilité des données
 
 Un point plein signale un chiffre lu dans une source consultée, un point creux une estimation à confirmer. Dans `data-analyses.js`, le suffixe `^` produit le point plein et `~` le point creux.
+
+## Migrations Supabase (supabase/migrations)
+
+- `001_case_outcomes_value_status.sql` : statuts par valeur (observed, projected, target, estimated, unknown) pour la référence, la valeur chiffrée, le coût et les recettes. Additive : les lignes existantes restent NULL (« Statut non vérifié »).
+- `002_poll_snapshots.sql` : photographies de sondages (sondages et moyennes séparés ; partis, candidatures, personnalités ou libellé libre). Le rang est calculé à l'affichage.
+
+Le site n'écrit jamais en base : ces scripts s'exécutent dans l'éditeur SQL Supabase. Le frontend est compatible avant et après leur exécution (colonnes absentes = statut non vérifié ; table absente = aucun bloc de sondages).

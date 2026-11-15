@@ -47,15 +47,17 @@
     return has(a) && has(b) ? (String(a) === String(b) ? String(a) : `${a}–${b}`) : has(a) ? `depuis ${a}` : has(b) ? `jusqu’en ${b}` : ""; };
 
   const OUT_USED = new Set(["title", "result_assessment", "baseline_value", "baseline_period", "observed_value", "observed_period", "value_unit", "effect_magnitude", "fiscal_cost", "fiscal_revenue", "fiscal_currency", "fiscal_period",
-    "baseline_value_status", "observed_value_status", "fiscal_value_status", "fiscal_cost_status", "fiscal_revenue_status", "direct_effects", "indirect_effects", "side_effects", "causal_evidence_level", "methodology", "limitations", "interpretation"]);
+    "baseline_value_status", "observed_value_status", "fiscal_cost_status", "fiscal_revenue_status", "direct_effects", "indirect_effects", "side_effects", "causal_evidence_level", "methodology", "limitations", "interpretation"]);
   const outcome = o => {
     const as = o.result_assessment, ev = o.causal_evidence_level, unit = o.value_unit;
-    const fiscal = [has(o.fiscal_cost) ? "Coût : " + num(o.fiscal_cost, o.fiscal_currency) : "", has(o.fiscal_revenue) ? "Recettes : " + num(o.fiscal_revenue, o.fiscal_currency) : ""].filter(Boolean).join(" · ") + (has(o.fiscal_period) && (has(o.fiscal_cost) || has(o.fiscal_revenue)) ? ` (${o.fiscal_period})` : "");
+    const fp = has(o.fiscal_period) ? ` (${o.fiscal_period})` : "";
+    const cost = has(o.fiscal_cost) ? e(num(o.fiscal_cost, o.fiscal_currency) + fp) + " " + vbadge(o.fiscal_cost_status) : "";
+    const rev = has(o.fiscal_revenue) ? e(num(o.fiscal_revenue, o.fiscal_currency) + fp) + " " + vbadge(o.fiscal_revenue_status) : "";
     const base = has(o.baseline_value) ? num(o.baseline_value, unit) + (has(o.baseline_period) ? ` (${o.baseline_period})` : "") : "";
     const obs = has(o.observed_value) ? num(o.observed_value, unit) + (has(o.observed_period) ? ` (${o.observed_period})` : "") : "";
     return `<article class="cs-out ${as ? tone(as) : ""}"><header><b>${e(o.title || "Résultat")}</b>
         ${as ? `<span class="cs-eval ${tone(as)}">Évaluation : ${e(ASSESS(as).t)}</span>` : ""}<span class="cs-ev">Niveau de preuve causale : ${ev ? e(EVID(ev).t) : "non précisé"}</span></header>
-      ${kv([["Situation de référence", base ? e(base) + " " + vbadge(o.baseline_value_status) : "", true], ["Valeur chiffrée", obs ? e(obs) + " " + vbadge(o.observed_value_status) : "", true], ["Ampleur de l’effet", o.effect_magnitude], ["Coûts et recettes", fiscal ? e(fiscal) + " " + vbadge(o.fiscal_value_status || o.fiscal_cost_status) : "", true],
+      ${kv([["Situation de référence", base ? e(base) + " " + vbadge(o.baseline_value_status) : "", true], ["Valeur chiffrée", obs ? e(obs) + " " + vbadge(o.observed_value_status) : "", true], ["Ampleur de l’effet", o.effect_magnitude], ["Coût budgétaire", cost, true], ["Recettes", rev, true],
         ["Effets directs", o.direct_effects], ["Effets indirects", o.indirect_effects], ["Effets secondaires", o.side_effects], ["Méthodologie", o.methodology], ["Limites", o.limitations], ["Interprétation", o.interpretation]].filter(r => r[0]))}
       ${rest(o, OUT_USED)}
       <p class="cs-rel">${U.reliability(o.reliability_level, { notes: o.reliability_notes, checked: o.reliability_checked_at })}</p>

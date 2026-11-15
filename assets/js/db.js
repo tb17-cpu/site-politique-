@@ -53,7 +53,7 @@
      quand l'objet publié qu'elles relient (source, thème) n'est pas visible. */
   const PUBLISHED = "published";
   const WITH_STATUS = new Set(["countries", "elections", "people", "parties", "candidacies", "programs", "program_versions",
-    "themes", "measures", "sources", "analyses", "indicators", "indicator_observations", "policy_cases", "case_outcomes"]);
+    "themes", "measures", "sources", "analyses", "indicators", "indicator_observations", "policy_cases", "case_outcomes", "poll_snapshots"]);
   const REQUIRED_EMBED = { case_measure_relations: "policy_cases", policy_case_sources: "sources", case_outcome_sources: "sources", measure_sources: "sources", analysis_sources: "sources", candidacy_sources: "sources", measure_themes: "themes" };
 
   /* Nettoyage récursif des données imbriquées : un objet imbriqué portant un statut autre que « published »
@@ -100,6 +100,16 @@
   const PARTY = "parties(id,name,acronym,website_url,political_color,publication_status)";
   const D = {
     DbError, humanMessage, rows, raw, one, count,
+
+    /* Photographies de sondages d'une élection (table optionnelle : absente tant que la migration 002 n'est pas exécutée).
+       Retourne { missing, rows }. Une ligne dont l'entité désignée (candidature, parti, personne) n'est pas publiée est écartée. */
+    polls: async electionId => {
+      try {
+        const r = await rows("poll_snapshots", { select: `*,sources(id,title,url,publisher,publication_status),candidacies(id,candidacy_status,publication_status,${PERSON}),${PARTY},${PERSON}`, filter: { election_id: "eq." + electionId }, order: "snapshot_date.desc,value_percent.desc" });
+        const ok = x => (x.entity_kind !== "candidacy" || x.candidacies) && (x.entity_kind !== "party" || x.parties) && (x.entity_kind !== "person" || x.people);
+        return { missing: false, rows: r.filter(ok) };
+      } catch (e) { if (e instanceof DbError && e.status === 404) return { missing: true, rows: [] }; throw e; }
+    },
 
     /* Thèmes : familles (parent_id nul) et sous-thèmes. */
     themes: () => rows("themes", { order: "display_order.asc,name.asc" }),

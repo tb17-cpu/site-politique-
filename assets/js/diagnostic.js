@@ -56,6 +56,10 @@
       add("Comptages", "Nombre de lignes visibles dans les " + TABLES.length + " tables", failed.length ? NA : OK,
         failed.length ? "Comptage impossible pour : " + failed.join(", ") : TABLES.length + " tables comptées");
 
+      /* Sondages : table optionnelle (migration 002). Absente = information, jamais un échec ni un zéro. */
+      try { const n = await DB.count("poll_snapshots"); add("Sondages", "Table poll_snapshots", OK, n + " ligne(s) visible(s)"); }
+      catch (err) { add("Sondages", "Table poll_snapshots", NA, err && err.status === 404 ? "Table absente : migration 002 non exécutée (attendu tant qu’elle n’est pas appliquée)" : "Vérification impossible"); }
+
       /* B. Thématiques (lecture brute, sans filtre navigateur) */
       let th = null;
       try { th = await DB.raw("themes", { select: "id,parent_id,publication_status" }); } catch (err) { add("Thématiques", "Lecture des thématiques", NA, "Contrôle impossible : " + why(err)); }
