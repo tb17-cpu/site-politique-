@@ -49,6 +49,12 @@
       return `<li>${UI.link(s.url, s.title || "Document") || e(s.title || "Document")}<small>${[s.publisher, UI.formatSourceType(s.source_type), UI.date(s.publication_date)].filter(Boolean).map(e).join(" · ")}</small></li>`; }).join("")}</ul>`;
   };
 
+  /* Le dossier « Comprendre le pays » est un complément : son absence ou son échec ne touche pas cette page.
+     L'échec est tracé dans la console (jamais silencieux) et contrôlé par le diagnostic. */
+  const dossierOf = el => DB.countryDossiers().then(l => { const cid = String(el.country_id == null ? "" : el.country_id);
+      return l.some(d => Object.keys(d).some(k => /country/i.test(k) && /(^|_)id$|^country$/i.test(k) && String(d[k]) === cid)); },
+    err => { console.warn("[Au résultat] Dossier pays indisponible (" + DB.classify(err) + ")", err); return false; });
+
   Election.need(mount).then(el => {
     if (!el) return;
     const st = Election.status(el);
@@ -56,15 +62,15 @@
     $("p-title").textContent = Election.name(el);
     $("p-label").textContent = "Vue d’ensemble · " + st.label;
     $("p-lede").textContent = el.description || "Candidatures, programmes, thématiques, comparateur et indicateurs de cette élection.";
-    UI.mount(mount, async () => ({ cands: await DB.candidacies(el.id), progs: await DB.programs(el.id), polls: await DB.polls(el.id).catch(() => ({ missing: true, rows: [] })) }), d => {
+    UI.mount(mount, async () => ({ cands: await DB.candidacies(el.id), progs: await DB.programs(el.id), polls: await DB.polls(el.id).catch(() => ({ missing: true, rows: [] })), dossier: await dossierOf(el) }), d => {
       const nm = d.progs.reduce((n, p) => n + (p.program_versions || []).reduce((k, v) => k + (v.measures || []).length, 0), 0);
       const sections = [
         ["candidats", "Candidats", d.cands.length ? plural(d.cands.length, "candidature", "candidatures") : "Aucune candidature enregistrée"],
         ["programmes", "Programmes", d.progs.length ? plural(d.progs.length, "programme", "programmes") : "Aucun programme enregistré"],
         ["thematiques", "Thématiques", nm ? plural(nm, "mesure", "mesures") : "Aucune mesure enregistrée"],
         ["comparateur", "Comparateur", "Comparer les mesures de candidats différents"],
-        ["indicateurs", "Indicateurs", "Données et sources du pays"]];
-      const hrefs = { candidats: "candidats.html", programmes: "programmes.html", thematiques: "thematiques.html", comparateur: "comparateur.html", indicateurs: "indicateurs.html" };
+        ["indicateurs", "Indicateurs", "Données et sources du pays"]].concat(d.dossier ? [["pays", "Comprendre le pays", "Le contexte politique, économique et institutionnel"]] : []);
+      const hrefs = { candidats: "candidats.html", programmes: "programmes.html", thematiques: "thematiques.html", comparateur: "comparateur.html", indicateurs: "indicateurs.html", pays: "pays.html" };
       return `<div class="p-grid">${sections.map(s => `<a class="p-cell" href="${hrefs[s[0]]}"><span class="tag">${e(s[1])}</span><h3>${e(s[2])}</h3></a>`).join("")}</div>
         ${pollBlock(d.polls)}
         <h2 class="ov-h">Calendrier</h2>

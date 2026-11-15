@@ -1,0 +1,42 @@
+/* Dossier « Comprendre le pays » : lecture éditoriale, sobre, mêmes variables que le reste du site. */
+.dos{display:grid;gap:28px;grid-template-columns:minmax(0,1fr)}
+.dos-toc{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 14px}
+.dos-toc summary{cursor:pointer;padding:12px 0;font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.dos-toc ol{list-style:none;margin:0;padding:0 0 12px;display:grid;gap:2px}
+.dos-toc a{display:flex;gap:10px;padding:7px 0;color:var(--fg-2);text-decoration:none;font-size:14.5px;line-height:1.35;border-left:2px solid transparent}
+.dos-toc a:hover{color:var(--fg)}.dos-toc a[aria-current]{color:var(--fg);font-weight:600}
+.dos-tn{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);padding-top:2px;min-width:1.6em}
+.dos-art{min-width:0;max-width:70ch}
+.dos-intro{font-family:var(--f-display);font-size:clamp(19px,2.4vw,22px);line-height:1.6;color:var(--fg);margin:0 0 44px;padding-bottom:32px;border-bottom:1px solid var(--line)}
+.dos-sec{padding:0 0 52px;scroll-margin-top:calc(var(--header-h) + 64px)}
+.dos-sec>header{margin:0 0 16px}
+.dos-n{margin:0 0 4px;font-family:var(--f-mono);font-size:12px;letter-spacing:.1em;color:var(--accent)}
+.dos-sec h2{margin:0;font-family:var(--f-display);font-weight:600;font-size:clamp(26px,4.2vw,34px);line-height:1.18;letter-spacing:-.01em;text-wrap:balance}
+.dos-lede{font-family:var(--f-display);font-size:19px;line-height:1.55;color:var(--fg-2);margin:0 0 20px}
+.dos-key{margin:0 0 24px;padding:2px 0 2px 16px;border-left:2px solid var(--accent-dim)}
+.dos-key h3{margin:0 0 6px;font-family:var(--f-mono);font-size:11.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.dos-key ul{margin:0;padding-left:1.1em;color:var(--fg-2);font-size:15.5px;line-height:1.55}.dos-key li{margin:.25em 0}
+.md{font-size:17px;line-height:1.72;color:var(--fg);overflow-wrap:anywhere}
+.md p{margin:0 0 1.05em}.md h3,.md h4,.md h5,.md h6{font-family:var(--f-display);font-weight:600;line-height:1.25;margin:1.6em 0 .5em;color:var(--fg)}
+.md h3{font-size:23px}.md h4{font-size:19.5px}.md h5,.md h6{font-size:17px}
+.md ul,.md ol{margin:0 0 1.05em;padding-left:1.25em}.md li{margin:.3em 0}
+.md blockquote{margin:1.2em 0;padding:.1em 0 .1em 16px;border-left:2px solid var(--line);color:var(--fg-2);font-family:var(--f-display);font-size:18px}
+.md a{color:var(--accent);text-underline-offset:2px}.md strong{font-weight:600}
+.md code{font-family:var(--f-mono);font-size:.88em;background:var(--surface);padding:.1em .35em;border-radius:4px}
+.md pre{overflow-x:auto;background:var(--surface);padding:12px 14px;border-radius:6px}.md pre code{background:none;padding:0}
+.md hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.md-table{overflow-x:auto;margin:0 0 1.2em}.md-table table{border-collapse:collapse;font-size:15px;min-width:100%}
+.md-table th,.md-table td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}.md-table th{font-weight:600;color:var(--fg-2)}
+.dos-refs{margin-top:22px;border-top:1px solid var(--line-soft);padding-top:10px;font-size:14.5px}
+.dos-refs summary{cursor:pointer;color:var(--muted);font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.dos-refs ol{margin:10px 0 0;padding-left:1.3em;color:var(--fg-2)}.dos-refs li{margin:.5em 0}
+.dos-refs small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}
+.dos-note{color:var(--muted);font-size:14px}
+.dos-end{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:8px;padding-top:22px;border-top:1px solid var(--line);font-size:15px}
+.dos-end a{color:var(--accent)}
+@media (min-width:960px){
+  .dos{grid-template-columns:250px minmax(0,1fr);gap:56px;align-items:start}
+  .dos-toc{position:sticky;top:calc(var(--header-h) + 64px);max-height:calc(100vh - var(--header-h) - 90px);overflow:auto;background:none;border:0;border-right:1px solid var(--line);border-radius:0;padding:0 18px 0 0}
+  .dos-toc summary{pointer-events:none;list-style:none}.dos-toc summary::-webkit-details-marker{display:none}
+}
+@media (max-width:520px){.md{font-size:16.5px}.dos-sec{padding-bottom:40px}}

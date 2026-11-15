@@ -54,7 +54,7 @@
   const PUBLISHED = "published";
   const WITH_STATUS = new Set(["countries", "elections", "people", "parties", "candidacies", "programs", "program_versions",
     "themes", "measures", "sources", "analyses", "indicators", "indicator_observations", "policy_cases", "case_outcomes", "poll_snapshots", "election_sources"]);
-  const REQUIRED_EMBED = { election_sources: "sources", case_measure_relations: "policy_cases", policy_case_sources: "sources", case_outcome_sources: "sources", measure_sources: "sources", analysis_sources: "sources", candidacy_sources: "sources", measure_themes: "themes" };
+  const REQUIRED_EMBED = { country_dossier_section_sources: "sources", election_sources: "sources", case_measure_relations: "policy_cases", policy_case_sources: "sources", case_outcome_sources: "sources", measure_sources: "sources", analysis_sources: "sources", candidacy_sources: "sources", measure_themes: "themes" };
 
   /* Nettoyage récursif des données imbriquées : un objet imbriqué portant un statut autre que « published »
      devient null ; une ligne de liaison dont l'objet requis est absent disparaît. */
@@ -98,8 +98,29 @@
   /* ---- Fonctions par entité ---- */
   const PERSON = "people(id,first_name,last_name,photo_url,biography,official_website,photo_source_url,photo_credit,publication_status)";
   const PARTY = "parties(id,name,acronym,website_url,political_color,political_position_label,publication_status)";
+  /* Nature d'un échec, pour distinguer un droit manquant (401/403) d'une relation absente (404) ou d'une requête invalide (400). */
+  const classify = e => !(e instanceof DbError) ? "error" : e.kind === "timeout" ? "timeout" : e.kind === "network" ? "network" : e.kind === "incomplete" ? "incomplete"
+    : e.status === 401 || e.status === 403 ? "denied" : e.status === 404 ? "missing" : e.status === 400 ? "invalid" : e.status >= 500 ? "server" : "error";
   const D = {
-    DbError, humanMessage, rows, raw, one, count,
+    DbError, humanMessage, classify, rows, raw, one, count,
+
+    /* Dossiers « Comprendre le pays » : lecture indépendante du chargement des élections et des candidats.
+       1) liste des dossiers publiés (sans contenu lourd), 2) contenu du dossier du pays. Les références (sources) sont
+       demandées avec les sections ; si elles sont refusées ou indisponibles, les sections sont relues sans références et
+       l'état est signalé (sourcesState), jamais masqué. */
+    countryDossiers: () => rows("country_dossiers", { select: "*" }).then(r => r.filter(d => d && d.editorial_status === PUBLISHED)),
+    countryDossier: async dossierId => {
+      const f = { id: "eq." + dossierId };
+      const SEC = "country_dossier_sections(*";
+      const get = async inner => { const r = await rows("country_dossiers", { select: `*,${SEC}${inner})`, filter: f }); return r.filter(d => d && d.editorial_status === PUBLISHED)[0] || null; };
+      try { return { dossier: await get(",country_dossier_section_sources(*,sources(*))"), sourcesState: "ok" }; }
+      catch (e) {
+        if (!(e instanceof DbError) || ["timeout", "network", "incomplete"].includes(classify(e))) throw e;
+        console.warn("[Au résultat] Références du dossier indisponibles (" + classify(e) + ", HTTP " + e.status + ") : sections lues sans références.");
+        return { dossier: await get(""), sourcesState: classify(e) };
+      }
+    },
+
 
     /* Sondages individuels d'une élection (table optionnelle : absente tant que la migration 002 n'est pas exécutée).
        Retourne { missing, rows }. Une ligne dont l'entité désignée (candidature, parti, personne) n'est pas publiée est écartée. */

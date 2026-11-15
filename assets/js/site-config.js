@@ -27,7 +27,8 @@ window.SITE = {
     { id: "programmes",  label: "Programmes",     href: "programmes.html" },
     { id: "thematiques", label: "Thématiques",    href: "thematiques.html" },
     { id: "comparateur", label: "Comparateur",    href: "comparateur.html" },
-    { id: "indicateurs", label: "Indicateurs",    href: "indicateurs.html" }
+    { id: "indicateurs", label: "Indicateurs",    href: "indicateurs.html" },
+    { id: "pays",        label: "Comprendre le pays", href: "pays.html" }
   ],
 
   /* Chiffres de la page Indicateurs : { id du pays, rang de l’indicateur dans sa liste « k » }.

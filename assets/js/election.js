@@ -7,7 +7,7 @@
   const S = window.SITE, body = document.body, page = body.dataset.page || "", navKey = body.dataset.nav || page;
   const file = location.pathname.split("/").pop() || "index.html";
   /* Pages qui dépendent de l'élection : leur lien reçoit automatiquement ?e=<élection active>. */
-  const SCOPED = new Set(["election.html", "candidats.html", "candidat.html", "programmes.html", "thematiques.html", "comparateur.html", "indicateurs.html", "mesure.html"]);
+  const SCOPED = new Set(["election.html", "candidats.html", "candidat.html", "programmes.html", "thematiques.html", "comparateur.html", "indicateurs.html", "mesure.html", "pays.html"]);
   const FICHES = new Set(["candidat.html", "mesure.html"]);
   const KEY = "ar.election";
   const store = { get() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }, set(v) { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY); } catch (e) { /* stockage indisponible */ } } };

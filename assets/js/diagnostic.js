@@ -58,9 +58,15 @@
       add("Comptages", "Nombre de lignes visibles dans les " + TABLES.length + " tables", failed.length ? NA : OK,
         failed.length ? "Comptage impossible pour : " + failed.join(", ") : TABLES.length + " tables comptées");
 
-      /* Sondages : table optionnelle (migration 002). Absente = information, jamais un échec ni un zéro. */
-      try { const n = await DB.count("poll_snapshots"); add("Sondages", "Table poll_snapshots", OK, n + " ligne(s) visible(s)"); }
-      catch (err) { add("Sondages", "Table poll_snapshots", err && err.status === 404 ? INFO : NA, err && err.status === 404 ? "Table absente : migration 002 non exécutée. Fonctionnalité désactivée, ce n’est pas une erreur." : "Vérification impossible"); }
+      /* Tables complémentaires : leur indisponibilité ne bloque aucune page principale. « Droit refusé » (401/403) est un défaut à corriger
+         dans Supabase (GRANT SELECT / politique RLS) ; « relation absente » (404) signale une fonctionnalité non déployée (attendu). */
+      for (const [t, what] of [["poll_snapshots", "Sondages (migration 002)"], ["election_sources", "Documents de référence des élections"], ["country_dossiers", "Dossiers « Comprendre le pays »"], ["country_dossier_sections", "Sections des dossiers"], ["country_dossier_section_sources", "Références des sections"]]) {
+        try { const n = await DB.count(t); add("Tables complémentaires", `${what} — ${t}`, OK, n + " ligne(s) visible(s)"); }
+        catch (err) { const k = DB.classify(err);
+          if (k === "missing") add("Tables complémentaires", `${what} — ${t}`, INFO, "Table absente : fonctionnalité non déployée (attendu, pas une erreur).");
+          else if (k === "denied") add("Tables complémentaires", `${what} — ${t}`, WARN, "Droit SELECT refusé pour le rôle public (HTTP " + err.status + ") : la fonctionnalité est désactivée tant que le droit n’est pas accordé.");
+          else add("Tables complémentaires", `${what} — ${t}`, NA, "Vérification impossible : " + why(err)); }
+      }
 
       /* B. Thématiques (lecture brute, sans filtre navigateur) */
       let th = null;
