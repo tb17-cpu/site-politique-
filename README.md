@@ -51,6 +51,7 @@ Un point plein signale un chiffre lu dans une source consultée, un point creux 
 
 ## Migrations Supabase (supabase/migrations)
 
+- `000_precheck.sql` : contrôles en lecture seule à lancer avant (valeurs autorisées réelles, types uuid).
 - `001_case_outcomes_value_status.sql` : statuts par valeur (observed, projected, target, estimated, unknown) pour la référence, la valeur chiffrée, le coût et les recettes. Additive : les lignes existantes restent NULL (« Statut non vérifié »).
 - `002_poll_snapshots.sql` : photographies de sondages (sondages et moyennes séparés ; partis, candidatures, personnalités ou libellé libre). Le rang est calculé à l'affichage.
 
