@@ -6,28 +6,40 @@
 
   const pname = x => [x.first_name, x.last_name].filter(Boolean).join(" ");
   const who = r => {
-    if (r.entity_kind === "candidacy") { const c = r.candidacies, pt = c.people ? pname(c.people) : "", party = c.parties && c.parties.name;
-      return `<b>${e(pt)}</b>${party ? ` <small>${e(party)}</small>` : ""} <small class="quiet">${e(UI.formatCandidacyStatus(c.candidacy_status) || "")}</small>`; }
+    if (r.entity_kind === "candidacy") { const c = r.candidacies, party = c.parties && c.parties.acronym; return `<b>${e(c.people ? pname(c.people) : "")}</b>${party ? ` <small>${e(party)}</small>` : ""}`; }
     if (r.entity_kind === "party") return `<b>${e(r.parties.name)}</b>`;
-    if (r.entity_kind === "person") return `<b>${e(pname(r.people))}</b> <small class="quiet">Personnalité, sans candidature enregistrée</small>`;
-    return `<b>${e(r.entity_label)}</b> <small class="quiet">Sans candidature ni parti enregistré</small>`;
+    if (r.entity_kind === "person") return `<b>${e(pname(r.people))}</b>`;
+    return `<b>${e(r.entity_label)}</b>`;
   };
-  /* Sondages : le classement est calculé ici (pourcentage décroissant), jamais stocké. Un bloc par photographie la plus récente,
-     par type (sondage / moyenne), institut et scénario : des mesures de natures différentes ne sont jamais fusionnées. */
+  /* Un seul sondage est présenté : celui désigné ci-dessous. Scores tels que publiés : aucun calcul, aucune moyenne.
+     Sélection : sondage individuel (record_kind « poll ») de cet institut et de ce scénario, le plus récent. */
+  const FEATURED = { pollster: /opinionway/i, scenario: /hypoth[èe]se\s*1/i };
+  const mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+  const dmy = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ""); return m ? { d: +m[3], m: +m[2] - 1, y: +m[1] } : null; };
+  const terrain = (a, b) => { const x = dmy(a), y = dmy(b);
+    if (x && y) return x.m === y.m && x.y === y.y ? `du ${x.d === 1 ? "1er" : x.d} au ${y.d} ${mois[y.m]} ${y.y}` : `du ${x.d} ${mois[x.m]} ${x.y} au ${y.d} ${mois[y.m]} ${y.y}`;
+    return y ? `le ${y.d} ${mois[y.m]} ${y.y}` : ""; };
+  /* Score affiché tel que publié : une valeur technique inférieure à 1 est présentée « moins de 1 % » (jamais comme un score exact). */
+  const score = v => Number(v) < 1 ? "moins de 1 %" : Number(v).toFixed(1).replace(".", ",") + " %";
   const pollBlock = P => {
-    if (P.missing || !P.rows.length) return "";
-    const snap = P.rows[0].snapshot_date, cur = P.rows.filter(r => r.snapshot_date === snap), groups = new Map();
-    cur.forEach(r => { const k = [r.record_kind, r.pollster, r.scenario, r.poll_date].join("|"); (groups.get(k) || groups.set(k, []).get(k)).push(r); });
-    const blocks = [...groups.values()].sort((a, b) => (a[0].record_kind === "average" ? 0 : 1) - (b[0].record_kind === "average" ? 0 : 1)).map(g => {
-      const r0 = g[0], list = g.slice().sort((a, b) => b.value_percent - a.value_percent), src = r0.sources;
-      return `<section class="poll"><h3>${r0.record_kind === "average" ? "Moyenne de sondages" : "Sondage"}${r0.pollster ? " · " + e(r0.pollster) : ""}</h3>
-        <p class="quiet">${[r0.scenario, r0.poll_date ? "Date : " + UI.date(r0.poll_date) : "", r0.sample_size ? "Échantillon : " + r0.sample_size : ""].filter(Boolean).map(e).join(" · ")}</p>
-        <ol class="poll-list">${list.map(r => `<li><span class="poll-v">${e(Number(r.value_percent).toFixed(1).replace(".", ","))} %</span> ${who(r)}</li>`).join("")}</ol>
-        ${r0.methodology || r0.aggregation_note ? `<p class="quiet">${e([r0.methodology, r0.aggregation_note].filter(Boolean).join(" — "))}</p>` : ""}
-        ${src ? `<p class="quiet">Source : ${UI.link(src.url, src.title) || e(src.title)}</p>` : ""}</section>`; }).join("");
-    return `<h2 class="ov-h">Tendances agrégées — photographie du ${e(UI.date(snap))}</h2>
-      <p class="quiet">Photographie éditoriale datée, mise à jour manuellement : ce n’est ni un classement permanent, ni une donnée en temps réel. Un sondage n’est ni une candidature officielle ni un résultat électoral. Classement complet des candidats : <a href="candidats.html">page Candidats</a>.</p>${blocks}`;
+    if (P.missing) return "";
+    const cand = P.rows.filter(r => FEATURED.pollster.test(r.pollster || "") && FEATURED.scenario.test(r.scenario || "") && r.value_percent != null);
+    if (!cand.length) return "";
+    const key = r => [r.pollster, r.scenario, r.poll_date].join("|"), latest = cand.map(r => r.poll_date || "").sort().pop();
+    const rows = cand.filter(r => (r.poll_date || "") === latest).sort((a, b) => b.value_percent - a.value_percent), r0 = rows[0], src = r0.sources;
+    const max = Math.max(...rows.map(r => Number(r.value_percent)), 1);
+    const commanditaire = ((/\bpour\s+([^,.;()\n·]+)/i.exec([r0.methodology, r0.notes, r0.pollster].filter(Boolean).join(" · ")) || [])[1] || "").trim();
+    const meta = [["Institut", r0.pollster && r0.pollster.replace(/\s+pour\s+.*$/i, "")], ["Commanditaire", commanditaire], ["Terrain", terrain(r0.fieldwork_start, r0.poll_date)], ["Échantillon", r0.sample_size ? r0.sample_size.toLocaleString("fr-FR") + " personnes" : ""]].filter(x => x[1]);
+    return `<h2 class="ov-h">Dernier sondage — premier tour</h2>
+      <section class="poll" aria-label="Sondage ${e(r0.pollster || "")}">
+        <p class="quiet">${e(r0.scenario || "")}</p>
+        <ul class="bars">${rows.map(r => { const v = Number(r.value_percent), w = v < 1 ? 1.5 : Math.max(1.5, v / max * 100);
+          return `<li><span class="bar-n">${who(r)}</span><span class="bar-t" role="img" aria-label="${e(score(v))}"><span class="bar-f" style="width:${w.toFixed(1)}%"></span></span><span class="bar-v">${e(score(v))}</span></li>`; }).join("")}</ul>
+        <dl class="kv poll-meta">${meta.map(x => `<dt>${e(x[0])}</dt><dd>${e(x[1])}</dd>`).join("")}</dl>
+        <p class="quiet poll-note">Scores tels que publiés par l’institut. Un sondage n’est ni une prévision ni un résultat électoral.${src && U_URL(src.url) ? ` <a href="${e(U_URL(src.url))}" target="_blank" rel="noopener">Notice officielle de la Commission des sondages</a>` : ""}</p>
+      </section>`;
   };
+  const U_URL = u => UI.safeUrl(u);
 
   Election.need(mount).then(el => {
     if (!el) return;

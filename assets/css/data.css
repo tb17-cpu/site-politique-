@@ -229,3 +229,12 @@ table.diag td.warn{color:#d1a24c;font-weight:600}table.diag td.inc{color:#9fb0c8
 .cand-rank{display:inline-block;min-width:1.7em;margin-right:.4em;padding:.05em .45em;border-radius:6px;background:var(--line,#2a2f3a);font-weight:700;font-variant-numeric:tabular-nums;text-align:center}
 .cand-poll{margin:.3rem 0}.cand-poll b{font-size:1.15rem;font-variant-numeric:tabular-nums}
 .cand-poll small{display:block}.cand-warn{color:#d1a24c}
+
+.bars{list-style:none;margin:.8rem 0;padding:0;display:grid;gap:.45rem}
+.bars li{display:grid;grid-template-columns:minmax(7.5rem,13rem) 1fr 6.2rem;gap:.6rem;align-items:center}
+.bar-n{min-width:0;overflow-wrap:anywhere;font-size:.92rem}.bar-n small{display:block;opacity:.7}
+.bar-t{height:.8rem;background:var(--line,#2a2f3a);border-radius:99px;overflow:hidden}
+.bar-f{display:block;height:100%;background:var(--accent,#6fa3d6);border-radius:99px}
+.bar-v{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:.92rem;white-space:nowrap}
+.poll-meta{margin-top:.8rem}.poll-note{font-size:.85rem}
+@media (max-width:520px){.bars li{grid-template-columns:1fr 5.4rem;grid-template-areas:"n v" "t t"}.bar-n{grid-area:n}.bar-v{grid-area:v}.bar-t{grid-area:t}}

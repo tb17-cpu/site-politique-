@@ -58,3 +58,8 @@ Un point plein signale un chiffre lu dans une source consultée, un point creux 
 Le site n'écrit jamais en base : ces scripts s'exécutent dans l'éditeur SQL Supabase. Le frontend est compatible avant et après leur exécution (colonnes absentes = statut non vérifié ; table absente = aucun bloc de sondages).
 - `supabase/audit_securite.sql` : audit en lecture seule (RLS, politiques, droits anon/authenticated, vues, fonctions).
 - `docs/BILAN.md` : bilan d'audit et priorités.
+
+## Candidats et sondage
+
+- Ordre de la page Candidats : `candidacies.display_order` (saisi dans Supabase), sans aucun calcul ; les lignes sans ordre viennent après.
+- Page élection : un seul sondage (OpinionWay, scénario « Hypothèse 1 ») en graphique, scores tels que publiés ; une valeur inférieure à 1 s’affiche « moins de 1 

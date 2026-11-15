@@ -101,25 +101,14 @@
   const D = {
     DbError, humanMessage, rows, raw, one, count,
 
-    /* Photographies de sondages d'une élection (table optionnelle : absente tant que la migration 002 n'est pas exécutée).
+    /* Sondages individuels d'une élection (table optionnelle : absente tant que la migration 002 n'est pas exécutée).
        Retourne { missing, rows }. Une ligne dont l'entité désignée (candidature, parti, personne) n'est pas publiée est écartée. */
     polls: async electionId => {
       try {
-        const r = await rows("poll_snapshots", { select: `*,sources(id,title,url,publisher,publication_status),candidacies(id,candidacy_status,publication_status,${PERSON}),${PARTY},${PERSON}`, filter: { election_id: "eq." + electionId, record_kind: "eq.average" }, order: "snapshot_date.desc,value_percent.desc", limit: 1000 });
+        const r = await rows("poll_snapshots", { select: `*,sources(id,title,url,publisher,publication_status),candidacies(id,candidacy_status,publication_status,${PERSON}),${PARTY},${PERSON}`, filter: { election_id: "eq." + electionId, record_kind: "eq.poll" }, order: "poll_date.desc.nullslast,snapshot_date.desc,value_percent.desc", limit: 1000 });
         const ok = x => (x.entity_kind !== "candidacy" || x.candidacies) && (x.entity_kind !== "party" || x.parties) && (x.entity_kind !== "person" || x.people);
         return { missing: false, rows: r.filter(ok) };
       } catch (e) { if (e instanceof DbError && e.status === 404) return { missing: true, rows: [] }; throw e; }
-    },
-
-    /* Données de classement par sondages (tendances agrégées et sondages individuels), sans jointure lourde.
-       Sondages et moyennes sont lus séparément : une lecture à 1000 lignes (plafond de l'API) est signalée par « truncated ». */
-    pollRanking: async electionId => {
-      const sel = "id,snapshot_date,record_kind,poll_date,pollster,entity_kind,candidacy_id,person_id,value_percent,scenario,aggregation_note,sample_size";
-      const q = kind => rows("poll_snapshots", { select: sel, filter: { election_id: "eq." + electionId, record_kind: "eq." + kind }, order: "poll_date.desc.nullslast,snapshot_date.desc", limit: 1000 });
-      try {
-        const [averages, polls] = await Promise.all([q("average"), q("poll")]);
-        return { missing: false, averages, polls, truncated: averages.length >= 1000 || polls.length >= 1000 };
-      } catch (e) { if (e instanceof DbError && e.status === 404) return { missing: true, averages: [], polls: [], truncated: false }; throw e; }
     },
 
     /* Thèmes : familles (parent_id nul) et sous-thèmes. */
@@ -136,7 +125,7 @@
 
     /* Une candidature dont le candidat n'est pas visible n'est pas présentée. */
     candidacies: electionId => rows("candidacies", {
-      select: `*,${PERSON},${PARTY}`, filter: { election_id: "eq." + electionId }, order: "announcement_date.asc.nullslast"
+      select: `*,${PERSON},${PARTY}`, filter: { election_id: "eq." + electionId }, order: "display_order.asc.nullslast,announcement_date.asc.nullslast"
     }).then(r => r.filter(c => c.people)),
 
     candidacy: id => rows("candidacies", { limit: 1,
