@@ -25,8 +25,8 @@
         <ol class="poll-list">${list.map(r => `<li><span class="poll-v">${e(Number(r.value_percent).toFixed(1).replace(".", ","))} %</span> ${who(r)}</li>`).join("")}</ol>
         ${r0.methodology || r0.aggregation_note ? `<p class="quiet">${e([r0.methodology, r0.aggregation_note].filter(Boolean).join(" — "))}</p>` : ""}
         ${src ? `<p class="quiet">Source : ${UI.link(src.url, src.title) || e(src.title)}</p>` : ""}</section>`; }).join("");
-    return `<h2 class="ov-h">Sondages — photographie du ${e(UI.date(snap))}</h2>
-      <p class="quiet">Photographie éditoriale datée, mise à jour manuellement : ce n’est ni un classement permanent, ni une donnée en temps réel. Un sondage n’est ni une candidature officielle ni un résultat électoral.</p>${blocks}`;
+    return `<h2 class="ov-h">Tendances agrégées — photographie du ${e(UI.date(snap))}</h2>
+      <p class="quiet">Photographie éditoriale datée, mise à jour manuellement : ce n’est ni un classement permanent, ni une donnée en temps réel. Un sondage n’est ni une candidature officielle ni un résultat électoral. Classement complet des candidats : <a href="candidats.html">page Candidats</a>.</p>${blocks}`;
   };
 
   Election.need(mount).then(el => {
