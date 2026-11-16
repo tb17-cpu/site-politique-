@@ -6,8 +6,7 @@
     const party = c.parties ? (c.parties.name + (c.parties.acronym ? ` (${c.parties.acronym})` : "")) : "";
     return `<a class="cand"${UI.partyColor(c.parties) ? ` style="--pc:${UI.partyColor(c.parties)}"` : ""} href="candidat.html#${encodeURIComponent(c.id)}">${UI.avatar(c.people)}
       <div>${UI.statusBadge("cand", c.candidacy_status)}
-      <h3>${e(name)}</h3><p>${UI.partyDot(c.parties)}${party ? e(party) : '<span class="quiet">Parti non renseigné</span>'}${UI.positionBlock(c)}</p>
-      ${UI.reliability(c.reliability_level)}</div></a>`;
+      <h3>${e(name)}</h3><p>${UI.partyDot(c.parties)}${party ? e(party) : '<span class="quiet">Parti non renseigné</span>'}${UI.positionBlock(c)}</p></div></a>`;
   };
   /* Ordre éditorial : candidacies.display_order (saisi dans Supabase), strictement respecté. Les lignes sans ordre
      viennent après les lignes ordonnées ; à ordre égal, ordre alphabétique stable. Aucun calcul à partir des sondages. */
@@ -25,5 +24,4 @@
     isEmpty: d => !d.list.length,
     empty: "<p><b>Aucune candidature n’est enregistrée pour cette élection.</b></p>"
   }); });
-  const lg = $("c-legend"); if (lg) lg.innerHTML = UI.reliabilityLegend();
 })();

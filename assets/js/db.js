@@ -42,6 +42,7 @@
     Object.entries(o.filter || {}).forEach(([k, v]) => p.push(`${k}=${encodeURIComponent(v).replace(/%2C/g, ",").replace(/%28/g, "(").replace(/%29/g, ")")}`));
     if (o.order) p.push(`order=${o.order}`);
     if (o.limit) p.push(`limit=${o.limit}`);
+    if (o.offset) p.push(`offset=${o.offset}`);
     return `${table}?${p.join("&")}`;
   }
 
@@ -79,9 +80,40 @@
   const inElection = electionId => m => !electionId || String(m.program_versions.programs.candidacies.election_id) === String(electionId);
   const chainOk = m => !!(m && m.program_versions && m.program_versions.programs && m.program_versions.programs.candidacies && m.program_versions.programs.candidacies.people);
 
+  /* Pagination automatique (l'API ne renvoie jamais plus de 1000 lignes par réponse, sans erreur).
+     - Requête avec « limit » explicite (une ligne, etc.) : inchangée.
+     - Sinon : première page de PAGE lignes, avec l'ordre demandé. Une page incomplète (< PAGE) est la fin des données :
+       comportement et trafic identiques à l'existant tant qu'une requête reste sous PAGE lignes.
+     - Une page pleine peut cacher une suite : les pages sont alors relues avec un ordre déterministe (l'ordre demandé,
+       puis « id » pour départager les ex æquo), pour ne produire ni doublon ni omission d'une page à l'autre, avec le
+       total exact fourni par l'API. Toute incohérence (total non atteint, doublon, trop de pages) lève une erreur
+       « incomplete » : jamais de tronquage silencieux. */
+  const PAGE = 1000, MAX_PAGES = 200;
+  async function fetchAll(table, o) {
+    if (o.limit) return (await call(url(table, o))).json();
+    const first = await (await call(url(table, Object.assign({}, o, { limit: PAGE })))).json();
+    if (first.length < PAGE) return first;
+    const order = o.order ? (/(^|,)id\./.test(o.order) ? o.order : o.order + ",id.asc") : "id.asc";
+    const all = []; let total = null;
+    for (let i = 0; i < MAX_PAGES; i++) {
+      const res = await call(url(table, Object.assign({}, o, { order, limit: PAGE, offset: i * PAGE })), i === 0 ? { headers: { Prefer: "count=exact" } } : {});
+      const part = await res.json();
+      if (i === 0) { const m = /\/(\d+)$/.exec(res.headers.get("content-range") || ""); total = m ? +m[1] : null; }
+      all.push(...part);
+      if (total !== null ? all.length >= total : part.length < PAGE) {
+        if (total !== null && all.length !== total) throw new DbError("incomplete", "Total incohérent", 200);
+        const ids = all.map(r => r && r.id).filter(x => x !== undefined && x !== null);
+        if (new Set(ids).size !== ids.length) throw new DbError("incomplete", "Doublons entre pages", 200);
+        return all;
+      }
+      if (part.length === 0) throw new DbError("incomplete", "Page vide avant le total", 200);
+    }
+    throw new DbError("incomplete", "Trop de pages", 200);
+  }
+
   async function rows(table, o) {
     const key = url(table, o);
-    if (!memo.has(key)) memo.set(key, call(key).then(r => r.json()).then(r => visible(table, r)).catch(e => { memo.delete(key); throw e; }));
+    if (!memo.has(key)) memo.set(key, fetchAll(table, o || {}).then(r => visible(table, r)).catch(e => { memo.delete(key); throw e; }));
     return memo.get(key);
   }
   /* Sans le garde-fou : réservé au diagnostic, pour constater ce que RLS laisse passer. */
@@ -126,7 +158,7 @@
        Retourne { missing, rows }. Une ligne dont l'entité désignée (candidature, parti, personne) n'est pas publiée est écartée. */
     polls: async electionId => {
       try {
-        const r = await rows("poll_snapshots", { select: `*,sources(id,title,url,publisher,publication_status),candidacies(id,candidacy_status,publication_status,${PERSON}),${PARTY},${PERSON}`, filter: { election_id: "eq." + electionId, record_kind: "eq.poll" }, order: "poll_date.desc.nullslast,snapshot_date.desc,value_percent.desc", limit: 1000 });
+        const r = await rows("poll_snapshots", { select: `*,sources(id,title,url,publisher,publication_date,publication_status),candidacies(id,candidacy_status,publication_status,${PERSON}),${PARTY},${PERSON}`, filter: { election_id: "eq." + electionId, record_kind: "eq.poll" }, order: "poll_date.desc.nullslast,snapshot_date.desc,value_percent.desc" });
         const ok = x => (x.entity_kind !== "candidacy" || x.candidacies) && (x.entity_kind !== "party" || x.parties) && (x.entity_kind !== "person" || x.people);
         return { missing: false, rows: r.filter(ok) };
       } catch (e) { if (e instanceof DbError && e.status === 404) return { missing: true, rows: [] }; throw e; }
