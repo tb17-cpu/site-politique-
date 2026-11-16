@@ -79,15 +79,17 @@ const rels=[kase('1','direct_application','Italie',[['positive','observational']
 
 const L={official_program:'Programme officiel publié du candidat',party_position:'Position officielle du parti',candidate_pledge:'Engagement public du candidat',recent_announcement:'Annonce récente non intégrée à un programme',press_reported:'Information rapportée par la presse, à confirmer'};
 const base={...mk1([]),case_measure_relations:[]};
-const fm=(id,o)=>({...base,id,title:'Mesure '+id,measure_sources:[{id:'ms'+id,sources:S1}],formalization_status:null,formalization_status_date:null,formalization_source_id:null,formalization_note:null,sources:null,...o});
+const J=(id,o)=>({id:'ms-'+id,measure_id:id,page_reference:'p3',sources:S1,...o});
+const fm=(id,o)=>({...base,id,title:'Mesure '+id,measure_sources:[{id:'ms'+id,sources:S1}],formalization_status:null,formalization_status_date:null,formalization_measure_source_id:null,formalization_note:null,justification:null,...o});
 const M=[
- fm('m1',{formalization_status:'official_program',formalization_status_date:'2026-10-02',formalization_source_id:'s1',sources:S1}),
- fm('m2',{formalization_status:'candidate_pledge',formalization_status_date:'2026-10-02',formalization_source_id:'s1',sources:S1,measure_sources:[{id:'x',sources:{...S1,id:'s9',title:'Autre source'}}]}),
- fm('m3',{formalization_status:'press_reported',formalization_status_date:'2026-10-02',formalization_source_id:'s1',sources:null}),
- fm('m4',{formalization_status:'foo',formalization_status_date:'2026-10-02',formalization_source_id:'s1',sources:S1}),
- fm('m5',{formalization_status:'recent_announcement',formalization_status_date:null,formalization_source_id:'s1',sources:S1}),
+ fm('m1',{formalization_status:'official_program',formalization_status_date:'2026-10-02',formalization_measure_source_id:'ms-m1',justification:J('m1')}),
+ fm('m2',{formalization_status:'candidate_pledge',formalization_status_date:'2026-10-02',formalization_measure_source_id:'ms-m9',justification:J('m2',{id:'ms-m9',measure_id:'m9'})}),   // ligne d'une AUTRE mesure
+ fm('m3',{formalization_status:'press_reported',formalization_status_date:'2026-10-02',formalization_measure_source_id:'ms-m3',justification:J('m3',{sources:null})}),                      // source dépubliée
+ fm('m4',{formalization_status:'foo',formalization_status_date:'2026-10-02',formalization_measure_source_id:'ms-m4',justification:J('m4')}),
+ fm('m5',{formalization_status:'recent_announcement',formalization_status_date:null,formalization_measure_source_id:'ms-m5',justification:J('m5')}),
  fm('m6',{}),
- fm('m7',{formalization_status:'party_position',formalization_status_date:'2026-09-15',formalization_source_id:'s1',sources:S1,formalization_note:'Note éditoriale test'}),
+ fm('m7',{formalization_status:'party_position',formalization_status_date:'2026-09-15',formalization_measure_source_id:'ms-m7',justification:J('m7'),formalization_note:'Note éditoriale test'}),
+ fm('m8',{formalization_status:'official_program',formalization_status_date:'2026-10-02',formalization_measure_source_id:null,justification:null}),                                         // aucune association
 ];
 (async()=>{
  br=await chromium.launch();
@@ -100,9 +102,11 @@ const M=[
    const all=await p.evaluate(async()=>{const m=await DB.formalizations();return {k:[...m.keys()].sort(),ui:Object.fromEntries(['official_program','party_position','candidate_pledge','recent_announcement','press_reported','foo',null].map(k=>[k,UI.formalization(k?{status:k,date:'2026-10-02'}:null).replace(/<[^>]+>/g,'')]))}});
    rep(JSON.stringify(all.k)===JSON.stringify(['m1','m7']),`${w}px statuts retenus : seulement les justifiés (m1, m7)`,all.k);
    rep(Object.entries(L).every(([k,v])=>all.ui[k]===v)&&all.ui.foo===''&&all.ui.null==='',`${w}px cinq libellés exacts ; valeur inconnue ou absente : rien`,all.ui);
+   const cols=await p.evaluate(()=>{const h=document.createElement('div');document.body.appendChild(h);return ['official_program','party_position','candidate_pledge','recent_announcement','press_reported'].map(k=>{h.innerHTML=UI.formalization({status:k,date:'2026-10-02'});const i=h.querySelector('.fs i'),c=getComputedStyle(i).backgroundColor,t=getComputedStyle(h.querySelector('.fs')).color;return c+'|'+t});});
+   rep(new Set(cols).size===1&&!/rgba\(0, 0, 0, 0\)/.test(cols[0]),`${w}px couleur identique pour les cinq statuts (pastille et texte)`,cols);
    rep(!/Fiabilité/i.test(await p.locator('#f-body > p:first-child').innerText().catch(()=>'')),`${w}px aucun texte « Fiabilité » dans l’en-tête de la mesure`);
   });
-  for(const [id,why] of [['m2','source non associée'],['m3','source non publiée'],['m4','valeur inconnue'],['m5','date manquante'],['m6','aucun statut']]){
+  for(const [id,why] of [['m2','association d’une autre mesure'],['m3','source dépubliée'],['m4','valeur inconnue'],['m5','date manquante'],['m6','aucun statut'],['m8','aucune association']]){
    await page(w,TT({elections:[E1],measures:M}),'mesure.html?e=e1#'+id,async p=>{rep(/Mesure m\d/.test(await txt(p))&&await p.locator('.st-err').count()===0&&await p.locator('.fs').count()===0,`${w}px ${id} (${why}) : fiche affichée, aucun badge`);});
   }
   await page(w,TT({elections:[E1],measures:M}),'mesure.html?e=e1#m7',async p=>{rep(await p.locator('.fs-party_position').count()===1&&/Note éditoriale test/.test(await txt(p)),`${w}px m7 : position du parti + note`)});

@@ -94,7 +94,7 @@
        page vide avant le total, nombre de requêtes excessif (serveur qui ignorerait « offset », par exemple).
      Les erreurs réseau et HTTP sont propagées telles quelles par call(). */
   const FORMALIZATION = ["official_program", "party_position", "candidate_pledge", "recent_announcement", "press_reported"];
-  const PAGE = 1000, MAX_REQUESTS = 500, COUNT = { headers: { Prefer: "count=exact" } };
+  const PAGE = 1000, HARD_CAP = 20000, NO_TOTAL_CAP = 5000, COUNT = { headers: { Prefer: "count=exact" } };
   const totalOf = res => { const m = /\/(\d+)$/.exec(res.headers.get("content-range") || ""); return m ? +m[1] : null; };
   const hasDupes = list => { const ids = list.map(r => r && r.id).filter(x => x !== undefined && x !== null); return new Set(ids).size !== ids.length; };
   const incomplete = why => new DbError("incomplete", why, 200);
@@ -110,7 +110,12 @@
     }
     const order = o.order ? (/(^|,)id\./.test(o.order) ? o.order : o.order + ",id.asc") : "id.asc";
     const all = []; let t = null;
-    for (let n = 0; n < MAX_REQUESTS; n++) {
+    /* Garde-fou : avec le total exact, au plus total + 2 requêtes (chaque requête doit apporter au moins une ligne, sinon erreur) ;
+       sans total, 5000 requêtes au plus (5 millions de lignes à 1000 par page : bien au-delà de ce site). Dans tous les cas, plafond
+       absolu de 20000 requêtes. Un dépassement lève « incomplete » : jamais de résultat tronqué ni de boucle sans fin. */
+    const cap = total !== null ? Math.min(total + 2, HARD_CAP) : NO_TOTAL_CAP;
+    if (total !== null && total > HARD_CAP) throw incomplete("Volume de données excessif pour la pagination");
+    for (let n = 0; n < cap; n++) {
       const r = await call(url(table, Object.assign({}, o, { order, limit: PAGE, offset: all.length })), n === 0 ? COUNT : {});
       const part = await r.json();
       if (n === 0) t = totalOf(r);
@@ -122,7 +127,7 @@
       }
       if (part.length === 0) throw incomplete("Page vide avant la fin des données");
     }
-    throw incomplete("Trop de requêtes de pagination");
+    throw incomplete("Trop de requêtes de pagination (plafond atteint)");
   }
 
   async function rows(table, o) {
@@ -187,14 +192,17 @@
     formalizations: () => D._fm || (D._fm = (async () => {
       const out = new Map(); let transient = false;
       try {
-        const r = await rows("measures", { select: "id,publication_status,formalization_status,formalization_status_date,formalization_source_id,formalization_note,sources!formalization_source_id(id,title,url,publisher,publication_date,publication_status),measure_sources(sources(id,publication_status))", filter: { formalization_status: "not.is.null" }, order: "id.asc" });
+        const r = await rows("measures", { select: "id,publication_status,formalization_status,formalization_status_date,formalization_measure_source_id,formalization_note,justification:measure_sources!measures_formalization_measure_source_fk(id,measure_id,page_reference,sources(id,title,url,publisher,publication_date,publication_status))", filter: { formalization_status: "not.is.null" }, order: "id.asc" });
         let ignored = 0;
         r.forEach(m => {
-          const linked = (m.measure_sources || []).some(x => x && x.sources && String(x.sources.id) === String(m.formalization_source_id));
-          if (FORMALIZATION.includes(m.formalization_status) && m.formalization_status_date && m.sources && linked) out.set(String(m.id), { status: m.formalization_status, date: m.formalization_status_date, note: m.formalization_note || "", source: m.sources });
+          /* La base garantit que la ligne de measure_sources appartient à la mesure (clé étrangère composite) ; on le revérifie par prudence.
+             La source de cette ligne doit être publiée : une source dépubliée (null après nettoyage) supprime le statut. */
+          const j = m.justification, src = j && j.sources;
+          if (FORMALIZATION.includes(m.formalization_status) && m.formalization_status_date && j && String(j.measure_id) === String(m.id) && src)
+            out.set(String(m.id), { status: m.formalization_status, date: m.formalization_status_date, note: m.formalization_note || "", source: src, page: j.page_reference || "" });
           else ignored++;
         });
-        if (ignored) console.warn(`[statuts] ${ignored} statut(s) ignoré(s) : valeur inconnue, date manquante, source absente, non publiée ou non associée à la mesure.`);
+        if (ignored) console.warn(`[statuts] ${ignored} statut(s) ignoré(s) : valeur inconnue, date manquante, source (référence documentaire) absente, non publiée ou non rattachée à la mesure.`);
       } catch (e) {
         const k = classify(e);
         if (k === "invalid" || k === "missing") console.info("[statuts] colonnes de statut absentes : fonctionnalité inactive (" + k + ").");

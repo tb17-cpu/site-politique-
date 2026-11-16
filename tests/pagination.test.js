@@ -146,6 +146,18 @@ const call=(p,expr)=>p.evaluate(async e=>{try{const v=await eval(e);return {ok:t
     const {out}=await run(browser,{measures:mkMeasures(2500)},p=>call(p,'DB.measuresByThemes(["S1"],"e1")'),{noTotal:true,ignoreOffset:true});
     rep(!out.ok&&out.kind==='incomplete','total illisible + offset ignoré : erreur explicite',out);
   }
+  // 11) garde-fou proportionné au total (≥ 1200 lignes avec un serveur à 1 ligne par réponse, plus de 500 requêtes)
+  {
+    const N=1200, M=mkMeasures(N), exp=M.map(m=>m.id).sort();
+    const {out,reqs}=await run(browser,{measures:M},p=>call(p,'DB.measuresByThemes(["S1"],"e1").then(r=>r.map(m=>m.id))'),{maxRows:1});
+    const mr=reqs.filter(r=>r.t==='measures');
+    rep(out.ok&&out.v.length===N&&new Set(out.v).size===N&&JSON.stringify(out.v.slice().sort())===JSON.stringify(exp),`maxRows=1, ${N} lignes : toutes récupérées, sans doublon ni omission`,out.ok?out.v.length:out);
+    rep(mr.length>500&&mr.length<=N+3,`maxRows=1, ${N} lignes : ${mr.length} requêtes (au-delà de 500, borné par total + 2)`,mr.length);
+    rep(mr.filter(r=>r.offset>0).every(r=>/id\.asc/.test(r.order||'')),`maxRows=1 : ordre déterministe sur toutes les pages`);
+    const {out:o2,reqs:r2}=await run(browser,{measures:M},p=>call(p,'DB.measuresByThemes(["S1"],"e1").then(r=>r.map(m=>m.id))'),{maxRows:1,noTotal:true});
+    rep(o2.ok&&o2.v.length===N&&new Set(o2.v).size===N&&JSON.stringify(o2.v.slice().sort())===JSON.stringify(exp),`sans total exact, maxRows=1, ${N} lignes : toutes récupérées`,o2.ok?o2.v.length:o2);
+    rep(r2.filter(r=>r.t==='measures').length>500,`sans total exact : plus de 500 requêtes acceptées (plafond documenté : 5000)`,r2.length);
+  }
   await browser.close();
   console.log(`${res} contrôles, ${bad} échec(s)`);process.exit(bad?1:0);
 })();

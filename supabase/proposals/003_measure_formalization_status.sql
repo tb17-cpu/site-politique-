@@ -1,10 +1,13 @@
--- PROPOSITION — NON EXÉCUTÉE — Statut de formalisation des mesures politiques (version 2, révisée d'après l'audit du schéma réel)
+-- PROPOSITION — NON EXÉCUTÉE — Statut de formalisation des mesures politiques (version 3 : association garantie par la base)
 -- À relire, puis à exécuter uniquement par le propriétaire du projet, dans l'éditeur SQL de Supabase. Ni le site ni Claude ne l'exécutent.
 --
 -- Base de l'audit (lecture seule, fourni par le propriétaire) : public.measures (1 651 lignes dont 1 649 publiées) sans aucune colonne de statut ;
 -- public.sources (id, title, source_type, publisher, url, publication_date, publication_status) ; public.measure_sources (plusieurs sources par mesure,
 -- 3 411 associations) ; RLS actif sur les trois tables ; lecture seule pour anon / authenticated ; politiques limitées aux lignes publiées ;
 -- aucune migration de statut dans supabase_migrations.schema_migrations (la 001 existante concerne case_outcomes).
+--
+-- Schéma confirmé en lecture seule par le propriétaire : measure_sources(id uuid PK, measure_id uuid FK→measures.id, source_id uuid FK→sources.id), 3 411 lignes
+-- complètes, aucun doublon (measure_id, source_id), unicité existante sur (measure_id, source_id, page_reference) ; anon/authenticated ont SELECT sur measures.
 --
 -- Garanties : additive ; aucune ligne modifiée ; statut NULL sans valeur par défaut pour les 1 651 mesures ; aucune table créée ; aucun trigger ;
 -- aucune politique RLS ni permission modifiée ; reliability_level et toutes les colonnes existantes intactes.
@@ -31,37 +34,51 @@ select count(*) as mesures, count(*) filter (where publication_status='published
 select conname, pg_get_constraintdef(oid) from pg_constraint where conrelid='public.measures'::regclass and contype='c';
 -- 1g. Colonnes de measure_sources (le site lit cette table pour vérifier qu'une source justificative est bien associée à la mesure).
 select column_name, data_type from information_schema.columns where table_schema='public' and table_name='measure_sources' order by ordinal_position;
+-- 1h. Contraintes existantes de measure_sources (la nouvelle unicité (measure_id, id) ne doit pas déjà exister ; son nom ne doit pas être pris) :
+select conname, contype, pg_get_constraintdef(oid) from pg_constraint where conrelid='public.measure_sources'::regclass order by 1;
+-- 1i. Aucune ligne de measure_sources sans mesure (la clé composite ne porte que sur des lignes complètes) : attendu 0.
+select count(*) as lignes_sans_mesure from public.measure_sources where measure_id is null;
 
 -- =====================================================================================================
 -- 2. MIGRATION (une seule transaction : tout ou rien)
 -- =====================================================================================================
 begin;
 
-alter table public.measures
-  add column formalization_status      text,    -- NULL = statut non établi : aucun badge affiché
-  add column formalization_status_date date,    -- date de référence PROPRE au statut (document/événement), indépendante de sources.publication_date
-  add column formalization_source_id   uuid references public.sources(id),  -- source justificative (doit être associée à la mesure : voir §4)
-  add column formalization_note        text;    -- précision éditoriale facultative
+-- (a) Unicité (measure_id, id) sur measure_sources : requise comme cible de la clé étrangère composite. Triviale (id est déjà unique) : aucune donnée
+--     modifiée, aucun doublon possible ; elle ne restreint pas les plusieurs références de pages vers une même source.
+alter table public.measure_sources add constraint measure_sources_measure_id_id_uq unique (measure_id, id);
 
--- Valeurs autorisées (NULL admis).
+-- (b) Colonnes du statut. UNE SEULE référence documentaire (pas de formalization_source_id : pas de deux références pouvant se contredire).
+alter table public.measures
+  add column formalization_status            text,   -- NULL = statut non établi : aucun badge affiché
+  add column formalization_status_date       date,   -- date de référence PROPRE au statut, indépendante de sources.publication_date
+  add column formalization_measure_source_id uuid,   -- ligne de measure_sources qui justifie le statut (la source en découle : measure_sources.source_id)
+  add column formalization_note              text;   -- précision éditoriale facultative
+
+-- (c) La base garantit que la ligne justificative APPARTIENT à cette mesure : clé composite (mesure, ligne) -> measure_sources(measure_id, id).
+--     MATCH SIMPLE : non appliquée tant que formalization_measure_source_id est NULL (mesures sans statut).
+alter table public.measures add constraint measures_formalization_measure_source_fk
+  foreign key (id, formalization_measure_source_id) references public.measure_sources (measure_id, id);
+
+-- (d) Valeurs autorisées (NULL admis).
 alter table public.measures add constraint measures_formalization_status_chk check (
   formalization_status is null or formalization_status in
   ('official_program','party_position','candidate_pledge','recent_announcement','press_reported'));
 
--- Un statut renseigné exige sa date de référence ET sa source justificative.
+-- (e) Un statut renseigné exige sa date de référence ET son association justificative.
 alter table public.measures add constraint measures_formalization_justified_chk check (
-  formalization_status is null or (formalization_status_date is not null and formalization_source_id is not null));
+  formalization_status is null or (formalization_status_date is not null and formalization_measure_source_id is not null));
 
--- Pas de date, de source ou de note sans statut (évite des données orphelines lorsqu'un statut est retiré).
+-- (f) Pas de date, d'association ou de note sans statut (évite des données orphelines lorsqu'un statut est retiré).
 alter table public.measures add constraint measures_formalization_orphan_chk check (
-  formalization_status is not null or (formalization_status_date is null and formalization_source_id is null and formalization_note is null));
+  formalization_status is not null or (formalization_status_date is null and formalization_measure_source_id is null and formalization_note is null));
 
 -- Index de la clé étrangère (suppression/contrôle d'une source) : table de ~1 650 lignes, coût négligeable.
-create index measures_formalization_source_idx on public.measures (formalization_source_id) where formalization_source_id is not null;
+create index measures_formalization_source_idx on public.measures (id, formalization_measure_source_id) where formalization_measure_source_id is not null;
 
 comment on column public.measures.formalization_status      is 'Degré de formalisation : official_program | party_position | candidate_pledge | recent_announcement | press_reported. NULL = non établi. Jamais déduit de reliability_level (fiabilité documentaire, notion distincte).';
 comment on column public.measures.formalization_status_date is 'Date de référence du statut (document ou événement qui le justifie). Ne dépend pas de sources.publication_date.';
-comment on column public.measures.formalization_source_id   is 'Source justificative du statut ; doit figurer dans measure_sources pour cette mesure et être publiée pour que le site affiche le statut.';
+comment on column public.measures.formalization_measure_source_id is 'Ligne de measure_sources (de CETTE mesure, garanti par clé étrangère composite) qui justifie le statut. La source publiée en découle ; une source dépubliée supprime l''affichage du statut (contrôle applicatif + audit §4).';
 comment on column public.measures.formalization_note        is 'Précision éditoriale facultative (ex. historique : annoncée le …, intégrée au programme publié le …).';
 
 commit;
@@ -73,47 +90,42 @@ notify pgrst, 'reload schema';
 -- =====================================================================================================
 --   select count(*) mesures, count(formalization_status) avec_statut from public.measures;   -- 1651 ; 0
 --   select column_name from information_schema.columns where table_schema='public' and table_name='measures' and column_name like 'formalization%' order by 1;   -- 4 lignes
---   select conname from pg_constraint where conrelid='public.measures'::regclass and conname like 'measures_formalization%' order by 1;                           -- 3 lignes
+--   select conname from pg_constraint where conrelid='public.measures'::regclass and conname like 'measures_formalization%' order by 1;                           -- 4 lignes (fk, status_chk, justified_chk, orphan_chk)
+--   select conname from pg_constraint where conrelid='public.measure_sources'::regclass and conname='measure_sources_measure_id_id_uq';              -- 1 ligne ; measure_sources : 3 411 lignes inchangées
 --   -- Lecture publique (à lancer avec le rôle anon, ex. via l'API REST) : ne doit pas renvoyer 42501 / 403 :
 --   --   GET /rest/v1/measures?select=id,formalization_status&limit=1
 --   -- Les politiques RLS et les permissions sont inchangées : les colonnes ajoutées suivent le modèle d'accès existant.
 
 -- =====================================================================================================
--- 4. COHÉRENCE « LA SOURCE EST ASSOCIÉE À LA MESURE ET PUBLIÉE » (contrôle applicatif + requête d'audit, sans trigger)
+-- 4. PUBLICATION DE LA SOURCE (contrôle applicatif + requête d'audit, sans trigger)
 -- =====================================================================================================
--- Le site n'affiche un statut que si sa source est publiée ET figure dans measure_sources pour cette mesure ; sinon aucun badge (et un
--- avertissement en console). Requête d'audit à lancer après chaque saisie de statuts (attendu : 0 ligne) :
---   select m.id, m.title, m.formalization_status
+-- L'appartenance de la référence à la mesure est garantie par la base (§2c). La PUBLICATION de la source ne l'est pas (pas de trigger) : le site
+-- n'affiche un statut que si la source de la ligne justificative est publiée ; une source dépubliée supprime le badge. Audit à lancer après
+-- chaque saisie de statuts et après chaque dépublication de source (attendu : 0 ligne) :
+--   select m.id, m.title, m.formalization_status, s.title as source, s.publication_status
 --     from public.measures m
---    where m.formalization_status is not null
---      and (not exists (select 1 from public.measure_sources ms where ms.measure_id = m.id and ms.source_id = m.formalization_source_id)
---           or not exists (select 1 from public.sources s where s.id = m.formalization_source_id and s.publication_status = 'published'));
--- (colonnes measure_sources.measure_id / source_id à confirmer par le contrôle 1g.)
---
--- Variante facultative, plus stricte : imposer l'association au niveau SQL par une clé étrangère composite.
--- Elle exige une contrainte d'unicité sur measure_sources(measure_id, source_id), donc la modification d'une table existante, et échouerait
--- s'il existe des doublons parmi les 3 411 associations. Non recommandée sans contrôle préalable :
---   select measure_id, source_id, count(*) from public.measure_sources group by 1,2 having count(*) > 1;     -- attendu : 0 ligne
---   alter table public.measure_sources add constraint measure_sources_measure_source_uq unique (measure_id, source_id);
---   alter table public.measures add constraint measures_formalization_source_linked_fk
---     foreign key (id, formalization_source_id) references public.measure_sources (measure_id, source_id);
--- Effet : une source ne pourrait plus être détachée d'une mesure tant qu'elle justifie son statut.
+--     join public.measure_sources ms on ms.id = m.formalization_measure_source_id and ms.measure_id = m.id
+--     join public.sources s on s.id = ms.source_id
+--    where m.formalization_status is not null and s.publication_status <> 'published';
 
 -- =====================================================================================================
 -- 5. SAISIE / ÉVOLUTION D'UN STATUT (par l'éditeur ; exemple)
 -- =====================================================================================================
 --   update public.measures
 --      set formalization_status='official_program', formalization_status_date='2027-01-15',
---          formalization_source_id='<uuid d''une source déjà associée à la mesure>',
+--          formalization_measure_source_id='<id de la ligne measure_sources de cette mesure qui justifie le statut>',
 --          formalization_note='Annoncée le 3 mars 2026 ; intégrée au programme publié le 15 janvier 2027.'
 --    where id='<uuid de la mesure>';
 -- Retirer un statut : mettre les quatre colonnes à NULL dans la même instruction.
+-- Trouver les lignes candidates : select ms.id, s.title, ms.page_reference from public.measure_sources ms join public.sources s on s.id=ms.source_id where ms.measure_id='<uuid de la mesure>';
+-- NB : une ligne de measure_sources qui justifie un statut ne peut plus être supprimée tant que le statut la référence (clé étrangère).
 
 -- =====================================================================================================
 -- 6. RETOUR ARRIÈRE (supprime uniquement les quatre colonnes ajoutées ; aucune autre donnée n'est touchée)
 -- =====================================================================================================
 --   begin;
 --   drop index if exists public.measures_formalization_source_idx;
---   alter table public.measures drop constraint measures_formalization_orphan_chk, drop constraint measures_formalization_justified_chk, drop constraint measures_formalization_status_chk;
---   alter table public.measures drop column formalization_note, drop column formalization_source_id, drop column formalization_status_date, drop column formalization_status;
+--   alter table public.measures drop constraint measures_formalization_orphan_chk, drop constraint measures_formalization_justified_chk, drop constraint measures_formalization_status_chk, drop constraint measures_formalization_measure_source_fk;
+--   alter table public.measures drop column formalization_note, drop column formalization_measure_source_id, drop column formalization_status_date, drop column formalization_status;
+--   alter table public.measure_sources drop constraint measure_sources_measure_id_id_uq;
 --   commit;
