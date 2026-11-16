@@ -158,7 +158,7 @@
        Retourne { missing, rows }. Une ligne dont l'entité désignée (candidature, parti, personne) n'est pas publiée est écartée. */
     polls: async electionId => {
       try {
-        const r = await rows("poll_snapshots", { select: `*,sources(id,title,url,publisher,publication_status),candidacies(id,candidacy_status,publication_status,${PERSON}),${PARTY},${PERSON}`, filter: { election_id: "eq." + electionId, record_kind: "eq.poll" }, order: "poll_date.desc.nullslast,snapshot_date.desc,value_percent.desc" });
+        const r = await rows("poll_snapshots", { select: `*,sources(id,title,url,publisher,publication_date,publication_status),candidacies(id,candidacy_status,publication_status,${PERSON}),${PARTY},${PERSON}`, filter: { election_id: "eq." + electionId, record_kind: "eq.poll" }, order: "poll_date.desc.nullslast,snapshot_date.desc,value_percent.desc" });
         const ok = x => (x.entity_kind !== "candidacy" || x.candidacies) && (x.entity_kind !== "party" || x.parties) && (x.entity_kind !== "person" || x.people);
         return { missing: false, rows: r.filter(ok) };
       } catch (e) { if (e instanceof DbError && e.status === 404) return { missing: true, rows: [] }; throw e; }
