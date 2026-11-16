@@ -28,17 +28,19 @@
     if (!all.length) return none;
     const key = r => [r.sources && r.sources.id || r.source_id || "", r.pollster || "", r.scenario || "", r.poll_date || "", r.fieldwork_start || ""].join("|");
     const groups = new Map(); all.forEach(r => { const k = key(r); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
-    /* Plus récent : date du sondage décroissante (sans date en dernier), puis date de saisie, début de terrain, scénario, institut. */
-    const dsc = (x, y) => x === y ? 0 : x < y ? 1 : -1;
-    const latestGroup = [...groups.values()].sort((A, B) => { const a = A[0], b = B[0];
-      return dsc(a.poll_date || "", b.poll_date || "") || dsc(a.snapshot_date || "", b.snapshot_date || "") || dsc(a.fieldwork_start || "", b.fieldwork_start || "")
-        || String(a.scenario || "").localeCompare(String(b.scenario || "")) || String(a.pollster || "").localeCompare(String(b.pollster || "")); })[0];
-    const rows = latestGroup.slice().sort((a, b) => b.value_percent - a.value_percent), r0 = rows[0], src = r0.sources;
-    const max = Math.max(...rows.map(r => Number(r.value_percent)), 1);
-    const commanditaire = ((/\bpour\s+([^,.;()\n·]+)/i.exec([r0.methodology, r0.notes, r0.pollster].filter(Boolean).join(" · ")) || [])[1] || "").trim();
-    const meta = [["Institut", r0.pollster && r0.pollster.replace(/\s+pour\s+.*$/i, "")], ["Commanditaire", commanditaire], ["Terrain", terrain(r0.fieldwork_start, r0.poll_date)], ["Échantillon", r0.sample_size ? r0.sample_size.toLocaleString("fr-FR") + " personnes" : ""]].filter(x => x[1]);
-    return `<h2 class="ov-h">Dernier sondage</h2>
-      <section class="poll" aria-label="Sondage ${e(r0.pollster || "")}">
+    /* Plus récent : date de publication de la source la plus récente, puis fin du terrain (poll_date). Un sondage sans date vient
+       après ceux qui en ont. Si des sondages restent à égalité parfaite, ils sont tous présentés, chacun dans son propre bloc :
+       aucun choix arbitraire, aucun mélange de résultats. */
+    const rank = g => [(g[0].sources && g[0].sources.publication_date) || "", g[0].poll_date || ""];
+    const cmp = (A, B) => { const a = rank(A), b = rank(B); return a[0] < b[0] ? 1 : a[0] > b[0] ? -1 : a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0; };
+    const sorted = [...groups.values()].sort(cmp), top = sorted.filter(g => cmp(g, sorted[0]) === 0)
+      .sort((A, B) => String(A[0].pollster || "").localeCompare(String(B[0].pollster || "")) || String(A[0].scenario || "").localeCompare(String(B[0].scenario || "")));
+    const one = group => {
+      const rows = group.slice().sort((a, b) => b.value_percent - a.value_percent), r0 = rows[0], src = r0.sources;
+      const max = Math.max(...rows.map(r => Number(r.value_percent)), 1);
+      const commanditaire = ((/\bpour\s+([^,.;()\n·]+)/i.exec([r0.methodology, r0.notes, r0.pollster].filter(Boolean).join(" · ")) || [])[1] || "").trim();
+      const meta = [["Institut", r0.pollster && r0.pollster.replace(/\s+pour\s+.*$/i, "")], ["Commanditaire", commanditaire], ["Terrain", terrain(r0.fieldwork_start, r0.poll_date)], ["Échantillon", r0.sample_size ? r0.sample_size.toLocaleString("fr-FR") + " personnes" : ""]].filter(x => x[1]);
+      return `<section class="poll" aria-label="Sondage ${e(r0.pollster || "")}">
         <p class="quiet">${e(r0.scenario || "")}</p>
         <ul class="bars">${rows.map(r => { const v = Number(r.value_percent), w = v < 1 ? 1.5 : Math.max(1.5, v / max * 100);
           return `<li><span class="bar-n">${who(r)}</span><span class="bar-t" role="img" aria-label="${e(score(v))}"><span class="bar-f" style="width:${w.toFixed(1)}%"></span></span><span class="bar-v">${e(score(v))}</span></li>`; }).join("")}</ul>
@@ -46,6 +48,8 @@
         <p class="quiet poll-note">Scores tels que publiés par l’institut. Un sondage n’est ni une prévision ni un résultat électoral.</p>
         ${src ? `<p class="quiet poll-note">Source : ${UI.link(src.url, src.title || "Source du sondage") || e(src.title || "Source du sondage")}${src.publisher ? ` · ${e(src.publisher)}` : ""}</p>` : ""}
       </section>`;
+    };
+    return `<h2 class="ov-h">${top.length > 1 ? "Derniers sondages" : "Dernier sondage"}</h2>${top.map(one).join("")}`;
   };
   const U_URL = u => UI.safeUrl(u);
 
