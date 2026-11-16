@@ -211,6 +211,17 @@
 .cs-rel{margin:10px 0 0}
 .cs-more{margin:8px 0;font-size:13px;color:var(--muted)}
 .cs-more summary{cursor:pointer;color:var(--accent)}
+/* Cas concrets : synthèse, rubriques rédigées, volets repliables */
+.cs-sum{margin-top:14px}
+.cs-lede p{font-size:17px}
+.cs-facts{margin:6px 0 0;color:var(--muted);font-size:13px}
+.cs-sec{margin-top:6px}
+.cs-prose p{max-width:70ch;line-height:1.65;margin:.55em 0}
+.cs-lead{font-weight:600}
+.cs-fold{margin-top:16px;border-top:1px solid var(--line);padding-top:10px}
+.cs-fold>summary{cursor:pointer;color:var(--accent);font-size:14px;padding:4px 0}
+.cs-meta{font-size:13px;color:var(--fg-2);overflow-wrap:anywhere}
+.cs-meta .kv{margin:6px 0}
 
 /* Statut d'une valeur chiffrée (cas comparatifs) */
 .vs{display:inline-block;margin-left:.4em;padding:.05em .55em;border-radius:99px;font-size:.72rem;font-weight:600;border:1px solid currentColor;white-space:nowrap;vertical-align:middle}
