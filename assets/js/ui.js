@@ -85,6 +85,25 @@
   U.reliabilityLegend = () => `<div class="rel-legend"><p class="p-sub" style="margin:0 0 10px">La fiabilité mesure la solidité documentaire d’une information, pas la pertinence politique d’une proposition. Une information de fiabilité faible reste affichée, avec son incertitude.</p>` +
     Object.keys(REL).map(k => U.reliability(k, { full: true })).join("") + `</div>`;
 
+  /* ---------- Statut de formalisation d'une mesure (remplace la fiabilité sur les mesures) ---------- */
+  const FS = {
+    official_program:    ["Programme officiel publié du candidat", "Proposition inscrite dans le programme officiel publié par le candidat."],
+    party_position:      ["Position officielle du parti", "Proposition portée par une position officielle du parti du candidat."],
+    candidate_pledge:    ["Engagement public du candidat", "Engagement pris publiquement par le candidat."],
+    recent_announcement: ["Annonce récente non intégrée à un programme", "Annonce récente, pas encore inscrite dans un programme."],
+    press_reported:      ["Information rapportée par la presse, à confirmer", "Information rapportée par la presse, à confirmer auprès du candidat ou de son parti."]
+  };
+  /* f = { status, date, note, source } (DB.formalizations). Rien n'est affiché sans statut valide.
+     o.full : ajoute la justification (date de référence, source, note). */
+  U.formalization = (f, o = {}) => {
+    if (!f || !FS[f.status]) return "";
+    const [label, text] = FS[f.status], src = f.source;
+    const title = `${label}${f.date ? " — référence du " + U.date(f.date) : ""}${src && src.title ? " — " + src.title : ""}. ${text}`;
+    const badge = `<span class="fs fs-${f.status}" title="${e(title)}"><i aria-hidden="true"></i>${e(label)}</span>`;
+    if (!o.full) return badge;
+    return `<span class="fs-block">${badge}<span class="fs-detail">${e(text)} Référence du ${e(U.date(f.date))}${src ? ` · Source : ${U.link(src.url, src.title || "source") || e(src.title || "source")}${src.publisher ? " · " + e(src.publisher) : ""}` : ""}.${f.note ? ` ${e(f.note)}` : ""}</span></span>`;
+  };
+
   /* ---------- États ---------- */
   U.loadingHtml = (msg) => `<div class="st st-load" role="status"><span class="spin" aria-hidden="true"></span>${e(msg || "Chargement…")}</div>`;
   U.emptyHtml = (msg) => `<div class="p-empty">${msg || "Aucun contenu disponible."}</div>`;

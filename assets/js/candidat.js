@@ -3,6 +3,8 @@
   const $ = id => document.getElementById(id), e = esc;
   const kv = rows => `<dl class="kv">${rows.filter(r => r[1] !== "" && r[1] != null).map(r => `<dt>${e(r[0])}</dt><dd>${r[2] ? r[1] : e(r[1])}</dd>`).join("")}</dl>`;
 
+  /* Statuts de formalisation (DB.formalizations), chargés avec la page ; vide si indisponibles. */
+  let F = new Map();
   const render = c => {
     const name = UI.person(c.people) || "Candidature";
     document.title = name + " · Au résultat";
@@ -27,7 +29,7 @@
     /* Accès au second tour : n'apparaît que lorsque la candidature est qualifiée (aucune mention avant le premier tour). */
     const qualified = String(c.second_round_status || "").toLowerCase() === "qualified" || has(c.second_round_qualified_at);
     const second = qualified ? "Qualifié pour le second tour" + (c.second_round_qualified_at ? ` (${e(UI.date(c.second_round_qualified_at))})` : "") : "";
-    let h = `<section class="blk blk--party"${UI.partyColor(pt) ? ` style="--pc:${UI.partyColor(pt)}"` : ""}><header><b>Candidature</b><span>${UI.reliability(c.reliability_level, { notes: c.reliability_notes })}</span></header><div>
+    let h = `<section class="blk blk--party"${UI.partyColor(pt) ? ` style="--pc:${UI.partyColor(pt)}"` : ""}><header><b>Candidature</b></header><div>
       <div class="fiche-head">${UI.avatar(c.people, true)}<div>${UI.statusBadge("cand", c.candidacy_status)}${pt ? `<p class="fh-party">${UI.partyDot(pt)}${e(pt.name + (pt.acronym ? ` (${pt.acronym})` : ""))}${UI.positionBlock(c)}</p>` : ""}</div></div>
       ${kv([
         ["Candidature annoncée le", UI.date(c.announcement_date)],
@@ -46,7 +48,7 @@
           (vs.length ? vs.map(v => {
             const ms = (v.measures || []).slice().sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
             return `<h4 class="label" style="margin:16px 0 4px">${[v.version_label && !/^v?\d+$/i.test(String(v.version_label)) ? e(v.version_label) : "", v.publication_date ? e(UI.date(v.publication_date)) : ""].filter(Boolean).join(" · ") || "Propositions"}</h4>
-              ${ms.length ? `<ul class="mlist">${ms.map(m => `<li><a class="t" href="mesure.html#${encodeURIComponent(m.id)}">${e(m.title)}</a>${UI.reliability(m.reliability_level)}</li>`).join("")}</ul>` : `<p class="p-sub" style="margin:6px 0">Aucune mesure publiée pour cette version.</p>`}`;
+              ${ms.length ? `<ul class="mlist">${ms.map(m => `<li><a class="t" href="mesure.html#${encodeURIComponent(m.id)}">${e(m.title)}</a>${UI.formalization(F.get(String(m.id)))}</li>`).join("")}</ul>` : `<p class="p-sub" style="margin:6px 0">Aucune mesure publiée pour cette version.</p>`}`;
           }).join("") : `<p class="p-sub">Aucune proposition détaillée.</p>`);
       }).join("") : `<p class="p-sub" style="margin-top:12px">Aucun programme n’est rattaché à cette candidature.</p>`) + `</div></section>`;
 
@@ -62,7 +64,8 @@
   const run = () => {
     const id = decodeURIComponent(location.hash.slice(1));
     if (!id) { $("f-name").textContent = "Fiche candidat"; $("f-lede").textContent = ""; $("f-body").innerHTML = UI.emptyHtml("Aucune candidature sélectionnée. <a href=\"candidats.html\">Voir la liste des candidats</a>."); return; }
-    UI.mount($("f-body"), async () => { const c = await DB.candidacy(id); if (c) Election.use(c.election_id); return c; }, render, { loading: "Chargement de la fiche…", empty: "Cette candidature n’existe pas ou n’est pas publiée. <a href=\"candidats.html\">Voir la liste des candidats</a>." });
+    F = new Map();
+    UI.mount($("f-body"), async () => { const c = await DB.candidacy(id); if (c) Election.use(c.election_id); F = await DB.formalizations(); return c; }, render, { loading: "Chargement de la fiche…", empty: "Cette candidature n’existe pas ou n’est pas publiée. <a href=\"candidats.html\">Voir la liste des candidats</a>." });
   };
   run();
   window.addEventListener("hashchange", run);

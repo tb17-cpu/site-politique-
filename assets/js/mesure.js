@@ -12,6 +12,8 @@
       ${quoteKey && s[quoteKey] ? `<small>« ${e(s[quoteKey])} »</small>` : ""}${s.notes ? `<small>${e(s.notes)}</small>` : ""}
       <small>${UI.reliability(s.reliability_level)}</small></li>`).join("")}</ul>` : `<p class="p-sub" style="margin:12px 0">Aucune source publiée.</p>`;
 
+  /* Statuts de formalisation (DB.formalizations), chargés avec la page ; vide si indisponibles. */
+  let F = new Map();
   const render = m => {
     document.title = m.title + " · Au résultat";
     $("f-name").textContent = m.title;
@@ -19,7 +21,8 @@
     $("f-lede").innerHTML = cd ? `Proposition de <a href="candidat.html#${encodeURIComponent(cd.id)}">${e(who || "ce candidat")}</a>${cd.parties ? " · " + e(cd.parties.name) : ""}` : "";
     const cost = m.announced_cost != null && m.announced_cost !== "" ? `${m.announced_cost}${m.cost_currency ? " " + m.cost_currency : ""}${m.cost_period ? " · " + m.cost_period : ""}` : "";
     const themes = (m.measure_themes || []).map(x => x.themes).filter(Boolean);
-    let h = `<p style="margin-bottom:18px">${UI.reliability(m.reliability_level, { notes: m.reliability_notes, checked: m.reliability_checked_at, full: true })}</p>
+    const fm = UI.formalization(F.get(String(m.id)), { full: true });
+    let h = `${fm ? `<p style="margin-bottom:18px">${fm}</p>` : ""}
       <section class="blk blk--decl"><header><b>Déclaré par le candidat</b><span>Formulation et éléments annoncés dans le programme</span></header><div>
         ${m.original_text ? `<blockquote class="quote">${e(m.original_text)}</blockquote>` : ""}
         ${kv([["Objectif annoncé", m.announced_objective], ["Coût annoncé", cost], ["Financement annoncé", m.announced_funding]], "decl")}
@@ -46,7 +49,8 @@
   const run = () => {
     const id = decodeURIComponent(location.hash.slice(1));
     if (!id) { $("f-name").textContent = "Mesure"; $("f-lede").textContent = ""; $("f-body").innerHTML = UI.emptyHtml("Aucune mesure sélectionnée. <a href=\"thematiques.html\">Parcourir les thématiques</a>."); return; }
-    UI.mount($("f-body"), async () => { const m = await DB.measure(id); const cd = m && m.program_versions && m.program_versions.programs && m.program_versions.programs.candidacies; if (cd) Election.use(cd.election_id); return m; }, render, { loading: "Chargement de la mesure…", empty: "Cette mesure n’existe pas ou n’est pas publiée. <a href=\"thematiques.html\">Parcourir les thématiques</a>." });
+    F = new Map();
+    UI.mount($("f-body"), async () => { const m = await DB.measure(id); const cd = m && m.program_versions && m.program_versions.programs && m.program_versions.programs.candidacies; if (cd) Election.use(cd.election_id); F = await DB.formalizations(); return m; }, render, { loading: "Chargement de la mesure…", empty: "Cette mesure n’existe pas ou n’est pas publiée. <a href=\"thematiques.html\">Parcourir les thématiques</a>." });
   };
   run();
   window.addEventListener("hashchange", run);

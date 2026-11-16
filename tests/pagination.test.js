@@ -29,10 +29,12 @@ async function run(browser,data,fn,opts={}){
     reqs.push({t,limit:lim,offset:off,order:q.get('order'),count:/count=exact/.test(pref)});
     let rows=data[t]||[];
     rows=rows.filter(x=>{for(const [k,v] of q){if(k.includes('.')||!v.startsWith('eq.'))continue;if(k in x&&String(x[k])!==v.slice(3))return false}return true});
+    if(opts.failAt!==undefined&&off>=opts.failAt)return r.fulfill({status:500,headers:h,body:'{"message":"boom"}'});
     const total=rows.length; rows=sortBy(rows,q.get('order'));
     const cap=opts.maxRows||1000; const n=Math.min(lim?+lim:cap,cap);
-    const part=rows.slice(off,off+n);
-    h['content-range']=part.length?`${off}-${off+part.length-1}/${/count=exact/.test(pref)?(opts.badTotal?total+5:total):'*'}`:`*/${total}`;
+    const part=rows.slice(opts.ignoreOffset?0:off,(opts.ignoreOffset?0:off)+n);
+    const counted=/count=exact/.test(pref)&&!opts.noTotal, shown=counted?(opts.badTotal?total+5:total):'*';
+    h['content-range']=part.length?`${off}-${off+part.length-1}/${shown}`:`*/${shown}`;
     r.fulfill({status:200,headers:h,body:JSON.stringify(part)});
   });
   const p=await ctx.newPage(); p.on('pageerror',e=>errs.push(e.message));
@@ -57,7 +59,7 @@ const call=(p,expr)=>p.evaluate(async e=>{try{const v=await eval(e);return {ok:t
     rep(out.a.ok&&a.length===N,`measuresByThemes ${N} lignes : toutes récupérées`,{got:out.a.ok?a.length:out.a});
     rep(out.a.ok&&new Set(a.map(x=>x.id)).size===N,`measuresByThemes ${N} : aucun doublon`);
     rep(out.a.ok&&JSON.stringify(a.map(x=>x.id).slice().sort())===JSON.stringify(expectIds),`measuresByThemes ${N} : aucune omission`);
-    rep(out.a.ok&&a.every((x,i)=>i===0||a[i-1].o<x.o||(a[i-1].o===x.o&&(N<1000||a[i-1].id<x.id))),`measuresByThemes ${N} : ordre display_order${N<1000?' (inchangé sous 1000)':' puis id stable'}`);
+    rep(out.a.ok&&a.every((x,i)=>i===0||a[i-1].o<x.o||(a[i-1].o===x.o&&(N<=1000||a[i-1].id<x.id))),`measuresByThemes ${N} : ordre display_order${N<=1000?' (une seule page : ordre du serveur inchangé)':' puis id stable'}`);
     rep(out.b.ok&&out.b.v.length===N&&new Set(out.b.v).size===N,`measuresForCompare ${N} : complet, sans doublon`,out.b.ok?out.b.v.length:out.b);
     rep(out.c.ok&&out.c.v.length===N&&new Set(out.c.v).size===N,`searchIndex ${N} mesures : complet, sans doublon`,out.c.ok?out.c.v.length:out.c);
     const mreq=reqs.filter(r=>r.t==='measures');
@@ -111,6 +113,38 @@ const call=(p,expr)=>p.evaluate(async e=>{try{const v=await eval(e);return {ok:t
   {
     const {out}=await run(browser,{measures:mkMeasures(2500)},p=>call(p,'DB.measuresByThemes(["S1"],"e1")'),{badTotal:true});
     rep(!out.ok&&out.kind==='incomplete','total annoncé incohérent -> erreur « incomplete » (pas de silence)',out);
+  }
+  // 8) seuil serveur inférieur à 1000 : jamais supposé (le total exact décide)
+  for (const [N,cap] of [[2500,500],[350,100],[1200,999],[1001,1000],[2000,1000],[3,1]]) {
+    const M=mkMeasures(N); const exp=M.map(m=>m.id).sort();
+    const {out,reqs}=await run(browser,{measures:M},p=>call(p,'DB.measuresByThemes(["S1"],"e1").then(r=>r.map(m=>m.id))'),{maxRows:cap});
+    rep(out.ok&&out.v.length===N&&new Set(out.v).size===N&&JSON.stringify(out.v.slice().sort())===JSON.stringify(exp),`limite serveur ${cap}, ${N} lignes : total exact récupéré, sans doublon ni omission`,out.ok?out.v.length:out);
+    if(N>cap) rep(reqs.filter(r=>r.t==='measures'&&r.offset>0).every(r=>/id\.asc/.test(r.order||'')),`limite serveur ${cap}, ${N} lignes : pages suivantes à ordre déterministe`);
+  }
+  {
+    const M=mkMeasures(2500);
+    const {out,reqs}=await run(browser,{measures:M},p=>call(p,'DB.measuresByThemes(["S1"],"e1").then(r=>r.map(m=>m.id))'),{maxRows:500});
+    const offs=reqs.filter(r=>r.t==='measures'&&r.offset>0).map(r=>r.offset);
+    rep(JSON.stringify(offs)===JSON.stringify([500,1000,1500,2000]),'limite 500 : l’offset avance du nombre réel de lignes reçues',offs);
+  }
+  // 9) total illisible (en-tête Content-Range sans total) : sonde puis lecture jusqu'à la page vide
+  for (const [N,cap] of [[2500,1000],[700,500],[3,1000]]) {
+    const {out}=await run(browser,{measures:mkMeasures(N)},p=>call(p,'DB.measuresByThemes(["S1"],"e1").then(r=>r.map(m=>m.id))'),{noTotal:true,maxRows:cap});
+    rep(out.ok&&out.v.length===N&&new Set(out.v).size===N,`total illisible, limite ${cap}, ${N} lignes : toutes récupérées`,out.ok?out.v.length:out);
+  }
+  // 10) garde-fous : pas de boucle infinie, pas de troncature silencieuse, erreurs propagées
+  {
+    const {out,reqs}=await run(browser,{measures:mkMeasures(2500)},p=>call(p,'DB.measuresByThemes(["S1"],"e1")'),{ignoreOffset:true});
+    rep(!out.ok&&out.kind==='incomplete','serveur ignorant « offset » : erreur « incomplete » (pas de boucle infinie, pas de doublons)',out);
+    rep(reqs.filter(r=>r.t==='measures').length<=501,'nombre de requêtes borné',reqs.length);
+  }
+  {
+    const {out}=await run(browser,{measures:mkMeasures(2500)},p=>call(p,'DB.measuresByThemes(["S1"],"e1")'),{failAt:1000});
+    rep(!out.ok&&out.kind==='http','erreur HTTP à la page 2 : propagée (aucun résultat partiel)',out);
+  }
+  {
+    const {out}=await run(browser,{measures:mkMeasures(2500)},p=>call(p,'DB.measuresByThemes(["S1"],"e1")'),{noTotal:true,ignoreOffset:true});
+    rep(!out.ok&&out.kind==='incomplete','total illisible + offset ignoré : erreur explicite',out);
   }
   await browser.close();
   console.log(`${res} contrôles, ${bad} échec(s)`);process.exit(bad?1:0);
