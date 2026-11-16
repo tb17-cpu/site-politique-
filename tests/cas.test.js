@@ -1,4 +1,4 @@
-/* Test de la présentation des cas concrets. Playwright, Supabase simulé. Serveur statique sur 8765 sous /site-politique-/. */
+/* Test de la présentation des cas concrets (structure, Markdown, sources, informations complémentaires). Playwright, Supabase simulé. Serveur statique sur 8765 sous /site-politique-/. */
 const { chromium } = require('playwright');
 const B='http://localhost:8765/site-politique-/';
 const person={id:'p1',first_name:'Alex',last_name:'Exemple',photo_url:null,biography:'Bio test.',official_website:'https://example.org',publication_status:'published'};
@@ -77,7 +77,7 @@ const rels=[kase('1','direct_application','Italie',[['positive','observational']
 
 const shared={...S1,id:'shared',title:'Rapport commun'};
 const rich=kase('7','close_analogy','Autriche',[['positive','observational'],['mixed','descriptive']]);
-rich.policy_cases={...rich.policy_cases,summary:'Synthèse du cas autrichien.',policy_design:'Premier paragraphe du dispositif.\n\nSecond paragraphe du dispositif <script>window.__x=1</script>.',
+rich.policy_cases={...rich.policy_cases,summary:'Synthèse du cas autrichien.',policy_design:'Premier paragraphe du dispositif avec **gras** et [lien](https://example.org/x).\n\nSecond paragraphe <script>window.__x=1</script> et [piège](javascript:alert(1)).\n\n## Sous-titre\n\n- puce A\n- puce B',
  policy_case_sources:[{id:'a1',source_role:'context',page_reference:'p3',exact_quote:'Cit',sources:shared}],
  case_outcomes:rich.policy_cases.case_outcomes.map((o,i)=>({...o,case_outcome_sources:[{id:'b'+i,source_role:'primary',page_reference:'p9',sources:shared},{id:'c'+i,source_role:'secondary',sources:{...S1,id:'own'+i,title:'Source propre '+i}}]}))};
 const bare=kase('8','direct_application',null,[]); bare.policy_cases={id:'k8',title:'Cas minimal',publication_status:'published',case_outcomes:[],policy_case_sources:[],countries:null};
@@ -91,7 +91,10 @@ const noOut=kase('9','counterexample','Suède',[]);
    const c0=p.locator('.cs').first(); const t=await c0.innerText();
    const h=(await c0.locator('h4').allTextContents()).map(x=>x.trim()); rep(JSON.stringify(h)===JSON.stringify(['Le dispositif','Résultats','Relation avec la mesure politique']),`${w}px : rubriques dans l’ordre`,h);
    rep(/Synthèse du cas autrichien/.test(t),`${w}px : présentation synthétique`);
-   rep(await c0.locator('.cs-sec .cs-prose p').filter({hasText:'Premier paragraphe du dispositif'}).count()===1&&await c0.locator('.cs-sec .cs-prose p').filter({hasText:'Second paragraphe'}).count()===1,`${w}px : texte du dispositif en paragraphes`);
+   rep(await c0.locator('.cs-sec .md p').filter({hasText:'Premier paragraphe du dispositif'}).count()===1&&await c0.locator('.cs-sec .md p').filter({hasText:'Second paragraphe'}).count()===1,`${w}px : dispositif rendu en paragraphes Markdown`);
+   rep(await c0.locator('.cs-sec .md strong:text("gras")').count()===1&&await c0.locator('.cs-sec .md a[href="https://example.org/x"]').count()===1&&await c0.locator('.cs-sec .md li').count()===2&&await c0.locator('.cs-sec .md h6:text("Sous-titre")').count()===1,`${w}px : Markdown (gras, lien, liste, intertitre)`);
+   rep(await c0.locator('.cs-sec .md a[href^="javascript"]').count()===0&&await c0.locator('.cs-sec .md script').count()===0,`${w}px : lien javascript: et script neutralisés`);
+   const disp=await c0.locator('.cs-sec').first().innerText(); rep(!/Pop 7|Impl 7|Ctx 7|Eco 7|LimCas 7/.test(disp),`${w}px : « Le dispositif » ne contient que policy_design`,disp);
    rep(await p.evaluate(()=>window.__x)===undefined&&/<script>window.__x=1<\/script>/.test(t),`${w}px : HTML du texte rendu inerte`);
    const folds=await c0.locator('details.cs-fold>summary').allInnerTexts(); rep(folds.length===2&&/^Sources \(\d+\)$/.test(folds[0])&&folds[1]==='Informations complémentaires',`${w}px : boutons « Sources » et « Informations complémentaires »`,folds);
    rep(await c0.locator('details.cs-fold[open]').count()===0,`${w}px : volets repliés par défaut`);
@@ -99,7 +102,7 @@ const noOut=kase('9','counterexample','Suède',[]);
    await c0.locator('details.cs-fold>summary').first().click();
    const li=await c0.locator('details.cs-fold').first().locator('li').count(); rep(li===3,`${w}px : sources sans doublon (rapport commun une seule fois + 2 propres)`,li);
    await c0.locator('details.cs-fold>summary').nth(1).click(); const t2=await c0.innerText();
-   rep(/rôle : context/i.test(t2)&&/rôle : primary/i.test(t2)&&/Niveau de preuve causale/i.test(t2)&&/Fiabilité/i.test(t2)&&/Méthodologie/i.test(t2),`${w}px : métadonnées conservées dans « Informations complémentaires »`);
+   rep(/Pop 7/.test(t2)&&/Impl 7/.test(t2)&&/Ctx 7/.test(t2)&&/Eco 7/.test(t2)&&/LimCas 7/.test(t2)&&/rôle : context/i.test(t2)&&/rôle : primary/i.test(t2)&&/Niveau de preuve causale/i.test(t2)&&/Fiabilité/i.test(t2)&&/Méthodologie/i.test(t2),`${w}px : métadonnées conservées dans « Informations complémentaires »`);
    rep(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),`${w}px : pas de débordement horizontal`);
    if(w===1280||w===400) await c0.screenshot({path:`cas-new-${w}.png`}).catch(()=>{});
    // cas minimal : aucune rubrique vide

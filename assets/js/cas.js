@@ -44,9 +44,11 @@
   const CASE_USED = new Set(["title", "geographic_scope", "start_year", "end_year", "government_or_authority", "policy_design", "target_population", "implementation_context", "institutional_context", "economic_context", "implementation_duration", "summary", "known_limitations"]);
   const REL_USED = new Set(["relation_type", "similarity_level", "shared_mechanisms", "key_differences", "relevance_to_france", "transferability_assessment", "explanation", "confidence_level"]);
 
-  /* Texte rédigé : paragraphes (lignes vides), jamais de HTML brut. */
-  const prose = v => has(v) ? String(v).split(/\n{2,}/).map(t => t.trim()).filter(Boolean).map(t => `<p>${e(t).replace(/\n/g, "<br>")}</p>`).join("") : "";
-  const lead = (label, v) => has(v) ? `<p><span class="cs-lead">${e(label)}.</span> ${e(String(v)).replace(/\n+/g, " ")}</p>` : "";
+  /* Texte rédigé : rendu Markdown sûr (moteur MD de « Comprendre le pays » : tout est échappé, liens http(s) seulement).
+     Sans ce moteur, repli sur des paragraphes échappés. Titres décalés (h5, h6) pour rester sous les rubriques du cas. */
+  const prose = v => !has(v) ? "" : window.MD ? `<div class="md">${window.MD.render(String(v), { headingBase: 5 })}</div>`
+    : String(v).split(/\n{2,}/).map(t => t.trim()).filter(Boolean).map(t => `<p>${e(t).replace(/\n/g, "<br>")}</p>`).join("");
+  const lead = (label, v) => has(v) ? `<p><span class="cs-lead">${e(label)}.</span> ${window.MD ? window.MD.inline(String(v).replace(/\n+/g, " ")) : e(String(v)).replace(/\n+/g, " ")}</p>` : "";
 
   /* Sources du cas et de ses résultats, regroupées sans doublon (même source = une seule ligne). */
   const sid = s => String(s.id != null ? s.id : (s.url || s.title || ""));
@@ -84,9 +86,10 @@
     const outs = Array.isArray(c.case_outcomes) ? c.case_outcomes : [], sums = [...new Set(outs.map(o => o.result_assessment).filter(Boolean))];
     const facts = [pl, per, c.government_or_authority].filter(has).map(e).join(" · ");
     const g = gather(c, outs);
-    const dispositif = prose(c.policy_design) + lead("Population concernée", c.target_population) + lead("Mise en œuvre", c.implementation_context)
-      + lead("Contexte institutionnel", c.institutional_context) + lead("Contexte économique", c.economic_context) + lead("Limites connues", c.known_limitations);
-    const meta = [kv([["Durée de mise en œuvre", c.implementation_duration]]), restKv(c, CASE_USED),
+    const dispositif = prose(c.policy_design);
+    const autres = lead("Population concernée", c.target_population) + lead("Mise en œuvre", c.implementation_context) + lead("Contexte institutionnel", c.institutional_context)
+      + lead("Contexte économique", c.economic_context) + lead("Limites connues", c.known_limitations);
+    const meta = [autres ? `<div class="cs-prose">${autres}</div>` : "", kv([["Durée de mise en œuvre", c.implementation_duration]]), restKv(c, CASE_USED),
       c.reliability_level ? `<p class="cs-rel">${U.reliability(c.reliability_level, { notes: c.reliability_notes, checked: c.reliability_checked_at })}</p>` : "",
       has(rel.confidence_level) ? kv([["Niveau de confiance de la relation", U.reliability(rel.confidence_level), true]]) : "", restKv(rel, REL_USED),
       outs.map(outcomeMeta).join(""), g.length ? `<h5>Rôle des sources</h5><ul class="refs">${srcMeta(g)}</ul>` : ""].join("");

@@ -218,6 +218,10 @@
 .cs-sec{margin-top:6px}
 .cs-prose p{max-width:70ch;line-height:1.65;margin:.55em 0}
 .cs-lead{font-weight:600}
+.cs .md{font-size:15.5px;line-height:1.65;max-width:70ch}
+.cs-lede .md{font-size:17px}
+.cs-body .md h5,.cs-body .md h6{font-family:var(--f-display);font-size:16.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--fg);margin:1.3em 0 .4em}
+.cs-body .md p:last-child{margin-bottom:0}
 .cs-fold{margin-top:16px;border-top:1px solid var(--line);padding-top:10px}
 .cs-fold>summary{cursor:pointer;color:var(--accent);font-size:14px;padding:4px 0}
 .cs-meta{font-size:13px;color:var(--fg-2);overflow-wrap:anywhere}
