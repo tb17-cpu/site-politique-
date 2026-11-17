@@ -258,7 +258,13 @@ table.diag td.warn{color:#d1a24c;font-weight:600}table.diag td.inc{color:#9fb0c8
 .brand-inline{font-family:var(--f-display);font-weight:700;color:var(--accent,#6fa3d6);letter-spacing:-.01em;white-space:nowrap}
 
 /* Statut de formalisation d'une mesure : pastille discrète + libellé, sans fond ni cadre coloré */
-.fs{display:inline-flex;align-items:baseline;gap:7px;font-size:12.5px;line-height:1.35;color:var(--fg-2);max-width:100%}
-.fs i{flex:none;width:7px;height:7px;border-radius:50%;background:var(--muted);transform:translateY(-1px)}
+.fs{--fs-c:var(--fg-2);display:inline-flex;align-items:baseline;gap:7px;font-size:12.5px;line-height:1.35;color:var(--fs-c);max-width:100%}
+.fs i{flex:none;width:7px;height:7px;border-radius:50%;background:var(--fs-c);transform:translateY(-1px)}
+/* Statuts de formalisation : une teinte douce par niveau (contraste ≥ 7:1 sur le fond bleu nuit), distincte des teintes pos/neg/mix des résultats. */
+.fs-official_program{--fs-c:#86aee8}   /* bleu       */
+.fs-party_position{--fs-c:#6fbcc8}     /* cyan sourd */
+.fs-candidate_pledge{--fs-c:#aa9bdb}   /* lavande    */
+.fs-recent_announcement{--fs-c:#d4a47e}/* sable      */
+.fs-press_reported{--fs-c:#c791a6}     /* rose poudré*/
 .mlist .fs{max-width:240px}
 .fs-block{display:flex;flex-direction:column;gap:4px}.fs-detail{font-size:13px;color:var(--muted);max-width:70ch}
