@@ -103,7 +103,10 @@ const M=[
    rep(JSON.stringify(all.k)===JSON.stringify(['m1','m7']),`${w}px statuts retenus : seulement les justifiés (m1, m7)`,all.k);
    rep(Object.entries(L).every(([k,v])=>all.ui[k]===v)&&all.ui.foo===''&&all.ui.null==='',`${w}px cinq libellés exacts ; valeur inconnue ou absente : rien`,all.ui);
    const cols=await p.evaluate(()=>{const h=document.createElement('div');document.body.appendChild(h);return ['official_program','party_position','candidate_pledge','recent_announcement','press_reported'].map(k=>{h.innerHTML=UI.formalization({status:k,date:'2026-10-02'});const i=h.querySelector('.fs i'),c=getComputedStyle(i).backgroundColor,t=getComputedStyle(h.querySelector('.fs')).color;return c+'|'+t});});
-   rep(new Set(cols).size===1&&!/rgba\(0, 0, 0, 0\)/.test(cols[0]),`${w}px couleur identique pour les cinq statuts (pastille et texte)`,cols);
+   const rgb=c=>c.match(/\d+/g).slice(0,3).map(Number),lum=([r,g,b])=>{const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return .2126*f(r)+.7152*f(g)+.0722*f(b)};
+   const ct=c=>(lum(rgb(c))+.05)/(lum([10,19,34])+.05);
+   rep(new Set(cols.map(c=>c.split('|')[0])).size===5,`${w}px cinq couleurs de pastille toutes distinctes`,cols);
+   rep(cols.every(c=>{const [d,t]=c.split('|');return d===t&&ct(t)>=7}),`${w}px pastille = couleur du texte, contraste ≥ 7:1 sur le fond`,cols.map(c=>c.split('|')[1]+' '+ct(c.split('|')[1]).toFixed(1)));
    rep(!/Fiabilité/i.test(await p.locator('#f-body > p:first-child').innerText().catch(()=>'')),`${w}px aucun texte « Fiabilité » dans l’en-tête de la mesure`);
   });
   for(const [id,why] of [['m2','association d’une autre mesure'],['m3','source dépubliée'],['m4','valeur inconnue'],['m5','date manquante'],['m6','aucun statut'],['m8','aucune association']]){
