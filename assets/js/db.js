@@ -240,7 +240,7 @@
     }).then(r => (r[0] && r[0].people) ? r[0] : null),
 
     measure: id => rows("measures", { limit: 1,
-      select: `*,program_versions(*,programs(*,candidacies(id,election_id,candidacy_status,${PERSON},${PARTY}))),measure_themes(themes(id,name,slug,parent_id,publication_status)),measure_sources(*,sources(*)),analyses(*,analysis_sources(*,sources(*))),case_measure_relations(*,policy_cases(*,countries(*),case_outcomes(*,case_outcome_sources(*,sources(*))),policy_case_sources(*,sources(*))))`,
+      select: `*,program_versions(*,programs(*,candidacies(id,election_id,candidacy_status,${PERSON},${PARTY}))),measure_themes(themes(id,name,slug,parent_id,publication_status)),measure_sources!measure_sources_measure_id_fkey(*,sources(*)),analyses(*,analysis_sources(*,sources(*))),case_measure_relations(*,policy_cases(*,countries(*),case_outcomes(*,case_outcome_sources(*,sources(*))),policy_case_sources(*,sources(*))))`,
       filter: { id: "eq." + id }
     }).then(r => chainOk(r[0]) ? r[0] : null),
 
