@@ -54,7 +54,10 @@ async function page(w,ov,url,fn,pre){
   if(t==='measures'||t==='measure_sources'){ for(const a of amb){ if(a==='measure_sources(') {ov.ambiguous=(ov.ambiguous||0)+1; return r.fulfill({status:300,headers:h,body:JSON.stringify({code:'PGRST201',message:"Could not embed because more than one relationship was found for 'measures' and 'measure_sources'"})});} } if(!/measure_sources!(measure_sources_measure_id_fkey|measures_formalization_measure_source_fk)\(/.test(sel)&&/measure_sources!/.test(sel)) return r.fulfill({status:400,headers:h,body:JSON.stringify({code:'PGRST200',message:'unknown relationship hint'})}); ov.hinted=(ov.hinted||0)+amb.length; }
   if(ov.badSelect&&ov.badSelect.re.test(u.search))return r.fulfill({status:ov.badSelect.status,headers:h,body:JSON.stringify({code:'42703',message:'column measures.formalization_status does not exist'})});
   if(ov.fail&&ov.fail.has(t))return r.fulfill({status:500,headers:h,body:'{}'});
-  const rows=apply((ov.T&&ov.T[t])||T[t]||[],u);
+  let rows=apply((ov.T&&ov.T[t])||T[t]||[],u);
+  if(ov.maxRows){ const nn=u.searchParams.get('formalization_status'); if(nn==='not.is.null')rows=rows.filter(x=>x.formalization_status!=null);
+    rows=[...rows].sort((a,b)=>String(a.id)<String(b.id)?-1:1); const tot=rows.length,off=+(u.searchParams.get('offset')||0),lim=Math.min(+(u.searchParams.get('limit')||1e9),ov.maxRows); ov.calls=(ov.calls||0)+1;
+    rows=rows.slice(off,off+lim); h['content-range']=`${rows.length?off:'*'}-${off+Math.max(rows.length-1,0)}/${tot}`; return r.fulfill({status:206,headers:h,body:JSON.stringify(rows)}); }
   h['content-range']=`0-0/${rows.length}`;
   r.fulfill({status:200,headers:h,body:req.method()==='HEAD'?'':JSON.stringify(rows)});
  });
@@ -132,6 +135,23 @@ const M=[
   });
   const ovA=TT({elections:[E1],measures:M}); await page(w,ovA,'mesure.html?e=e1#m1',async()=>{}); 
   rep((ovA.hinted||0)>0&&!(ovA.ambiguous),`${w}px requêtes : relations désignées, aucune ambiguïté PGRST201 (hinted=${ovA.hinted}, ambigu=${ovA.ambiguous||0})`);
+ }
+
+ // 4. volumétrie réelle : 1 649 mesures publiées, 1 628 avec statut justifié, 21 sans ; serveur plafonné à 1000 lignes par réponse
+ {
+  const ST=['official_program','party_position','candidate_pledge','recent_announcement','press_reported'];
+  const big=[];for(let i=1;i<=1649;i++){const id='m'+String(i).padStart(4,'0');const st=i<=1628;
+   big.push({...base,id,title:'Mesure '+id,publication_status:'published',measure_sources:[{id:'ms-'+id,sources:S1}],
+    formalization_status:st?ST[i%5]:null,formalization_status_date:st?'2026-10-02':null,formalization_measure_source_id:st?'ms-'+id:null,formalization_note:null,justification:st?J(id):null});}
+  const ovB={...TT({elections:[E1],measures:big}),maxRows:1000};
+  await page(1280,ovB,'mesure.html?e=e1#m0001',async p=>{
+   const r=await p.evaluate(async()=>{const m=await DB.formalizations();return {n:m.size,has1:m.has('m0001'),has1629:m.has('m1629'),has1649:m.has('m1649'),st:[...new Set([...m.values()].map(v=>v.status))].sort()}});
+   rep(r.n===1628&&r.has1&&!r.has1629&&!r.has1649,'1 628 statuts récupérés (pagination, plafond 1000), aucune mesure sans statut ajoutée',r);
+   rep(r.st.length===5,'les cinq valeurs de statut sont présentes',r.st);
+   rep(await p.locator('.fs').count()===1&&await p.locator('.st-err').count()===0,'fiche d’une mesure avec statut : un badge, aucune erreur');
+  });
+  await page(1280,ovB,'mesure.html?e=e1#m1629',async p=>{rep(/Mesure m1629/.test(await txt(p))&&await p.locator('.fs').count()===0&&await p.locator('.st-err').count()===0,'mesure sans statut (parmi les 21) : fiche affichée, aucun badge');});
+  rep((ovB.ambiguous||0)===0&&ovB.calls>=2,'volumétrie : requêtes paginées, aucune ambiguïté',{amb:ovB.ambiguous,calls:ovB.calls});
  }
  await br.close(); console.log(`${res} contrôles, ${bad} échec(s)`); process.exit(bad?1:0);
 })();

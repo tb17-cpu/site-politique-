@@ -1,5 +1,6 @@
 -- ÉTAT DES LIEUX (LECTURE SEULE) — candidats aux statuts de formalisation des mesures
 -- Aucune écriture, aucun remplissage : ce fichier ne contient que des SELECT, à lancer par le propriétaire dans l'éditeur SQL.
+-- Situation constatée après la migration v3 : 1 628 mesures avec statut, 21 sans. Les requêtes B, C, D ciblent les mesures SANS statut (les 21 restantes).
 -- Il PROPOSE, il ne décide pas : toute valeur de statut reste soumise à validation éditoriale avant un UPDATE manuel (cf. §5 de la migration 003 v3).
 
 -- A. Répartition des mesures par type de source associée (relation historique measure_sources_measure_id_fkey)
