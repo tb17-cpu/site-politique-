@@ -22,9 +22,10 @@
     setStatus(`<b>${sel.length} mesures comparées</b>, ${cands.size} candidats. Quatre mesures au plus.`, "ok");
     const rows = [["Candidat", m => who(m), 0], ["Formulation originale", m => m.original_text, 1], ["Objectif annoncé", m => m.announced_objective, 1], ["Coût annoncé", cost, 1], ["Financement annoncé", m => m.announced_funding, 1],
       ["Mécanisme (Au résultat)", m => m.mechanism, 0], ["Publics concernés (Au résultat)", m => m.target_groups, 0], ["Modalités (Au résultat)", m => m.implementation_details, 0]];
+    const F = await DB.formalizations();
     out.innerHTML = `<div class="scroll"><table class="cmp"><thead><tr><th scope="col">Champ</th>${sel.map(m => `<th scope="col"><a href="mesure.html#${encodeURIComponent(m.id)}">${e(m.title)}</a></th>`).join("")}</tr></thead><tbody>
       ${rows.map(r => `<tr><th scope="row">${e(r[0]).replace(/Au résultat/g, '<span class="brand-inline">Au résultat</span>')}${r[2] ? '<small class="decl">déclaré par le candidat</small>' : ""}</th>${sel.map(m => cell(r[1](m))).join("")}</tr>`).join("")}
-      <tr><th scope="row">Fiabilité</th>${sel.map(m => `<td>${UI.reliability(m.reliability_level, { notes: m.reliability_notes, checked: m.reliability_checked_at })}</td>`).join("")}</tr></tbody></table></div>`;
+      ${sel.some(m => F.has(String(m.id))) ? `<tr><th scope="row">Statut de la proposition</th>${sel.map(m => `<td>${UI.formalization(F.get(String(m.id))) || "—"}</td>`).join("")}</tr>` : ""}</tbody></table></div>`;
     const mine = sel.map(m => m.id).join(",");
     try {
       rel = await DB.relations(sel.map(m => m.id));

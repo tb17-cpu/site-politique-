@@ -256,3 +256,9 @@ table.diag td.warn{color:#d1a24c;font-weight:600}table.diag td.inc{color:#9fb0c8
 
 .pos-tag{display:inline-block;margin-left:.55em;padding:.05em .6em;border:1px solid var(--line,#2a2f3a);border-radius:99px;font-size:.78rem;color:var(--fg-2,#aab);white-space:nowrap}
 .brand-inline{font-family:var(--f-display);font-weight:700;color:var(--accent,#6fa3d6);letter-spacing:-.01em;white-space:nowrap}
+
+/* Statut de formalisation d'une mesure : pastille discrète + libellé, sans fond ni cadre coloré */
+.fs{display:inline-flex;align-items:baseline;gap:7px;font-size:12.5px;line-height:1.35;color:var(--fg-2);max-width:100%}
+.fs i{flex:none;width:7px;height:7px;border-radius:50%;background:var(--muted);transform:translateY(-1px)}
+.mlist .fs{max-width:240px}
+.fs-block{display:flex;flex-direction:column;gap:4px}.fs-detail{font-size:13px;color:var(--muted);max-width:70ch}

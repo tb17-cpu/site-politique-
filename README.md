@@ -49,6 +49,11 @@ Le sélecteur de l'en-tête liste les élections publiées de Supabase (aucune n
 
 Un point plein signale un chiffre lu dans une source consultée, un point creux une estimation à confirmer. Dans `data-analyses.js`, le suffixe `^` produit le point plein et `~` le point creux.
 
+## Cache des fichiers statiques
+GitHub Pages met JS et CSS en cache dans le navigateur. Chaque page référence donc ses fichiers avec une empreinte de contenu
+(`assets/js/db.js?v=1a2b3c4d`) : l'URL ne change que si le fichier change. **Après toute modification d'un fichier de `assets/`,
+lancer `node tools/cache-bust.js` avant de commiter** ; `node tools/cache-bust.js --check` vérifie (code 1 si une référence est périmée).
+
 ## Migrations Supabase (supabase/migrations)
 
 - `000_precheck.sql` : contrôles en lecture seule à lancer avant (valeurs autorisées réelles, types uuid).

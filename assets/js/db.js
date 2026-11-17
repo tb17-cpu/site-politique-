@@ -80,35 +80,54 @@
   const inElection = electionId => m => !electionId || String(m.program_versions.programs.candidacies.election_id) === String(electionId);
   const chainOk = m => !!(m && m.program_versions && m.program_versions.programs && m.program_versions.programs.candidacies && m.program_versions.programs.candidacies.people);
 
-  /* Pagination automatique (l'API ne renvoie jamais plus de 1000 lignes par réponse, sans erreur).
+  /* Pagination automatique. Le serveur plafonne silencieusement chaque réponse (1000 lignes par défaut, mais ce seuil se
+     règle côté Supabase : il n'est donc jamais supposé). La fin des données est établie par le TOTAL EXACT (en-tête
+     Content-Range, demandé avec « Prefer: count=exact »), jamais par la taille d'une page.
      - Requête avec « limit » explicite (une ligne, etc.) : inchangée.
-     - Sinon : première page de PAGE lignes, avec l'ordre demandé. Une page incomplète (< PAGE) est la fin des données :
-       comportement et trafic identiques à l'existant tant qu'une requête reste sous PAGE lignes.
-     - Une page pleine peut cacher une suite : les pages sont alors relues avec un ordre déterministe (l'ordre demandé,
-       puis « id » pour départager les ex æquo), pour ne produire ni doublon ni omission d'une page à l'autre, avec le
-       total exact fourni par l'API. Toute incohérence (total non atteint, doublon, trop de pages) lève une erreur
-       « incomplete » : jamais de tronquage silencieux. */
-  const PAGE = 1000, MAX_PAGES = 200;
+     - Sinon : une première requête (page + total). Si elle contient déjà tout, c'est terminé.
+     - Sinon les données sont relues avec un ordre déterministe (l'ordre demandé, puis « id » pour départager les ex æquo :
+       ni doublon ni omission d'une page à l'autre), en avançant du nombre de lignes RÉELLEMENT reçues, quelle que soit la
+       taille de page imposée par le serveur.
+     - Total illisible : une requête de sonde (1 ligne à la suite) confirme la fin, puis les pages sont lues jusqu'à une
+       page vide.
+     - Garde-fous explicites (erreur « incomplete », jamais de résultat tronqué) : total non atteint ou dépassé, doublons,
+       page vide avant le total, nombre de requêtes excessif (serveur qui ignorerait « offset », par exemple).
+     Les erreurs réseau et HTTP sont propagées telles quelles par call(). */
+  const FORMALIZATION = ["official_program", "party_position", "candidate_pledge", "recent_announcement", "press_reported"];
+  const PAGE = 1000, HARD_CAP = 20000, NO_TOTAL_CAP = 5000, COUNT = { headers: { Prefer: "count=exact" } };
+  const totalOf = res => { const m = /\/(\d+)$/.exec(res.headers.get("content-range") || ""); return m ? +m[1] : null; };
+  const hasDupes = list => { const ids = list.map(r => r && r.id).filter(x => x !== undefined && x !== null); return new Set(ids).size !== ids.length; };
+  const incomplete = why => new DbError("incomplete", why, 200);
   async function fetchAll(table, o) {
     if (o.limit) return (await call(url(table, o))).json();
-    const first = await (await call(url(table, Object.assign({}, o, { limit: PAGE })))).json();
-    if (first.length < PAGE) return first;
+    const res = await call(url(table, Object.assign({}, o, { limit: PAGE })), COUNT);
+    const first = await res.json(), total = totalOf(res);
+    if (total !== null && first.length >= total) { if (first.length > total) throw incomplete("Total incohérent"); return first; }
+    if (total === null) {
+      if (first.length === 0) return first;
+      const probe = await (await call(url(table, Object.assign({}, o, { limit: 1, offset: first.length })))).json();
+      if (probe.length === 0) return first;
+    }
     const order = o.order ? (/(^|,)id\./.test(o.order) ? o.order : o.order + ",id.asc") : "id.asc";
-    const all = []; let total = null;
-    for (let i = 0; i < MAX_PAGES; i++) {
-      const res = await call(url(table, Object.assign({}, o, { order, limit: PAGE, offset: i * PAGE })), i === 0 ? { headers: { Prefer: "count=exact" } } : {});
-      const part = await res.json();
-      if (i === 0) { const m = /\/(\d+)$/.exec(res.headers.get("content-range") || ""); total = m ? +m[1] : null; }
+    const all = []; let t = null;
+    /* Garde-fou : avec le total exact, au plus total + 2 requêtes (chaque requête doit apporter au moins une ligne, sinon erreur) ;
+       sans total, 5000 requêtes au plus (5 millions de lignes à 1000 par page : bien au-delà de ce site). Dans tous les cas, plafond
+       absolu de 20000 requêtes. Un dépassement lève « incomplete » : jamais de résultat tronqué ni de boucle sans fin. */
+    const cap = total !== null ? Math.min(total + 2, HARD_CAP) : NO_TOTAL_CAP;
+    if (total !== null && total > HARD_CAP) throw incomplete("Volume de données excessif pour la pagination");
+    for (let n = 0; n < cap; n++) {
+      const r = await call(url(table, Object.assign({}, o, { order, limit: PAGE, offset: all.length })), n === 0 ? COUNT : {});
+      const part = await r.json();
+      if (n === 0) t = totalOf(r);
       all.push(...part);
-      if (total !== null ? all.length >= total : part.length < PAGE) {
-        if (total !== null && all.length !== total) throw new DbError("incomplete", "Total incohérent", 200);
-        const ids = all.map(r => r && r.id).filter(x => x !== undefined && x !== null);
-        if (new Set(ids).size !== ids.length) throw new DbError("incomplete", "Doublons entre pages", 200);
+      if (t !== null ? all.length >= t : part.length === 0) {
+        if (t !== null && all.length !== t) throw incomplete("Total incohérent");
+        if (hasDupes(all)) throw incomplete("Doublons entre pages");
         return all;
       }
-      if (part.length === 0) throw new DbError("incomplete", "Page vide avant le total", 200);
+      if (part.length === 0) throw incomplete("Page vide avant la fin des données");
     }
-    throw new DbError("incomplete", "Trop de pages", 200);
+    throw incomplete("Trop de requêtes de pagination (plafond atteint)");
   }
 
   async function rows(table, o) {
@@ -154,15 +173,44 @@
     },
 
 
-    /* Sondages individuels d'une élection (table optionnelle : absente tant que la migration 002 n'est pas exécutée).
-       Retourne { missing, rows }. Une ligne dont l'entité désignée (candidature, parti, personne) n'est pas publiée est écartée. */
+    /* Sondages individuels d'une élection. Retourne { rows } : une liste vide signifie une ABSENCE RÉELLE de sondages publiés.
+       Toute erreur (permission, table ou relation absente, schéma, réseau…) est propagée à l'appelant, qui la distingue avec
+       DB.classify : une erreur n'est jamais présentée comme « aucun sondage ». Une ligne dont l'entité désignée (candidature,
+       parti, personne) n'est pas publiée est écartée. */
     polls: async electionId => {
-      try {
-        const r = await rows("poll_snapshots", { select: `*,sources(id,title,url,publisher,publication_date,publication_status),candidacies(id,candidacy_status,publication_status,${PERSON}),${PARTY},${PERSON}`, filter: { election_id: "eq." + electionId, record_kind: "eq.poll" }, order: "poll_date.desc.nullslast,snapshot_date.desc,value_percent.desc" });
-        const ok = x => (x.entity_kind !== "candidacy" || x.candidacies) && (x.entity_kind !== "party" || x.parties) && (x.entity_kind !== "person" || x.people);
-        return { missing: false, rows: r.filter(ok) };
-      } catch (e) { if (e instanceof DbError && e.status === 404) return { missing: true, rows: [] }; throw e; }
+      const r = await rows("poll_snapshots", { select: `*,sources(id,title,url,publisher,publication_date,publication_status),candidacies(id,candidacy_status,publication_status,${PERSON}),${PARTY},${PERSON}`, filter: { election_id: "eq." + electionId, record_kind: "eq.poll" }, order: "poll_date.desc.nullslast,snapshot_date.desc,value_percent.desc" });
+      const ok = x => (x.entity_kind !== "candidacy" || x.candidacies) && (x.entity_kind !== "party" || x.parties) && (x.entity_kind !== "person" || x.people);
+      return { rows: r.filter(ok) };
     },
+
+    /* Statuts de formalisation des mesures (colonnes optionnelles de measures, migration 003 non exécutée par défaut).
+       Requête SÉPARÉE des listes de mesures : son échec ne bloque jamais une page. Retourne une Map id de mesure -> { status,
+       date, note, source }. Un statut n'est retenu que s'il est complet et justifié : valeur autorisée, date de référence, source
+       publiée ET associée à la mesure (measure_sources). Sinon il est ignoré (aucun badge) et le nombre d'écarts est signalé en
+       console. Colonnes absentes (400/404 avant migration) : fonctionnalité simplement inactive. Autre erreur : avertissement
+       en console, non mis en cache (nouvel essai au prochain appel). Jamais déduit de reliability_level. */
+    formalizations: () => D._fm || (D._fm = (async () => {
+      const out = new Map(); let transient = false;
+      try {
+        const r = await rows("measures", { select: "id,publication_status,formalization_status,formalization_status_date,formalization_measure_source_id,formalization_note,justification:measure_sources!measures_formalization_measure_source_fk(id,measure_id,page_reference,sources(id,title,url,publisher,publication_date,publication_status))", filter: { formalization_status: "not.is.null" }, order: "id.asc" });
+        let ignored = 0;
+        r.forEach(m => {
+          /* La base garantit que la ligne de measure_sources appartient à la mesure (clé étrangère composite) ; on le revérifie par prudence.
+             La source de cette ligne doit être publiée : une source dépubliée (null après nettoyage) supprime le statut. */
+          const j = m.justification, src = j && j.sources;
+          if (FORMALIZATION.includes(m.formalization_status) && m.formalization_status_date && j && String(j.measure_id) === String(m.id) && src)
+            out.set(String(m.id), { status: m.formalization_status, date: m.formalization_status_date, note: m.formalization_note || "", source: src, page: j.page_reference || "" });
+          else ignored++;
+        });
+        if (ignored) console.warn(`[statuts] ${ignored} statut(s) ignoré(s) : valeur inconnue, date manquante, source (référence documentaire) absente, non publiée ou non rattachée à la mesure.`);
+      } catch (e) {
+        const k = classify(e);
+        if (k === "invalid" || k === "missing") console.info("[statuts] colonnes de statut absentes : fonctionnalité inactive (" + k + ").");
+        else { transient = true; console.warn("[statuts] lecture impossible :", k, e && e.message); }
+      }
+      if (transient) D._fm = null;
+      return out;
+    })()),
 
     /* Thèmes : familles (parent_id nul) et sous-thèmes. */
     themes: () => rows("themes", { order: "display_order.asc,name.asc" }),

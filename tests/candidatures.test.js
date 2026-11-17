@@ -1,4 +1,4 @@
-/* Candidatures : aucun badge « Fiabilité » sur les cartes, conservé sur la fiche. Playwright, Supabase simulé. Serveur statique 8765 sous /site-politique-/. */
+/* Candidatures : aucune fiabilité globale sur les cartes ni sur la fiche (les fiabilités de sources restent). Playwright, Supabase simulé. Serveur statique 8765 sous /site-politique-/. */
 const { chromium } = require('playwright');
 const B='http://localhost:8765/site-politique-/';
 const person={id:'p1',first_name:'Alex',last_name:'Exemple',photo_url:null,biography:'Bio test.',official_website:'https://example.org',publication_status:'published'};
@@ -83,7 +83,8 @@ const edge=[mkC('x','Sans','Couleur','Parti X',null,null,0,null),mkC('y','Sans',
   });
   await page(w,ex,'candidat.html?e=e1#a',async p=>{
    const x=await txt(p);
-   rep(/Fiabilité/.test(x)&&await p.locator('.rel').count()>=1,`${w}px fiche candidat : indicateur de fiabilité conservé`);
+   rep(await p.locator('.blk--party header').count()===1&&(await p.locator('.blk--party header').textContent()).trim()==='Candidature'&&await p.locator('.blk--party header .rel').count()===0,`${w}px fiche candidat : fiabilité globale de la candidature supprimée`);
+   rep(await p.locator('.fiche-head').count()===1&&/Candidature annoncée|Statut|candidat/i.test(x),`${w}px fiche candidat : autres informations conservées`);
   });
  }
  await br.close(); console.log(`${res} contrôles, ${bad} échec(s)`); process.exit(bad?1:0);

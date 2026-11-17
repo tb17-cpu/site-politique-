@@ -28,9 +28,11 @@ mkPoll('d3','a','Alpha','2026-11-20','2026-11-01',[30,20]); mkPoll('d3','b','Bet
 // moyenne et brouillon à ignorer
 S.push(prow('es','avg',{record_kind:'average',aggregation_note:'m',poll_date:'2026-11-15',value_percent:77,parties:{id:'paX',name:'MOY',...pb},party_id:'paX'}));
 S.push(prow('es','drf',{publication_status:'draft',poll_date:'2026-11-15',value_percent:88,parties:{id:'paY',name:'BROUILLON',...pb},party_id:'paY'}));
-async function page(w,url,fn,T){
+async function page(w,url,fn,T,st){
   const b=await chromium.launch(); const c=await b.newContext({viewport:{width:w,height:900}}); const errs=[]; const data=T||D;
   await c.route('**/rest/v1/**',r=>{const u=new URL(r.request().url()),t=u.pathname.split('/').pop();const h={'access-control-allow-origin':'*','access-control-allow-headers':'*','content-type':'application/json','access-control-expose-headers':'content-range'};
+    if(st&&st[t]==='abort')return r.abort('failed');
+    if(st&&st[t])return r.fulfill({status:st[t],headers:h,body:JSON.stringify({message:'erreur simulée',code:st.code||''})});
     let rows=data[t]||[];rows=rows.filter(x=>{for(const [k,v] of u.searchParams){if(k.includes('.')||!v.startsWith('eq.'))continue;if(k in x&&String(x[k])!==v.slice(3))return false}return true});
     h['content-range']=`0-0/${rows.length}`;r.fulfill({status:200,headers:h,body:JSON.stringify(rows)})});
   const p=await c.newPage();p.on('pageerror',e=>errs.push(e.message));
@@ -64,5 +66,17 @@ const poll=p=>p.evaluate(()=>{const s=document.querySelector('.poll');if(!s)retu
  }
  const seen=new Set(); for(let i=0;i<5;i++){await page(1280,'election.html?e=fr',async p=>{seen.add((await p.locator('.poll').evaluateAll(a=>a.map(x=>/Ifop/.test(x.innerText)?'I':'O'))).join())})}
  rep(seen.size===1,'égalité : ordre d’affichage identique sur 5 chargements',[...seen]);
+ // 11) erreurs techniques : jamais présentées comme « aucun sondage »
+ const cases=[[403,'denied',/pas accessibles/,'42501','permission refusée (403)'],[404,'missing',/structure de données attendue est indisponible/,'','relation absente (404)'],[400,'invalid',/structure de données attendue est indisponible/,'PGRST200','schéma / relation invalide (400)'],[500,'server',/n’ont pas pu être chargés/,'','erreur serveur (500)'],['abort','network',/n’ont pas pu être chargés/,'','erreur réseau']];
+ for(const w of [1280,400]) for(const [code,cls,re,pg,label] of cases){
+  await page(w,'election.html?e=es',async p=>{
+   const x=await p.evaluate(()=>document.body.innerText), el=p.locator('[data-poll-error]');
+   rep(await el.count()===1&&await el.getAttribute('data-poll-error')===cls&&re.test(x),`${w}px ${label} : message d’erreur « ${cls} »`,x.slice(0,200));
+   rep(!/Aucun sondage publié/.test(x)&&await p.locator('.bars').count()===0,`${w}px ${label} : pas de « aucun sondage », pas de graphique`);
+   rep(/Calendrier|Candidats|élection/i.test(x)&&(await p.locator('h1').count())>=1,`${w}px ${label} : le reste de la page reste affiché`);
+  },null,{poll_snapshots:code,code:pg});
+ }
+ await page(1280,'election.html?e=xx',async p=>{const x=await p.evaluate(()=>document.body.innerText);rep(/Aucun sondage publié pour cette élection/.test(x)&&await p.locator('[data-poll-error]').count()===0,'absence réelle : « Aucun sondage publié » conservé, sans message d’erreur');});
+ await page(1280,'election.html?e=es',async p=>{rep(await p.locator('[data-poll-error]').count()===0&&await p.locator('.poll').count()===1,'aucune erreur : sondage affiché normalement');});
  console.log(`${res} contrôles, ${bad} échec(s)`);process.exit(bad?1:0);
 })();

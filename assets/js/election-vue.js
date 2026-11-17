@@ -23,7 +23,11 @@
   const score = v => Number(v) < 1 ? "moins de 1 %" : Number(v).toFixed(1).replace(".", ",") + " %";
   const pollBlock = P => {
     const none = `<h2 class="ov-h">Dernier sondage</h2><p class="quiet">Aucun sondage publié pour cette élection.</p>`;
-    if (P.missing) return none;
+    /* Erreur technique : message distinct de l'absence réelle, selon la nature du problème (détail dans la console). */
+    if (P.error) { const txt = P.error === "denied" ? "Les sondages ne sont pas accessibles pour le moment (accès refusé)."
+        : P.error === "missing" || P.error === "invalid" ? "Les sondages ne peuvent pas être affichés : la structure de données attendue est indisponible."
+        : "Les sondages n’ont pas pu être chargés. Réessayez dans un instant.";
+      return `<h2 class="ov-h">Dernier sondage</h2><p class="quiet" role="status" data-poll-error="${e(P.error)}">${e(txt)}</p>`; }
     const all = P.rows.filter(r => r.value_percent != null);
     if (!all.length) return none;
     const key = r => [r.sources && r.sources.id || r.source_id || "", r.pollster || "", r.scenario || "", r.poll_date || "", r.fieldwork_start || ""].join("|");
@@ -74,7 +78,7 @@
     $("p-title").textContent = Election.name(el);
     $("p-label").textContent = "Vue d’ensemble · " + st.label;
     $("p-lede").textContent = el.description || "Candidatures, programmes, thématiques, comparateur et indicateurs de cette élection.";
-    UI.mount(mount, async () => ({ cands: await DB.candidacies(el.id), progs: await DB.programs(el.id), polls: await DB.polls(el.id).catch(() => ({ missing: true, rows: [] })), dossier: await dossierOf(el) }), d => {
+    UI.mount(mount, async () => ({ cands: await DB.candidacies(el.id), progs: await DB.programs(el.id), polls: await DB.polls(el.id).catch(err => { const kind = DB.classify(err); console.warn("[sondages] chargement impossible :", kind, err && err.message); return { error: kind, rows: [] }; }), dossier: await dossierOf(el) }), d => {
       const nm = d.progs.reduce((n, p) => n + (p.program_versions || []).reduce((k, v) => k + (v.measures || []).length, 0), 0);
       const sections = [
         ["candidats", "Candidats", d.cands.length ? plural(d.cands.length, "candidature", "candidatures") : "Aucune candidature enregistrée"],
