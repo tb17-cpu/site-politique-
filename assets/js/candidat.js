@@ -40,17 +40,29 @@
       ${p.biography ? `<h3 class="h-h3 sub-h">Biographie</h3><p class="long desc">${e(p.biography)}</p>` : ""}
     </div></section>` + sponsorBlock();
 
-    const progs = c.programs || [];
-    h += `<section class="blk"><header><b>Programme</b><span>Documents programmatiques et propositions</span></header><div>` +
+    const progs = c.programs || [], seen = [];
+    const progHtml = 
       (progs.length ? progs.map(pg => {
         const vs = (pg.program_versions || []).slice().sort((a, b) => (b.version_number || 0) - (a.version_number || 0));
         return `<h3 class="h-h3" style="margin:14px 0 4px">${e(pg.title || "Programme")}</h3>${pg.description ? `<p style="color:var(--fg-2)">${e(pg.description)}</p>` : ""}` +
           (vs.length ? vs.map(v => {
             const ms = (v.measures || []).slice().sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-            return `<h4 class="label" style="margin:16px 0 4px">${[v.version_label && !/^v?\d+$/i.test(String(v.version_label)) ? e(v.version_label) : "", v.publication_date ? e(UI.date(v.publication_date)) : ""].filter(Boolean).join(" · ") || "Propositions"}</h4>
-              ${ms.length ? `<ul class="mlist">${ms.map(m => `<li><a class="t" href="mesure.html#${encodeURIComponent(m.id)}">${e(m.title)}</a>${UI.formalization(F.get(String(m.id)))}</li>`).join("")}</ul>` : `<p class="p-sub" style="margin:6px 0">Aucune mesure publiée pour cette version.</p>`}`;
+            const item = m => `<li><a class="t" href="mesure.html#${encodeURIComponent(m.id)}">${e(m.title)}</a>${UI.formalization(F.get(String(m.id)))}</li>`;
+            /* Regroupement par thème (premier thème publié de la mesure) ; sans thème : « Autres propositions ». L'ordre des mesures est conservé. */
+            const themeOf = m => { const t = (m.measure_themes || []).map(x => x && x.themes).filter(Boolean)[0]; return t && t.name ? t.name : ""; };
+            const groups = [], idx = new Map();
+            ms.forEach(m => { const k = themeOf(m); if (!idx.has(k)) { idx.set(k, groups.length); groups.push({ k, list: [] }); } groups[idx.get(k)].list.push(m); });
+            groups.sort((a, b) => (a.k === "") - (b.k === ""));
+            const grouped = groups.length > 1 || (groups.length === 1 && groups[0].k !== "");
+            const used = ms.map(m => F.get(String(m.id))).filter(Boolean).map(f => f.status);
+            seen.push(...used);
+            const body = !ms.length ? `<p class="p-sub" style="margin:6px 0">Aucune mesure publiée pour cette version.</p>`
+              : grouped ? groups.map(g => `<section class="m-group"><h4>${e(g.k || "Autres propositions")}<small>${g.list.length} ${g.list.length > 1 ? "positions" : "position"}</small></h4><ul class="mlist">${g.list.map(item).join("")}</ul></section>`).join("")
+              : `<ul class="mlist">${ms.map(item).join("")}</ul>`;
+            return `<h4 class="label" style="margin:16px 0 4px">${[v.version_label && !/^v?\d+$/i.test(String(v.version_label)) ? e(v.version_label) : "", v.publication_date ? e(UI.date(v.publication_date)) : ""].filter(Boolean).join(" · ") || "Propositions"}</h4>${body}`;
           }).join("") : `<p class="p-sub">Aucune proposition détaillée.</p>`);
-      }).join("") : `<p class="p-sub" style="margin-top:12px">Aucun programme n’est rattaché à cette candidature.</p>`) + `</div></section>`;
+      }).join("") : `<p class="p-sub" style="margin-top:12px">Aucun programme n’est rattaché à cette candidature.</p>`);
+    h += `<section class="blk"><header><b>Programme</b><span>Documents programmatiques et propositions</span></header><div>${UI.formalizationLegend(seen)}${progHtml}</div></section>`;
 
     const cs = c.candidacy_sources || [];
     h += `<section class="blk"><header><b>Sources justificatives</b><span>Documents de référence</span></header><div>` +

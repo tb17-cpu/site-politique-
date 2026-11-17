@@ -234,10 +234,12 @@
       select: `*,${PERSON},${PARTY}`, filter: { election_id: "eq." + electionId }, order: "display_order.asc.nullslast,announcement_date.asc.nullslast"
     }).then(r => r.filter(c => c.people)),
 
-    candidacy: id => rows("candidacies", { limit: 1,
-      select: `*,${PERSON},${PARTY},elections(id,name,year,publication_status),candidacy_sources(*,sources(*)),candidacy_sponsorship_territories(*,sources(title,url,publication_status)),programs(*,program_versions(*,measures(id,title,reliability_level,display_order,publication_status)))`,
-      filter: { id: "eq." + id }
-    }).then(r => (r[0] && r[0].people) ? r[0] : null),
+    /* Les thèmes des mesures servent au regroupement de la fiche ; si cette jointure échoue, la fiche reste lisible sans regroupement. */
+    candidacy: id => {
+      const sel = themes => `*,${PERSON},${PARTY},elections(id,name,year,publication_status),candidacy_sources(*,sources(*)),candidacy_sponsorship_territories(*,sources(title,url,publication_status)),programs(*,program_versions(*,measures(id,title,reliability_level,display_order,publication_status${themes ? ",measure_themes(themes(id,name,slug,parent_id,publication_status))" : ""})))`;
+      const q = themes => rows("candidacies", { limit: 1, select: sel(themes), filter: { id: "eq." + id } });
+      return q(true).catch(() => q(false)).then(r => (r[0] && r[0].people) ? r[0] : null);
+    },
 
     measure: id => rows("measures", { limit: 1,
       select: `*,program_versions(*,programs(*,candidacies(id,election_id,candidacy_status,${PERSON},${PARTY}))),measure_themes(themes(id,name,slug,parent_id,publication_status)),measure_sources!measure_sources_measure_id_fkey(*,sources(*)),analyses(*,analysis_sources(*,sources(*))),case_measure_relations(*,policy_cases(*,countries(*),case_outcomes(*,case_outcome_sources(*,sources(*))),policy_case_sources(*,sources(*))))`,

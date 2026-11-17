@@ -104,6 +104,13 @@
     return `<span class="fs-block">${badge}<span class="fs-detail">${e(text)} Référence du ${e(U.date(f.date))}${src ? ` · Source : ${U.link(src.url, src.title || "source") || e(src.title || "source")}${src.publisher ? " · " + e(src.publisher) : ""}` : ""}.${f.note ? ` ${e(f.note)}` : ""}</span></span>`;
   };
 
+  /* Légende « comment lire les sources » : une ligne par statut réellement présent sur la page (statuts = liste de clés). */
+  U.formalizationLegend = statuses => {
+    const keys = Object.keys(FS).filter(k => (statuses || []).includes(k));
+    if (!keys.length) return "";
+    return `<div class="m-legend"><span class="label">Comment lire les sources</span>${keys.map(k => `<div><span class="fs fs-${k}"><i aria-hidden="true"></i>${e(FS[k][0])}</span><span>${e(FS[k][1])}</span></div>`).join("")}</div>`;
+  };
+
   /* ---------- États ---------- */
   U.loadingHtml = (msg) => `<div class="st st-load" role="status"><span class="spin" aria-hidden="true"></span>${e(msg || "Chargement…")}</div>`;
   U.emptyHtml = (msg) => `<div class="p-empty">${msg || "Aucun contenu disponible."}</div>`;
