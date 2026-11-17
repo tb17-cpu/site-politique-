@@ -115,7 +115,7 @@
       }
       const NESTED = [
         ["candidacies", "candidacies", "id,publication_status,people(publication_status),parties(publication_status),programs(publication_status,program_versions(publication_status,measures(publication_status))),candidacy_sources(sources(publication_status)),candidacy_sponsorship_territories(sources(publication_status))"],
-        ["measures", "measures", "id,publication_status,program_versions(publication_status,programs(publication_status,candidacies(publication_status,people(publication_status),parties(publication_status)))),measure_themes(themes(publication_status)),measure_sources(sources(publication_status)),analyses(publication_status,analysis_sources(sources(publication_status))),case_measure_relations(policy_cases(publication_status,countries(publication_status),case_outcomes(publication_status,case_outcome_sources(sources(publication_status))),policy_case_sources(sources(publication_status))))"],
+        ["measures", "measures", "id,publication_status,program_versions(publication_status,programs(publication_status,candidacies(publication_status,people(publication_status),parties(publication_status)))),measure_themes(themes(publication_status)),measure_sources!measure_sources_measure_id_fkey(sources(publication_status)),analyses(publication_status,analysis_sources(sources(publication_status))),case_measure_relations(policy_cases(publication_status,countries(publication_status),case_outcomes(publication_status,case_outcome_sources(sources(publication_status))),policy_case_sources(sources(publication_status))))"],
         ["indicator_observations", "indicator_observations", "id,publication_status,indicators(publication_status),countries(publication_status),sources(publication_status)"]
       ];
       for (const [label, t, sel] of NESTED) {
@@ -133,7 +133,7 @@
       const report = (name, items, sev, okMsg, what) => add(DQ, name, items.length ? sev : OK, items.length ? `${items.length} ${what}${items.length > 1 ? "s" : ""} : ${items.slice(0, 4).join(" ; ")}${items.length > 4 ? "…" : ""}` : okMsg);
       const ttl = x => x.title || x.name || String(x.id).slice(0, 8);
       await guard(DQ, "Mesures : thèmes et sources", async () => {
-        const r = await DB.raw("measures", { select: "id,title,measure_themes(theme_id),measure_sources(source_id)", limit: PAGE });
+        const r = await DB.raw("measures", { select: "id,title,measure_themes(theme_id),measure_sources!measure_sources_measure_id_fkey(source_id)", limit: PAGE });
         if (r.length >= PAGE) return [NA, "Lecture limitée : vérification incomplète"];
         const nt = r.filter(m => none(m, "measure_themes")).map(ttl), ns = r.filter(m => none(m, "measure_sources")).map(ttl);
         report("Mesures sans thématique", nt, WARN, `${r.length} mesure(s), toutes classées`, "mesure");
