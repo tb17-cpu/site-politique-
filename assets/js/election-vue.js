@@ -46,8 +46,8 @@
       const meta = [["Institut", r0.pollster && r0.pollster.replace(/\s+pour\s+.*$/i, "")], ["Commanditaire", commanditaire], ["Terrain", terrain(r0.fieldwork_start, r0.poll_date)], ["Échantillon", r0.sample_size ? r0.sample_size.toLocaleString("fr-FR") + " personnes" : ""]].filter(x => x[1]);
       return `<section class="poll" aria-label="Sondage ${e(r0.pollster || "")}">
         <p class="quiet">${e(r0.scenario || "")}</p>
-        <ul class="bars">${rows.map(r => { const v = Number(r.value_percent), w = v < 1 ? 1.5 : Math.max(1.5, v / max * 100);
-          return `<li><span class="bar-n">${who(r)}</span><span class="bar-t" role="img" aria-label="${e(score(v))}"><span class="bar-f" style="width:${w.toFixed(1)}%"></span></span><span class="bar-v">${e(score(v))}</span></li>`; }).join("")}</ul>
+        <ul class="bars">${rows.map((r, i) => { const v = Number(r.value_percent), w = v < 1 ? 1.5 : Math.max(1.5, v / max * 100);
+          return `<li${i < 3 ? ' class="top"' : ""}><span class="bar-n">${who(r)}</span><span class="bar-t" role="img" aria-label="${e(score(v))}"><span class="bar-f" style="width:${w.toFixed(1)}%"></span></span><span class="bar-v">${e(score(v))}</span></li>`; }).join("")}</ul>
         <dl class="kv poll-meta">${meta.map(x => `<dt>${e(x[0])}</dt><dd>${e(x[1])}</dd>`).join("")}</dl>
         <p class="quiet poll-note">Scores tels que publiés par l’institut. Un sondage n’est ni une prévision ni un résultat électoral.</p>
         ${src ? `<p class="quiet poll-note">Source : ${UI.link(src.url, src.title || "Source du sondage") || e(src.title || "Source du sondage")}${src.publisher ? ` · ${e(src.publisher)}` : ""}</p>` : ""}
@@ -88,11 +88,11 @@
         ["indicateurs", "Indicateurs", "Données et sources du pays"]].concat(d.dossier ? [["pays", "Comprendre le pays", "Le contexte politique, économique et institutionnel"]] : []);
       const hrefs = { candidats: "candidats.html", programmes: "programmes.html", thematiques: "thematiques.html", comparateur: "comparateur.html", indicateurs: "indicateurs.html", pays: "pays.html" };
       return `<div class="p-grid">${sections.map(s => `<a class="p-cell" href="${hrefs[s[0]]}"><span class="tag">${e(s[1])}</span><h3>${e(s[2])}</h3></a>`).join("")}</div>
-        ${pollBlock(d.polls)}
         <h2 class="ov-h">Calendrier</h2>
         ${kv([["Pays", el.countries && el.countries.name], ["Type de scrutin", UI.humanize(el.election_type)], ["Année", el.year],
           ["Date du scrutin", UI.date(el.scheduled_date)], ["Date effective", UI.date(el.actual_date)], ["Second tour", UI.date(el.second_round_date)],
-          ["Date limite des parrainages", UI.date(el.sponsorship_deadline)], ["Situation", st.label]]) || `<p class="p-sub quiet">Calendrier non renseigné.</p>`}${refsBlock(el)}`;
+          ["Date limite des parrainages", UI.date(el.sponsorship_deadline)], ["Situation", st.label]]) || `<p class="p-sub quiet">Calendrier non renseigné.</p>`}
+        ${pollBlock(d.polls)}${refsBlock(el)}`;
     }, { loading: "Chargement de l’élection…", isEmpty: () => false });
   });
 })();

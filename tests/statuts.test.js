@@ -102,11 +102,20 @@ const M=[
    const all=await p.evaluate(async()=>{const m=await DB.formalizations();return {k:[...m.keys()].sort(),ui:Object.fromEntries(['official_program','party_position','candidate_pledge','recent_announcement','press_reported','foo',null].map(k=>[k,UI.formalization(k?{status:k,date:'2026-10-02'}:null).replace(/<[^>]+>/g,'')]))}});
    rep(JSON.stringify(all.k)===JSON.stringify(['m1','m7']),`${w}px statuts retenus : seulement les justifiés (m1, m7)`,all.k);
    rep(Object.entries(L).every(([k,v])=>all.ui[k]===v)&&all.ui.foo===''&&all.ui.null==='',`${w}px cinq libellés exacts ; valeur inconnue ou absente : rien`,all.ui);
-   const cols=await p.evaluate(()=>{const h=document.createElement('div');document.body.appendChild(h);return ['official_program','party_position','candidate_pledge','recent_announcement','press_reported'].map(k=>{h.innerHTML=UI.formalization({status:k,date:'2026-10-02'});const i=h.querySelector('.fs i'),c=getComputedStyle(i).backgroundColor,t=getComputedStyle(h.querySelector('.fs')).color;return c+'|'+t});});
+   const KEYS=['official_program','party_position','candidate_pledge','recent_announcement','press_reported'];
+   /* Couleurs de production (main), à ne pas modifier : bleu, cyan sourd, lavande, sable, rose poudré */
+   const PROD={official_program:'#86aee8',party_position:'#6fbcc8',candidate_pledge:'#aa9bdb',recent_announcement:'#d4a47e',press_reported:'#c791a6'};
+   const hex2rgb=h=>`rgb(${[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)).join(', ')})`;
    const rgb=c=>c.match(/\d+/g).slice(0,3).map(Number),lum=([r,g,b])=>{const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return .2126*f(r)+.7152*f(g)+.0722*f(b)};
-   const ct=c=>(lum(rgb(c))+.05)/(lum([10,19,34])+.05);
-   rep(new Set(cols.map(c=>c.split('|')[0])).size===5,`${w}px cinq couleurs de pastille toutes distinctes`,cols);
-   rep(cols.every(c=>{const [d,t]=c.split('|');return d===t&&ct(t)>=7}),`${w}px pastille = couleur du texte, contraste ≥ 7:1 sur le fond`,cols.map(c=>c.split('|')[1]+' '+ct(c.split('|')[1]).toFixed(1)));
+   const ct=(t,bg)=>{const a=lum(rgb(t))+.05,b=lum(rgb(bg))+.05;return Math.max(a,b)/Math.min(a,b)};
+   for(const th of ['light','dark']){
+    const cols=await p.evaluate(th=>{document.documentElement.setAttribute('data-theme',th);const h=document.createElement('div');document.body.appendChild(h);const out=['official_program','party_position','candidate_pledge','recent_announcement','press_reported'].map(k=>{h.innerHTML=UI.formalization({status:k,date:'2026-10-02'});const f=h.querySelector('.fs'),i=f.querySelector('i'),c=getComputedStyle(f);return {k,dot:getComputedStyle(i).backgroundColor,fg:c.color,bg:c.backgroundColor,ring:c.boxShadow}});h.remove();return out},th);
+    rep(cols.every(c=>c.bg===hex2rgb(PROD[c.k])&&th==='light'||c.fg===hex2rgb(PROD[c.k])&&th==='dark'),`${w}px ${th} : couleurs de production exactes (clair = fond de la pastille ; sombre = texte)`,cols.map(c=>[c.k,c.fg,c.bg]));
+    rep(cols.every(c=>c.ring.includes(hex2rgb(PROD[c.k]))),`${w}px ${th} : contour de la pastille = couleur de production`,cols.map(c=>c.ring));
+    rep(new Set(cols.map(c=>c.fg+'|'+c.bg)).size===5,`${w}px ${th} : cinq pastilles toutes distinctes`,cols);
+    rep(cols.every(c=>c.dot===c.fg&&ct(c.fg,c.bg)>=7),`${w}px ${th} : point = couleur du texte, contraste texte/fond ≥ 7:1`,cols.map(c=>c.k+' '+ct(c.fg,c.bg).toFixed(2)));
+   }
+   await p.evaluate(()=>document.documentElement.removeAttribute('data-theme'));
    rep(!/Fiabilité/i.test(await p.locator('#f-body > p:first-child').innerText().catch(()=>'')),`${w}px aucun texte « Fiabilité » dans l’en-tête de la mesure`);
   });
   for(const [id,why] of [['m2','association d’une autre mesure'],['m3','source dépubliée'],['m4','valeur inconnue'],['m5','date manquante'],['m6','aucun statut'],['m8','aucune association']]){

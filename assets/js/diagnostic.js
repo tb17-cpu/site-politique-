@@ -128,6 +128,17 @@
         });
       }
 
+      /* Jointure utilisée par le regroupement des mesures d'une fiche candidat (thèmes + ordre d'affichage) */
+      await guard("Visibilité", "Jointure mesures → thèmes (regroupement des fiches)", async () => {
+        const r = await DB.raw("measures", { select: "id,measure_themes(themes(id,name,display_order,publication_status))", limit: 50 });
+        if (!r.length) return [OK, "aucune mesure visible : rien à contrôler"];
+        const th = r.flatMap(m => (m.measure_themes || []).map(x => x && x.themes)).filter(Boolean);
+        const bad = th.filter(t => t.publication_status !== "published");
+        if (bad.length) return [KO, `${bad.length} thème(s) non publié(s) accessible(s) via la jointure`];
+        const multi = r.filter(m => (m.measure_themes || []).filter(x => x && x.themes).length > 1).length;
+        return [OK, `jointure lisible : ${th.length} rattachement(s) sur ${r.length} mesure(s) (${multi} multi-thèmes, regroupées de façon déterministe)`];
+      });
+
       /* G. Qualité des données (lecture brute) : bloquant / avertissement / incomplet, jamais mélangés */
       const DQ = "Qualité des données", none = (a, k) => !Array.isArray(a[k]) || !a[k].length;
       const report = (name, items, sev, okMsg, what) => add(DQ, name, items.length ? sev : OK, items.length ? `${items.length} ${what}${items.length > 1 ? "s" : ""} : ${items.slice(0, 4).join(" ; ")}${items.length > 4 ? "…" : ""}` : okMsg);

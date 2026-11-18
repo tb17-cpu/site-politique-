@@ -49,6 +49,15 @@ Le sélecteur de l'en-tête liste les élections publiées de Supabase (aucune n
 
 Un point plein signale un chiffre lu dans une source consultée, un point creux une estimation à confirmer. Dans `data-analyses.js`, le suffixe `^` produit le point plein et `~` le point creux.
 
+## Apparence : clair, sombre, automatique
+- **Une seule source de couleurs :** `assets/css/tokens.css` (clair par défaut ; `:root[data-theme="dark"]` pour le sombre). Aucun autre fichier CSS ne contient de couleur en dur ; la seule exception est hors CSS : `assets/js/theme-init.js` écrit en dur les deux couleurs de la barre du navigateur mobile (`<meta name="theme-color">`, qui ne lit pas les variables CSS) ; elles doivent suivre `--header-bg`. Changer l'identité = changer `tokens.css` (et ces deux valeurs).
+- **Choix de l'utilisateur :** sélecteur « Apparence » de l'en-tête (Automatique, Clair, Sombre), construit par `assets/js/layout.js`. Le choix est mémorisé dans `localStorage` (clé `ar.theme`) ; sans choix, ou si le stockage est bloqué, le site suit le système et réagit en direct à son changement.
+- **Pas de flash :** `assets/js/theme-init.js` est chargé en tête de chaque page, de façon synchrone, avant les feuilles de style ; il pose `<html data-theme>` avant le premier affichage. Sans JavaScript, la page reste en clair.
+- **Les cinq statuts de formalisation** gardent leurs libellés et les couleurs de la version en production : `#86aee8` (programme officiel), `#6fbcc8` (position du parti), `#aa9bdb` (engagement du candidat), `#d4a47e` (annonce récente), `#c791a6` (presse). En clair, la teinte est le fond de la pastille (texte `--fs-ink`) ; en sombre, c'est le texte et le contour sur un fond très sombre teinté. Contraste texte/pastille ≥ 7:1 dans les deux modes ; `tests/statuts.test.js` vérifie les valeurs exactes.
+- **Focus clavier :** contour de 3 px (`--focus`, `--focus-bar` sur les bandeaux marine et le pied de page).
+- **Regroupement des mesures d'une fiche candidat :** une mesure multi-thèmes va dans le thème de plus petit `display_order` (puis nom, puis id) ; ordre des groupes fixe, « Autres propositions » en dernier. Aucune dépendance à l'ordre renvoyé par la base.
+- **Tests :** `tests/apparence.test.js` (thème, mémorisation, flash, focus) et `tests/regroupement.test.js` (multi-thèmes, ordres aléatoires, repli de jointure). Comme les autres tests Playwright, ils attendent un serveur sur `http://localhost:8765/site-politique-/`.
+
 ## Cache des fichiers statiques
 GitHub Pages met JS et CSS en cache dans le navigateur. Chaque page référence donc ses fichiers avec une empreinte de contenu
 (`assets/js/db.js?v=1a2b3c4d`) : l'URL ne change que si le fichier change. **Après toute modification d'un fichier de `assets/`,
