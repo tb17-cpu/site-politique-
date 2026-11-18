@@ -236,13 +236,18 @@
 
     /* Les thèmes des mesures servent au regroupement de la fiche ; si cette jointure échoue, la fiche reste lisible sans regroupement. */
     candidacy: id => {
-      const sel = themes => `*,${PERSON},${PARTY},elections(id,name,year,publication_status),candidacy_sources(*,sources(*)),candidacy_sponsorship_territories(*,sources(title,url,publication_status)),programs(*,program_versions(*,measures(id,title,reliability_level,display_order,publication_status${themes ? ",measure_themes(themes(id,name,slug,parent_id,publication_status))" : ""})))`;
+      const sel = themes => `*,${PERSON},${PARTY},elections(id,name,year,publication_status),candidacy_sources(*,sources(*)),candidacy_sponsorship_territories(*,sources(title,url,publication_status)),programs(*,program_versions(*,measures(id,title,reliability_level,display_order,publication_status${themes ? ",measure_themes(themes(id,name,slug,parent_id,display_order,publication_status))" : ""})))`;
       const q = themes => rows("candidacies", { limit: 1, select: sel(themes), filter: { id: "eq." + id } });
-      return q(true).catch(() => q(false)).then(r => (r[0] && r[0].people) ? r[0] : null);
+      return q(true).catch(e => {
+        /* Repli sans les thèmes UNIQUEMENT si la jointure elle-même est refusée (colonne ou relation absente, accès refusé) ; une panne réseau ou un délai se propage. */
+        if (!["invalid", "missing", "denied", "server"].includes(classify(e))) throw e;
+        console.warn("[Au résultat] Jointure des thèmes indisponible (" + classify(e) + ", HTTP " + e.status + ") : fiche lue sans regroupement thématique.");
+        return q(false);
+      }).then(r => (r[0] && r[0].people) ? r[0] : null);
     },
 
     measure: id => rows("measures", { limit: 1,
-      select: `*,program_versions(*,programs(*,candidacies(id,election_id,candidacy_status,${PERSON},${PARTY}))),measure_themes(themes(id,name,slug,parent_id,publication_status)),measure_sources!measure_sources_measure_id_fkey(*,sources(*)),analyses(*,analysis_sources(*,sources(*))),case_measure_relations(*,policy_cases(*,countries(*),case_outcomes(*,case_outcome_sources(*,sources(*))),policy_case_sources(*,sources(*))))`,
+      select: `*,program_versions(*,programs(*,candidacies(id,election_id,candidacy_status,${PERSON},${PARTY}))),measure_themes(themes(id,name,slug,parent_id,display_order,publication_status)),measure_sources!measure_sources_measure_id_fkey(*,sources(*)),analyses(*,analysis_sources(*,sources(*))),case_measure_relations(*,policy_cases(*,countries(*),case_outcomes(*,case_outcome_sources(*,sources(*))),policy_case_sources(*,sources(*))))`,
       filter: { id: "eq." + id }
     }).then(r => chainOk(r[0]) ? r[0] : null),
 

@@ -1,0 +1,107 @@
+/* ==========================================================================
+   DESIGN TOKENS : source unique des couleurs, polices, espacements et rayons.
+   Deux jeux de valeurs : clair (par défaut) et sombre ([data-theme="dark"]).
+   L'attribut data-theme est posé sur <html> par assets/js/theme-init.js AVANT le premier affichage
+   (choix mémorisé, sinon préférence du système). Aucun composant ne contient de couleur en dur :
+   changer l'identité du site = changer les valeurs de ce fichier, et seulement celui-ci.
+   Contrastes vérifiés (WCAG AA) pour chaque paire texte/fond de ce fichier, dans les deux modes.
+   ========================================================================== */
+:root{
+  /* ---- Typographie ---- */
+  --f-display:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --f-body:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --f-mono:var(--f-body);          /* libellés techniques : même famille que le texte, en capitales espacées */
+  /* ---- Espacements (échelle unique) ---- */
+  --s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:24px;--s-6:32px;--s-7:48px;--s-8:64px;
+  --r-sm:6px;--r:10px;--r-lg:14px;
+  --tap:44px;                      /* cible tactile minimale */
+  --header-h:60px;
+
+  /* ---- Mode clair : fond gris très clair, cartes blanches, bleu marine structurant ---- */
+  color-scheme:light;
+  --bg:#f2f4f8;                    /* fond général */
+  --surface:#ffffff;               /* cartes et surfaces */
+  --surface-2:#eef1f7;             /* aplat discret : en-têtes de tableau, citations, tuiles */
+  --surface-hover:#f6f8fc;
+  --line:#d3d9e4;                  /* séparateurs visibles */
+  --line-soft:#e6eaf1;             /* filets discrets, contour des cartes */
+  --control-line:#7d89a3;          /* contour des champs et boutons (≥ 3:1) */
+  --fg:#111c33;
+  --fg-2:#38445e;
+  --muted:#566178;
+  --accent:#1e3a8a;                /* liens, repères, bleu marine vif */
+  --accent-dim:#8d9bc4;
+  --accent-soft:#e7edfa;           /* fond d'une note d'information */
+  --accent-soft-fg:#22305a;
+  --on-accent:#ffffff;
+  --btn-bg:#14213d;--btn-fg:#ffffff;--btn-hover:#1e3a8a;
+  --bar:#14213d;                   /* bandeau d'élection */
+  --bar-2:#25365f;
+  --bar-fg:#ffffff;
+  --bar-fg-2:#c1cbe3;
+  --footer-bg:#101a30;
+  --header-bg:#ffffff;
+  --sticky-bg:rgba(242,244,248,.94);
+  --focus:#1e3a8a;                 /* anneau de focus sur le fond de page */
+  --focus-bar:#ffffff;             /* anneau de focus sur les bandeaux marine et le pied de page */
+  --pos:#146c3a;--neg:#b3261e;--mix:#8a5a00;
+  --pre:#8794ae;--post:#4f5d7d;    /* graphiques : avant / pendant le mandat */
+  --shadow:0 1px 2px rgba(17,28,51,.06),0 1px 1px rgba(17,28,51,.04);
+  --logo-bg:#14213d;--logo-bar:#ffffff;
+  /* Statut d'une valeur chiffrée (cas comparatifs) */
+  --vs-obs:#14703f;--vs-proj:#0b4f9a;--vs-tgt:#8a5a00;--vs-est:#5b3ea6;--vs-unk:#566178;
+  /* Les cinq statuts de formalisation d'une mesure : couleurs de la version en production (pastilles pleines, texte --fs-ink ≥ 7:1) */
+  --fs-ink:#070d1a;
+  --fs-official-fg:var(--fs-ink);--fs-official-bg:#86aee8;--fs-official-line:#86aee8;
+  --fs-party-fg:var(--fs-ink);--fs-party-bg:#6fbcc8;--fs-party-line:#6fbcc8;
+  --fs-pledge-fg:var(--fs-ink);--fs-pledge-bg:#aa9bdb;--fs-pledge-line:#aa9bdb;
+  --fs-recent-fg:var(--fs-ink);--fs-recent-bg:#d4a47e;--fs-recent-line:#d4a47e;
+  --fs-press-fg:var(--fs-ink);--fs-press-bg:#c791a6;--fs-press-line:#c791a6;
+  /* Bandeaux marine et pied de page : mêmes valeurs dans les deux modes */
+  --on-bar:#ffffff;
+  --st-upcoming-fg:#e6ebf8;--st-live-bg:#14532d;--st-live-fg:#d7f3e1;--st-past-bg:#3a3f4d;--st-past-fg:#d5d9e3;
+  --logo-on-bar:#ffffff;
+  --shadow-pop:0 8px 24px rgba(17,28,51,.16);
+}
+
+/* ---- Mode sombre : bleu nuit, cartes ardoise, texte blanc cassé, accents bleus ---- */
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0b1424;
+  --surface:#131f36;
+  --surface-2:#1a2947;
+  --surface-hover:#182742;
+  --line:#2c3d60;
+  --line-soft:#1f2f4d;
+  --control-line:#6479a6;
+  --fg:#eceff6;
+  --fg-2:#c4ccdc;
+  --muted:#9aa6be;
+  --accent:#8fb4ff;
+  --accent-dim:#4a69a8;
+  --accent-soft:#1b2c4f;
+  --accent-soft-fg:#d3e0fa;
+  --on-accent:#0b1424;
+  --btn-bg:#8fb4ff;--btn-fg:#0b1424;--btn-hover:#b3cdff;
+  --bar:#16264a;
+  --bar-2:#243a6b;
+  --bar-fg:#ffffff;
+  --bar-fg-2:#b9c6e6;
+  --footer-bg:#08101e;
+  --header-bg:#0f1a2f;
+  --sticky-bg:rgba(11,20,36,.94);
+  --focus:#a9c4ff;
+  --focus-bar:#ffffff;
+  --pos:#5cd1a0;--neg:#ff8f82;--mix:#f0c36a;
+  --pre:#5f7196;--post:#9fb3da;
+  --shadow:none;
+  --logo-bg:#8fb4ff;--logo-bar:#0b1424;
+  --vs-obs:#5cd1a0;--vs-proj:#8fb4ff;--vs-tgt:#f0c36a;--vs-est:#c9b6ff;--vs-unk:#9aa6be;
+  /* Mode sombre : la teinte de production devient le texte et le contour, sur un fond très sombre teinté (≥ 7:1) */
+  --fs-official-fg:#86aee8;--fs-official-bg:#0e1421;--fs-official-line:#86aee8;
+  --fs-party-fg:#6fbcc8;--fs-party-bg:#0c151f;--fs-party-line:#6fbcc8;
+  --fs-pledge-fg:#aa9bdb;--fs-pledge-bg:#101320;--fs-pledge-line:#aa9bdb;
+  --fs-recent-fg:#d4a47e;--fs-recent-bg:#12131a;--fs-recent-line:#d4a47e;
+  --fs-press-fg:#c791a6;--fs-press-bg:#12121d;--fs-press-line:#c791a6;
+  --shadow-pop:0 8px 24px rgba(0,0,0,.5);
+}

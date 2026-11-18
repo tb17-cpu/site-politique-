@@ -1,7 +1,7 @@
 /* nav */
-.chips-nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(250,248,243,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.chips-nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--sticky-bg);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .chips-nav .wrap{display:flex;gap:6px;overflow-x:auto;padding-block:10px;scrollbar-width:thin}
-.chips-nav a{flex:none;display:flex;gap:6px;align-items:baseline;padding:5px 10px;border:1px solid var(--line);border-radius:4px;color:var(--fg-2);font-size:12.5px;white-space:nowrap}
+.chips-nav a{flex:none;display:flex;gap:6px;align-items:center;min-height:var(--tap);padding:5px 12px;border:1px solid var(--line);border-radius:4px;color:var(--fg-2);font-size:12.5px;white-space:nowrap}
 .chips-nav a b{font-family:var(--f-mono);font-weight:500;color:var(--accent);font-size:11px}
 .chips-nav a:hover{border-color:var(--accent-dim);text-decoration:none;color:var(--fg)}
 
@@ -38,14 +38,14 @@ td.num,th.num{font-variant-numeric:tabular-nums}
 .mini.est i{opacity:.45}
 .mini u{text-decoration:none;color:var(--muted);font-size:10px}
 .chip{display:inline-block;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.04em;padding:2px 7px;border:1px solid var(--line);border-radius:3px;color:var(--fg-2);white-space:nowrap}
-.chip.pos{color:var(--pos);border-color:rgba(20,112,63,.45)}
-.chip.neg{color:var(--neg);border-color:rgba(179,38,30,.45)}
-.chip.mix{color:var(--mix);border-color:rgba(138,90,0,.45)}
+.chip.pos{color:var(--pos);border-color:var(--pos)}
+.chip.neg{color:var(--neg);border-color:var(--neg)}
+.chip.mix{color:var(--mix);border-color:var(--mix)}
 .chip.on{color:var(--accent);border-color:var(--accent-dim)}
 .c-meta .chip{white-space:normal;max-width:100%}
 .chip.c1{color:var(--fg)}
 .chip.c3{color:var(--muted)}
-.chip.c0{color:var(--mix);border-style:dashed;border-color:rgba(138,90,0,.5)}
+.chip.c0{color:var(--mix);border-style:dashed;border-color:var(--mix)}
 .divider{padding-block:64px 0;border-top:1px solid var(--line);margin-top:56px}
 .divider .label{margin-bottom:10px}
 .divider p.lede2{margin-top:10px;max-width:68ch;color:var(--fg-2)}
@@ -146,7 +146,7 @@ h2.sec{font-size:clamp(24px,3.5vw,34px);margin-bottom:18px}
 
 /* ---------- Onglets et barre fixe ---------- */
 body[data-page="analyses"] .site-header{position:static}
-.a-bar{position:sticky;top:0;z-index:30;background:rgba(250,248,243,.97);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.a-bar{position:sticky;top:0;z-index:30;background:var(--sticky-bg);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .a-tabs{border-bottom:1px solid var(--line-soft)}
 .a-tabs .wrap{display:flex;overflow-x:auto;scrollbar-width:none}
 .a-tabs a{flex:none;padding:11px 14px 10px;color:var(--fg-2);font-size:13.5px;font-weight:500;white-space:nowrap;border-bottom:2px solid transparent;text-decoration:none}
