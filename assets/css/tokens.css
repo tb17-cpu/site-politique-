@@ -19,16 +19,17 @@
 
   /* ---- Mode clair : fond gris très clair, cartes blanches, bleu marine structurant ---- */
   color-scheme:light;
-  --bg:#f2f4f8;                    /* fond général */
+  --bg:#edf0f6;                    /* fond général */
   --surface:#ffffff;               /* cartes et surfaces */
-  --surface-2:#eef1f7;             /* aplat discret : en-têtes de tableau, citations, tuiles */
-  --surface-hover:#f6f8fc;
-  --line:#d3d9e4;                  /* séparateurs visibles */
-  --line-soft:#e6eaf1;             /* filets discrets, contour des cartes */
+  --surface-2:#e8ecf4;             /* aplat discret : en-têtes de tableau, citations, tuiles */
+  --surface-hover:#f5f8fe;
+  --line:#c5cddc;                  /* contour des cartes et séparateurs (≈1,6:1 sur blanc) */
+  --rule:#9aa6bd;                  /* filet de séparation de groupe et de section */
+  --line-soft:#d5dbe8;             /* filets discrets internes */
   --control-line:#7d89a3;          /* contour des champs et boutons (≥ 3:1) */
   --fg:#111c33;
   --fg-2:#38445e;
-  --muted:#566178;
+  --muted:#4a566e;
   --accent:#1e3a8a;                /* liens, repères, bleu marine vif */
   --accent-dim:#8d9bc4;
   --accent-soft:#e7edfa;           /* fond d'une note d'information */
@@ -41,7 +42,7 @@
   --bar-fg-2:#c1cbe3;
   --footer-bg:#101a30;
   --header-bg:#ffffff;
-  --sticky-bg:rgba(242,244,248,.94);
+  --sticky-bg:rgba(237,240,246,.94);
   --focus:#1e3a8a;                 /* anneau de focus sur le fond de page */
   --focus-bar:#ffffff;             /* anneau de focus sur les bandeaux marine et le pied de page */
   --pos:#146c3a;--neg:#b3261e;--mix:#8a5a00;
@@ -49,7 +50,7 @@
   --shadow:0 1px 2px rgba(17,28,51,.06),0 1px 1px rgba(17,28,51,.04);
   --logo-bg:#14213d;--logo-bar:#ffffff;
   /* Statut d'une valeur chiffrée (cas comparatifs) */
-  --vs-obs:#14703f;--vs-proj:#0b4f9a;--vs-tgt:#8a5a00;--vs-est:#5b3ea6;--vs-unk:#566178;
+  --vs-obs:#14703f;--vs-proj:#0b4f9a;--vs-tgt:#8a5a00;--vs-est:#5b3ea6;--vs-unk:#4a566e;
   /* Les cinq statuts de formalisation d'une mesure : couleurs de la version en production (pastilles pleines, texte --fs-ink ≥ 7:1) */
   --fs-ink:#070d1a;
   --fs-official-fg:var(--fs-ink);--fs-official-bg:#86aee8;--fs-official-line:#86aee8;
@@ -71,8 +72,9 @@
   --surface:#131f36;
   --surface-2:#1a2947;
   --surface-hover:#182742;
-  --line:#2c3d60;
-  --line-soft:#1f2f4d;
+  --line:#2f4166;
+  --rule:#4a6194;
+  --line-soft:#243659;
   --control-line:#6479a6;
   --fg:#eceff6;
   --fg-2:#c4ccdc;
@@ -98,10 +100,10 @@
   --logo-bg:#8fb4ff;--logo-bar:#0b1424;
   --vs-obs:#5cd1a0;--vs-proj:#8fb4ff;--vs-tgt:#f0c36a;--vs-est:#c9b6ff;--vs-unk:#9aa6be;
   /* Mode sombre : la teinte de production devient le texte et le contour, sur un fond très sombre teinté (≥ 7:1) */
-  --fs-official-fg:#86aee8;--fs-official-bg:#0e1421;--fs-official-line:#86aee8;
-  --fs-party-fg:#6fbcc8;--fs-party-bg:#0c151f;--fs-party-line:#6fbcc8;
-  --fs-pledge-fg:#aa9bdb;--fs-pledge-bg:#101320;--fs-pledge-line:#aa9bdb;
-  --fs-recent-fg:#d4a47e;--fs-recent-bg:#12131a;--fs-recent-line:#d4a47e;
-  --fs-press-fg:#c791a6;--fs-press-bg:#12121d;--fs-press-line:#c791a6;
+  --fs-official-fg:#86aee8;--fs-official-bg:#273754;--fs-official-line:#86aee8;
+  --fs-party-fg:#6fbcc8;--fs-party-bg:#233a4f;--fs-party-line:#6fbcc8;
+  --fs-pledge-fg:#aa9bdb;--fs-pledge-bg:#2d3452;--fs-pledge-line:#aa9bdb;
+  --fs-recent-fg:#d4a47e;--fs-recent-bg:#343642;--fs-recent-line:#d4a47e;
+  --fs-press-fg:#c791a6;--fs-press-bg:#323249;--fs-press-line:#c791a6;
   --shadow-pop:0 8px 24px rgba(0,0,0,.5);
 }

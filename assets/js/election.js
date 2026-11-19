@@ -73,6 +73,8 @@
       <div class="eb-title"><span class="label">Élection</span><b>${esc(name(cur))}</b><span class="eb-st eb-${st.key}">${esc(st.label)}</span></div>
       <nav class="eb-nav" aria-label="Rubriques de l’élection"><ul>${S.electionNav.map(n =>
         `<li><a href="${esc(hrefFor(n.href, cur.id))}"${n.id === navKey ? ' aria-current="page"' : ""}>${esc(n.label)}</a></li>`).join("")}</ul></nav></div></div>`;
+    const cu = bar.querySelector('.eb-nav a[aria-current="page"]'), ul = cu && cu.closest("ul");
+    if (ul && ul.scrollWidth > ul.clientWidth) ul.scrollLeft = Math.max(0, cu.offsetLeft - (ul.clientWidth - cu.offsetWidth) / 2);
   }
 
   /* ---- Liens : l'élection active suit le visiteur ---- */

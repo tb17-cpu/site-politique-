@@ -111,9 +111,9 @@ const M=[
   // 2. parcours complet : candidat -> liste de mesures -> clic -> fiche détaillée
   const ov=TT({elections:[E1],measures:M});
   await page(w,ov,'candidat.html?e=e1#c1',async p=>{
-   const links=p.locator('.mlist a.t'); const nl=await links.count();
+   const links=p.locator('.mlist a.mcard'); const nl=await links.count();
    rep(nl>=1,`${w}px candidat : mesures listées`,nl);
-   const first=(await links.first().innerText()).trim();
+   const first=(await links.first().locator('b').innerText()).trim();
    await links.first().click(); await p.waitForURL(/mesure\.html/); await p.waitForSelector('#f-body, .st-err',{timeout:8000}).catch(()=>{}); await p.waitForTimeout(600);
    const x=await p.evaluate(()=>document.body.textContent);
    rep(await p.locator('.st-err').count()===0&&!/Impossible d.afficher/.test(x),`${w}px clic sur « ${first} » : la fiche s’ouvre sans erreur`);
@@ -128,7 +128,7 @@ const M=[
   });
   const ov0=TT({elections:[E1],measures:M.map(m=>({...m,formalization_status:null,formalization_status_date:null,formalization_measure_source_id:null,formalization_note:null,justification:null}))});
   await page(w,ov0,'candidat.html?e=e1#c1',async p=>{
-   rep(await p.locator('.fs').count()===0&&await p.locator('.mlist a.t').count()>=1,`${w}px aucun statut renseigné : aucun badge, mesures listées`);
+   rep(await p.locator('.fs').count()===0&&await p.locator('.mlist a.mcard').count()>=1,`${w}px aucun statut renseigné : aucun badge, mesures listées`);
   });
   await page(w,ov,'candidat.html?e=e1#c1',async p=>{
    rep(await p.locator('.mlist .fs').count()>=1,`${w}px cartes/listes de mesures : badge sur les mesures avec statut`);

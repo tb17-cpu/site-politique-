@@ -25,7 +25,8 @@
       ms.forEach(m => { const c = m.program_versions && m.program_versions.programs && m.program_versions.programs.candidacies; if (c) cands.set(c.id, UI.person(c.people) || "Candidature"); });
       setTimeout(() => { $("t-cands").innerHTML = cands.size ? `<h3 class="h-h3" style="margin:22px 0 8px;font-size:21px">Candidats concernés</h3><ul class="fam-sub">${[...cands].map(([id, n]) => `<li><a href="candidat.html#${encodeURIComponent(id)}">${e(n)}</a></li>`).join("")}</ul>` : ""; }, 0);
       return `<ul class="mlist">${ms.map(m => { const c = m.program_versions && m.program_versions.programs && m.program_versions.programs.candidacies;
-        return `<li><a class="t" href="mesure.html#${encodeURIComponent(m.id)}">${e(m.title)}</a>${UI.formalization(F.get(String(m.id)))}<span class="by">${e(c ? UI.person(c.people) : "")}</span></li>`; }).join("")}</ul>`;
+        const by = c ? UI.person(c.people) : "";
+        return `<li><a class="mcard" href="mesure.html#${encodeURIComponent(m.id)}"><b>${e(m.title)}</b>${UI.formalization(F.get(String(m.id)), { short: true })}${by ? `<span class="by">${e(by)}</span>` : ""}</a></li>`; }).join("")}</ul>`;
     }, { loading: "Chargement des mesures…", empty: "<p>Aucune mesure publiée pour cette thématique dans cette élection.</p>" });
     setTimeout(() => box.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };

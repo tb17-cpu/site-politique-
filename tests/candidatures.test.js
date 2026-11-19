@@ -83,8 +83,8 @@ const edge=[mkC('x','Sans','Couleur','Parti X',null,null,0,null),mkC('y','Sans',
   });
   await page(w,ex,'candidat.html?e=e1#a',async p=>{
    const x=await txt(p);
-   rep(await p.locator('.blk--party header').count()===1&&(await p.locator('.blk--party header').textContent()).trim()==='Candidature'&&await p.locator('.blk--party header .rel').count()===0,`${w}px fiche candidat : fiabilité globale de la candidature supprimée`);
-   rep(await p.locator('.fiche-head').count()===1&&/Candidature annoncée|Statut|candidat/i.test(x),`${w}px fiche candidat : autres informations conservées`);
+   rep(await p.locator('.cand-head').count()===1&&await p.locator('.cand-head .rel').count()===0,`${w}px fiche candidat : fiabilité globale de la candidature supprimée`);
+   rep(await p.locator('.cand-id h1').count()===1&&/Candidature annoncée|Statut|candidat/i.test(x),`${w}px fiche candidat : autres informations conservées`);
   });
  }
  await br.close(); console.log(`${res} contrôles, ${bad} échec(s)`); process.exit(bad?1:0);

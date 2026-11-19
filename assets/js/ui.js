@@ -87,28 +87,30 @@
 
   /* ---------- Statut de formalisation d'une mesure (remplace la fiabilité sur les mesures) ---------- */
   const FS = {
-    official_program:    ["Programme officiel publié du candidat", "Proposition inscrite dans le programme officiel publié par le candidat."],
-    party_position:      ["Position officielle du parti", "Proposition portée par une position officielle du parti du candidat."],
-    candidate_pledge:    ["Engagement public du candidat", "Engagement pris publiquement par le candidat."],
-    recent_announcement: ["Annonce récente non intégrée à un programme", "Annonce récente, pas encore inscrite dans un programme."],
-    press_reported:      ["Information rapportée par la presse, à confirmer", "Information rapportée par la presse, à confirmer auprès du candidat ou de son parti."]
+    official_program:    ["Programme officiel publié du candidat", "Proposition inscrite dans le programme officiel publié par le candidat.", "Programme officiel"],
+    party_position:      ["Position officielle du parti", "Proposition portée par une position officielle du parti du candidat.", "Position du parti"],
+    candidate_pledge:    ["Engagement public du candidat", "Engagement pris publiquement par le candidat.", "Engagement public"],
+    recent_announcement: ["Annonce récente non intégrée à un programme", "Annonce récente, pas encore inscrite dans un programme.", "Annonce récente"],
+    press_reported:      ["Information rapportée par la presse, à confirmer", "Information rapportée par la presse, à confirmer auprès du candidat ou de son parti.", "Presse, à confirmer"]
   };
   /* f = { status, date, note, source } (DB.formalizations). Rien n'est affiché sans statut valide.
-     o.full : ajoute la justification (date de référence, source, note). */
+     o.full  : ajoute la justification (date de référence, source, note).
+     o.short : libellé court (cartes de mesures). Le libellé complet reste accessible : infobulle et texte pour lecteur d'écran ; la légende dépliable le détaille. */
   U.formalization = (f, o = {}) => {
     if (!f || !FS[f.status]) return "";
-    const [label, text] = FS[f.status], src = f.source;
+    const [label, text, short] = FS[f.status], src = f.source;
     const title = `${label}${f.date ? " — référence du " + U.date(f.date) : ""}${src && src.title ? " — " + src.title : ""}. ${text}`;
-    const badge = `<span class="fs fs-${f.status}" title="${e(title)}"><i aria-hidden="true"></i>${e(label)}</span>`;
+    const inner = o.short ? `<span aria-hidden="true">${e(short)}</span><span class="sr-only">${e(label)}</span>` : e(label);
+    const badge = `<span class="fs fs-${f.status}" title="${e(title)}"><i aria-hidden="true"></i>${inner}</span>`;
     if (!o.full) return badge;
-    return `<span class="fs-block">${badge}<span class="fs-detail">${e(text)} Référence du ${e(U.date(f.date))}${src ? ` · Source : ${U.link(src.url, src.title || "source") || e(src.title || "source")}${src.publisher ? " · " + e(src.publisher) : ""}` : ""}.${f.note ? ` ${e(f.note)}` : ""}</span></span>`;
+    return `<span class="fs-block">${badge}<span class="fs-detail">${e(text)}${f.date ? ` Référence du ${e(U.date(f.date))}` : ""}${src ? ` · Source : ${U.link(src.url, src.title || "source") || e(src.title || "source")}${src.publisher ? " · " + e(src.publisher) : ""}` : ""}.${f.note ? ` ${e(f.note)}` : ""}</span></span>`;
   };
 
-  /* Légende « comment lire les sources » : une ligne par statut réellement présent sur la page (statuts = liste de clés). */
+  /* Légende repliable « Comment lire les statuts » : une ligne par statut réellement présent sur la page (statuts = liste de clés). */
   U.formalizationLegend = statuses => {
     const keys = Object.keys(FS).filter(k => (statuses || []).includes(k));
     if (!keys.length) return "";
-    return `<div class="m-legend"><span class="label">Comment lire les sources</span>${keys.map(k => `<div><span class="fs fs-${k}"><i aria-hidden="true"></i>${e(FS[k][0])}</span><span>${e(FS[k][1])}</span></div>`).join("")}</div>`;
+    return `<details class="m-help"><summary>Comment lire les statuts</summary><div class="m-legend">${keys.map(k => `<div><span class="fs fs-${k}"><i aria-hidden="true"></i>${e(FS[k][0])}</span><span>${e(FS[k][1])}</span></div>`).join("")}</div></details>`;
   };
 
   /* ---------- Texte éditorial : rendu Markdown commun ----------
