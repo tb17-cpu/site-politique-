@@ -63,7 +63,7 @@
    L'intitulé domine ; le statut de formalisation est secondaire ; la flèche indique l'ouverture d'une fiche. */
 .mlist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-3)}
 .mlist>li{display:flex;min-width:0}
-.mcard{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:var(--s-3);width:100%;min-height:104px;padding:var(--s-4) calc(var(--s-5) + 8px) var(--s-4) var(--s-4);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);color:var(--fg);text-decoration:none;transition:border-color .15s,background-color .15s}
+.mcard{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:var(--s-3);width:100%;min-height:104px;padding:var(--s-4) 44px var(--s-4) var(--s-4);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);color:var(--fg);text-decoration:none;transition:border-color .15s,background-color .15s}
 .mcard>b{font-weight:600;font-size:1.0625rem;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 .mcard .fs{align-self:flex-start}
 .mcard .by{font-size:.8125rem;color:var(--muted)}

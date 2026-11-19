@@ -9,7 +9,16 @@ const lum = c => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : M
 const rgb = s => s.match(/[\d.]+/g).slice(0, 3).map(Number);
 const ratio = (a, b) => { const x = lum(rgb(a)) + .05, y = lum(rgb(b)) + .05; return Math.max(x, y) / Math.min(x, y); };
 
-const route = (t, u) => D.route(t, u);
+let route = (t, u) => D.route(t, u);
+/* Variantes de données : programmes multiples et versions successives ; analyses avec ou sans date de publication. */
+const withPrograms = base => (t, u) => { const d = base(t, u); if (t !== 'candidacies') return d;
+  const M = D.measures, ver = (id, n, label, date, ms) => ({ id, version_number: n, version_label: label, publication_date: date, publication_status: 'published', measures: ms });
+  return d.map(c => String(c.id) !== '1' || !c.programs ? c : Object.assign({}, c, { programs: [
+    { id: 'pA', title: 'Programme A', description: null, publication_status: 'published', program_versions: [ver('v1', 1, 'Version initiale', '2026-09-01', M.slice(3, 5)), ver('v2', 2, 'Version mise à jour', '2026-11-14', M.slice(0, 3))] },
+    { id: 'pB', title: 'Programme B', description: null, publication_status: 'published', program_versions: [ver('v3', 1, 'v1', '2026-10-10', M.slice(5, 7))] }] })); };
+const withAnalysis = (extra, base) => (t, u) => { const d = base(t, u); if (t !== 'measures' || (u.searchParams.get('select') || '').startsWith('id,publication_status,formalization_status')) return d;
+  return d.map(m => Object.assign({}, m, { analyses: [Object.assign({ id: 1, publication_status: 'published', analysis_type: 'editorial', analysis_title: 'Titre', assessment: 'Évaluation', reliability_level: 'high', reliability_notes: 'NOTE-INTERNE-FIABILITE', analysis_sources: [] }, extra)] })); };
+const fixed = D.route;
 const open = async (br, url, { w = 1280, h = 900, theme = 'light', mob = false } = {}) => {
   const ctx = await br.newContext({ viewport: { width: w, height: h }, hasTouch: mob, isMobile: mob });
   await ctx.addInitScript(v => { try { localStorage.setItem('ar.theme', v); } catch (e) {} }, theme);
@@ -104,7 +113,7 @@ const open = async (br, url, { w = 1280, h = 900, theme = 'light', mob = false }
     rep(!/Formulation et éléments annoncés|Reformulation et mise en forme|Description structurée|Non documenté|Type de mesure|relue le|Les analyses ci-dessous|Fiabilité|version\s+\d|Cela ne signifie pas/i.test(t), `mesure ${label} : textes et métadonnées supprimés absents`, (t.match(/Formulation et éléments annoncés|Reformulation et mise en forme|Description structurée|Non documenté|Type de mesure|relue le|Les analyses ci-dessous|Fiabilité|version\s+\d/i) || [])[0]);
     if (id === 2) {
       rep(h.some(x => /^Analyse · .+ · publiée le /.test(x)) || h.some(x => /^Analyse( · .+)?$/.test(x)), 'mesure : titre d’analyse « Analyse · Thème · publiée le … » (date si connue)', h);
-      const d = await pg.evaluate(() => { const f = document.querySelector('details.m-fold'); return f ? { open: f.open, sum: f.querySelector('summary').textContent } : null; });
+      const d = await pg.evaluate(() => { const f = [...document.querySelectorAll('details.m-fold')].find(x => /Sources de l’analyse/.test(x.querySelector('summary').textContent)); return f ? { open: f.open, sum: f.querySelector('summary').textContent } : null; });
       rep(d && !d.open && /Sources de l’analyse/.test(d.sum), 'mesure : sources de l’analyse dans un menu déroulant replié', d);
     }
     rep(!errs.length, `mesure ${label} : aucune erreur JS`, errs);
@@ -149,6 +158,34 @@ const open = async (br, url, { w = 1280, h = 900, theme = 'light', mob = false }
     if (th === 'light') rep(c.hex.toLowerCase() === '#edf0f6', 'clair : fond #edf0f6', c.hex);
     await ctx.close();
   }
+
+  /* ---------- Programmes multiples, versions successives, mesures multi-thèmes ---------- */
+  {
+    route = withPrograms(fixed);
+    const { ctx, pg, errs } = await open(br, 'candidat.html?e=1#1');
+    const r = await pg.evaluate(() => ({
+      progH3: [...document.querySelectorAll('.blk h3.m-vh')].map(h => h.textContent), vers: [...document.querySelectorAll('h4.m-vh')].map(h => h.textContent),
+      titles: [...document.querySelectorAll('.mlist a.mcard b')].map(b => b.textContent), ids: [...document.querySelectorAll('[id^="mg-"]')].map(x => x.id),
+      panel: document.querySelector('.prog-panel') ? document.querySelector('.prog-panel').innerText : '', h2: (document.querySelector('.prog-panel h2') || {}).textContent, fs: document.querySelectorAll('.mcard .fs').length }));
+    rep(r.progH3.join('|') === 'Programme A|Programme B' && r.vers.length === 3, 'programmes multiples : titres des deux programmes et trois versions affichées', [r.progH3, r.vers]);
+    rep(r.titles.length === 7 && new Set(r.titles).size === 7, 'versions successives : les 7 mesures (3 + 2 + 2) sont toutes présentes, aucune répétition', r.titles.length);
+    rep(new Set(r.ids).size === r.ids.length, 'identifiants de groupes uniques sur toute la page', r.ids);
+    rep(/2 programmes/.test(r.h2) && /\b5\b/.test(r.panel) && !/\b7\b/.test(r.panel), 'panneau : « 2 programmes », propositions comptées sur la dernière version de chaque programme (3 + 2), sans cumuler les anciennes versions', r.panel);
+    rep(r.fs >= 4 && !errs.length, 'statuts affichés sur les cartes, aucune erreur JS', [r.fs, errs]);
+    await ctx.close(); route = fixed;
+  }
+
+  /* ---------- Analyses : date de publication et notes de fiabilité ---------- */
+  for (const [extra, label, re, no] of [[{ reviewed_at: '2026-11-01' }, 'sans date de publication (relecture seule)', /^Analyse · [^·]+$/, /publiée le|relue/], [{ reviewed_at: '2026-11-01', published_at: '2026-11-14T10:00:00Z' }, 'avec published_at', /^Analyse · .+ · publiée le 14 novembre 2026$/, /relue/], [{ publication_date: '2026-10-02' }, 'avec publication_date', /publiée le 2 octobre 2026$/, /relue/]]) {
+    route = withAnalysis(extra, fixed);
+    const { ctx, pg } = await open(br, 'mesure.html?e=1#2');
+    const r = await pg.evaluate(() => ({ h: [...document.querySelectorAll('.blk--an > header b')].map(b => b.textContent), t: document.body.innerText, sum: [...document.querySelectorAll('details.m-fold summary')].map(s => s.textContent), open: [...document.querySelectorAll('details.m-fold')].map(d => d.open) }));
+    rep(r.h.length === 1 && re.test(r.h[0]) && !no.test(r.t), `analyse ${label} : titre « ${r.h[0]} »`, r.h);
+    rep(!/NOTE-INTERNE-FIABILITE/.test(r.t), `analyse ${label} : notes de fiabilité non affichées`);
+    rep(r.sum.some(x => /^Voir les sources \(\d+\)$/.test(x)) && r.open.every(o => !o), `fiche mesure ${label} : sources des mesures dans un menu replié`, r.sum);
+    await ctx.close();
+  }
+  route = fixed;
 
   await br.close();
   console.log(`${res} contrôles, ${bad} échec(s)`); process.exit(bad ? 1 : 0);

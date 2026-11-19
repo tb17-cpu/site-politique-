@@ -50,10 +50,9 @@
             const groups = [], idx = new Map();
             ms.forEach(m => { const t = themeOf(m), k = t ? String(t.id || t.name) : ""; if (!idx.has(k)) { idx.set(k, groups.length); groups.push({ k, t, list: [] }); } groups[idx.get(k)].list.push(m); });
             groups.sort((x, y) => (x.t === null) - (y.t === null) || (x.t && y.t ? cmpTh(x.t, y.t) : 0));
-            groups.forEach(g => { g.name = g.t ? g.t.name : ""; g.dom = "mg-" + (++gid); if (g.t) themeKeys.add(g.k); });
+            groups.forEach(g => { g.name = g.t ? g.t.name : ""; g.dom = "mg-" + (++gid); if (g.t && v === vs[0]) themeKeys.add(g.k); });
             const grouped = groups.length > 1 || (groups.length === 1 && groups[0].k !== "");
-            nMeasures += ms.length;
-            if (v.publication_date && String(v.publication_date) > lastPub) lastPub = String(v.publication_date);
+            if (v === vs[0]) { nMeasures += ms.length; if (v.publication_date && String(v.publication_date) > lastPub) lastPub = String(v.publication_date); }
             seen.push(...ms.map(m => F.get(String(m.id))).filter(Boolean).map(f => f.status));
             const nl = n => `${n} ${n > 1 ? "propositions" : "proposition"}`;
             const jump = grouped && groups.length > 1 ? `<nav class="m-jump" aria-label="Thèmes du programme">${groups.map(g => `<button type="button" data-jump="${g.dom}">${e(g.name || "Autres propositions")} <small>${g.list.length}</small></button>`).join("")}</nav>` : "";

@@ -33,19 +33,20 @@
       kv([["Objectif annoncé", m.announced_objective], ["Coût annoncé", cost], ["Financement annoncé", m.announced_funding]]), "blk--lead");
     h += section("Description", kv([["Reformulation explicative", m.reformulation], ["Mécanisme", m.mechanism], ["Publics concernés", m.target_groups], ["Modalités d’application", m.implementation_details], ["Précisions", m.additional_details]]));
     if (themes.length) h += `<section class="blk"><header><b>Thématiques</b></header><ul class="fam-sub">${themes.map(t => `<li><a href="thematiques.html#${encodeURIComponent(t.slug)}">${e(t.name)}</a></li>`).join("")}</ul></section>`;
-    h += section("Sources et références", srcList(m.measure_sources || [], "exact_quote", "page_reference"));
+    const ms = m.measure_sources || [], msl = srcList(ms, "exact_quote", "page_reference");
+    h += section("Sources et références", msl ? `<details class="m-fold"><summary>Voir les sources (${ms.length})</summary>${msl}</details>` : "");
 
     /* Analyses d'Au résultat : « Analyse · Thème · publiée le … ». Sources dans un menu déroulant, avec leurs citations, pages et notes. */
     const an = m.analyses || [];
     h += an.length ? an.map(a => {
-      const d = a.published_at || a.publication_date || a.reviewed_at;
+      /* Date de publication uniquement (jamais la date de relecture) ; sans elle, le titre reste « Analyse · Thème ». */
+      const d = a.published_at || a.publication_date;
       const head = ["Analyse", main && e(main.name), d && UI.date(d) && "publiée le " + e(UI.date(d))].filter(Boolean).join(" · ");
       const srcs = srcList(a.analysis_sources || [], "evidence_excerpt"), n = (a.analysis_sources || []).length;
-      const rn = a.reliability_notes ? `<p class="quiet">${UI.richInline(a.reliability_notes)}</p>` : "";
       return `<section class="blk blk--an"><header><b>${head}</b></header><div>
         ${a.analysis_title ? `<h3 class="an-title">${UI.richInline(a.analysis_title)}</h3>` : ""}
         ${kv([["Évaluation générale", a.assessment], ["Faisabilité", a.feasibility_assessment], ["Effets attendus", a.expected_effects], ["Risques et limites", a.risks_and_limitations], ["Incertitudes", a.uncertainties], ["Méthodologie", a.methodology]])}
-        ${srcs || rn ? `<details class="m-fold"><summary>Sources de l’analyse${n ? ` (${n})` : ""}</summary>${srcs}${rn}</details>` : ""}
+        ${srcs ? `<details class="m-fold"><summary>Sources de l’analyse (${n})</summary>${srcs}</details>` : ""}
       </div></section>`;
     }).join("") : "";
     h += Cases.section(m.case_measure_relations);
