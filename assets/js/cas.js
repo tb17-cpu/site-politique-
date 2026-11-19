@@ -46,7 +46,7 @@
 
   /* Texte rédigé : rendu Markdown sûr (moteur MD de « Comprendre le pays » : tout est échappé, liens http(s) seulement).
      Sans ce moteur, repli sur des paragraphes échappés. Titres décalés (h5, h6) pour rester sous les rubriques du cas. */
-  const prose = v => !has(v) ? "" : window.MD ? `<div class="md">${window.MD.render(String(v), { headingBase: 5 })}</div>`
+  const prose = v => !has(v) ? "" : window.UI && window.MD ? window.UI.rich(v, { headingBase: 5 })
     : String(v).split(/\n{2,}/).map(t => t.trim()).filter(Boolean).map(t => `<p>${e(t).replace(/\n/g, "<br>")}</p>`).join("");
   const lead = (label, v) => has(v) ? `<p><span class="cs-lead">${e(label)}.</span> ${window.MD ? window.MD.inline(String(v).replace(/\n+/g, " ")) : e(String(v)).replace(/\n+/g, " ")}</p>` : "";
 

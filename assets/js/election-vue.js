@@ -77,7 +77,7 @@
     document.title = Election.name(el) + " · Au résultat";
     $("p-title").textContent = Election.name(el);
     $("p-label").textContent = "Vue d’ensemble · " + st.label;
-    $("p-lede").textContent = el.description || "Candidatures, programmes, thématiques, comparateur et indicateurs de cette élection.";
+    $("p-lede").innerHTML = UI.richInline(el.description) || "Candidatures, programmes, thématiques, comparateur et indicateurs de cette élection.";
     UI.mount(mount, async () => ({ cands: await DB.candidacies(el.id), progs: await DB.programs(el.id), polls: await DB.polls(el.id).catch(err => { const kind = DB.classify(err); console.warn("[sondages] chargement impossible :", kind, err && err.message); return { error: kind, rows: [] }; }), dossier: await dossierOf(el) }), d => {
       const nm = d.progs.reduce((n, p) => n + (p.program_versions || []).reduce((k, v) => k + (v.measures || []).length, 0), 0);
       const sections = [

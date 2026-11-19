@@ -26,7 +26,7 @@
   const plural = (n, s1, p, none) => n ? `${n} ${n > 1 ? p : s1}` : none;
   UI.mount($("h-elections"), () => Election.load(), list => `<div class="h-doors">${list.map(el => { const st = Election.status(el), w = Election.when(el);
     return `<a class="h-door" href="${e(Election.hrefFor("election.html", el.id))}"><span class="h-state">${e(st.label)}${w ? " · " + e(w) : ""}</span>
-      <h3>${e(Election.name(el))}</h3>${el.description ? `<p>${e(el.description)}</p>` : ""}
+      <h3>${e(Election.name(el))}</h3>${el.description ? `<p>${UI.richInline(el.description)}</p>` : ""}
       <span class="h-count" data-el="${e(el.id)}">Chargement…</span><span class="h-go">Ouvrir l’élection →</span></a>`; }).join("")}</div>`,
     { loading: "Chargement des élections…", empty: "<p><b>Aucune élection disponible.</b></p>",
       after: (box, list) => list.forEach(el => DB.count("candidacies", { election_id: "eq." + el.id })

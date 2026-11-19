@@ -111,6 +111,26 @@
     return `<div class="m-legend"><span class="label">Comment lire les sources</span>${keys.map(k => `<div><span class="fs fs-${k}"><i aria-hidden="true"></i>${e(FS[k][0])}</span><span>${e(FS[k][1])}</span></div>`).join("")}</div>`;
   };
 
+  /* ---------- Texte éditorial : rendu Markdown commun ----------
+     Les textes saisis dans Supabase restent du Markdown (jamais du HTML) ; toute page qui affiche un champ rédigé passe par ces deux
+     fonctions, qui s'appuient sur le moteur unique assets/js/markdown.js (tout est échappé avant mise en forme, liens http(s) seulement).
+     Sans le moteur (script absent), le texte est simplement échappé : aucune injection possible, aucun rendu perdu.
+     U.rich(v, o)       : blocs (paragraphes, ## sous-titres, listes à puces et numérotées, **gras**…) dans <div class="md md--rich">.
+                          o.headingBase = niveau du « # » (3 par défaut : « ## » devient un h4) ; o.cell = variante compacte (tableaux).
+     U.richInline(v)    : version « une ligne » pour les contextes sans bloc (<p>, citation, bulle) : gras, italique, liens, sauts de ligne. */
+  const mdText = v => String(v == null ? "" : v).replace(/\r\n?/g, "\n").trim();
+  U.rich = (v, o = {}) => {
+    const t = mdText(v); if (!t) return "";
+    const cls = "md md--rich" + (o.cell ? " md--cell" : "");
+    if (!window.MD) return `<div class="${cls}"><p>${e(t).replace(/\n+/g, "<br>")}</p></div>`;
+    return `<div class="${cls}">${window.MD.render(t, { headingBase: o.headingBase || 3, breaks: true })}</div>`;
+  };
+  U.richInline = v => {
+    const t = mdText(v); if (!t) return "";
+    if (!window.MD) return e(t).replace(/\n+/g, "<br>");
+    return window.MD.inline(t.replace(/^\s{0,3}#{1,6}\s+/gm, "")).replace(/\n+/g, "<br>");
+  };
+
   /* ---------- États ---------- */
   U.loadingHtml = (msg) => `<div class="st st-load" role="status"><span class="spin" aria-hidden="true"></span>${e(msg || "Chargement…")}</div>`;
   U.emptyHtml = (msg) => `<div class="p-empty">${msg || "Aucun contenu disponible."}</div>`;

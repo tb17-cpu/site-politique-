@@ -1,7 +1,7 @@
 /* Fiche détaillée d'une candidature (candidat.html#identifiant). */
 (function () {
   const $ = id => document.getElementById(id), e = esc;
-  const kv = rows => `<dl class="kv">${rows.filter(r => r[1] !== "" && r[1] != null).map(r => `<dt>${e(r[0])}</dt><dd>${r[2] ? r[1] : e(r[1])}</dd>`).join("")}</dl>`;
+  const kv = rows => `<dl class="kv">${rows.filter(r => r[1] !== "" && r[1] != null).map(r => `<dt>${e(r[0])}</dt><dd>${r[2] ? r[1] : UI.rich(r[1])}</dd>`).join("")}</dl>`;
 
   /* Statuts de formalisation (DB.formalizations), chargés avec la page ; vide si indisponibles. */
   let F = new Map();
@@ -36,15 +36,15 @@
         ["Site officiel", UI.safeUrl(p.official_website) ? UI.link(p.official_website, p.official_website) : "", true],
         ["Second tour", second, true]
       ])}
-      ${c.description ? `<p class="long desc">${e(c.description)}</p>` : ""}
-      ${p.biography ? `<h3 class="h-h3 sub-h">Biographie</h3><p class="long desc">${e(p.biography)}</p>` : ""}
+      ${c.description ? `<div class="desc">${UI.rich(c.description)}</div>` : ""}
+      ${p.biography ? `<h3 class="h-h3 sub-h">Biographie</h3><div class="desc">${UI.rich(p.biography)}</div>` : ""}
     </div></section>` + sponsorBlock();
 
     const progs = c.programs || [], seen = [];
     const progHtml = 
       (progs.length ? progs.map(pg => {
         const vs = (pg.program_versions || []).slice().sort((a, b) => (b.version_number || 0) - (a.version_number || 0));
-        return `<h3 class="h-h3" style="margin:14px 0 4px">${e(pg.title || "Programme")}</h3>${pg.description ? `<p style="color:var(--fg-2)">${e(pg.description)}</p>` : ""}` +
+        return `<h3 class="h-h3" style="margin:14px 0 4px">${e(pg.title || "Programme")}</h3>${pg.description ? `<div style="color:var(--fg-2)">${UI.rich(pg.description)}</div>` : ""}` +
           (vs.length ? vs.map(v => {
             const ms = (v.measures || []).slice().sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || String(a.title || "").localeCompare(String(b.title || ""), "fr") || String(a.id).localeCompare(String(b.id)));
             const item = m => `<li><a class="t" href="mesure.html#${encodeURIComponent(m.id)}">${e(m.title)}</a>${UI.formalization(F.get(String(m.id)))}</li>`;
@@ -73,7 +73,7 @@
     h += `<section class="blk"><header><b>Sources justificatives</b><span>Documents de référence</span></header><div>` +
       (cs.length ? `<ul class="refs">${cs.map(s => `<li>${s.sources ? UI.link(s.sources.url, s.sources.title) || e(s.sources.title) : "Source"}
         <small>${[s.sources && s.sources.publisher, s.sources && s.sources.source_type && UI.formatSourceType(s.sources.source_type), s.relation_type && UI.formatSourceLink(s.relation_type), UI.date(s.evidence_date || (s.sources && s.sources.publication_date))].filter(Boolean).map(e).join(" · ")}</small>
-        ${s.evidence_excerpt ? `<small>« ${e(s.evidence_excerpt)} »</small>` : ""}${s.notes ? `<small>${e(s.notes)}</small>` : ""}
+        ${s.evidence_excerpt ? `<small>« ${e(s.evidence_excerpt)} »</small>` : ""}${s.notes ? `<small>${UI.richInline(s.notes)}</small>` : ""}
         <small>${UI.reliability(s.reliability_level)}</small></li>`).join("")}</ul>` : `<p class="p-sub" style="margin-top:12px">Aucune source disponible pour cette candidature.</p>`) + `</div></section>`;
     return h;
   };

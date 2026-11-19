@@ -98,7 +98,7 @@
     return `<div class="elec-choose"><p class="p-sub">Choisissez une élection : chaque rubrique n’affiche que les contenus de l’élection sélectionnée.</p>
       <div class="h-doors">${list.map(el => { const st = status(el);
         return `<a class="h-door" href="${esc(hrefFor(target || "election.html", el.id))}"><span class="h-state">${esc(st.label)}${when(el) ? " · " + esc(when(el)) : ""}</span>
-          <h3>${esc(name(el))}</h3>${el.description ? `<p>${esc(el.description)}</p>` : "<p></p>"}<span class="h-go">Ouvrir →</span></a>`; }).join("")}</div></div>`;
+          <h3>${esc(name(el))}</h3>${el.description ? `<p>${window.UI ? UI.richInline(el.description) : esc(el.description)}</p>` : "<p></p>"}<span class="h-go">Ouvrir →</span></a>`; }).join("")}</div></div>`;
   }
 
   /* Pour les pages de rubrique : renvoie l'élection active ou affiche, dans `mount`, le choix / l'état vide / l'erreur. */

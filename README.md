@@ -58,6 +58,14 @@ Un point plein signale un chiffre lu dans une source consultée, un point creux 
 - **Regroupement des mesures d'une fiche candidat :** une mesure multi-thèmes va dans le thème de plus petit `display_order` (puis nom, puis id) ; ordre des groupes fixe, « Autres propositions » en dernier. Aucune dépendance à l'ordre renvoyé par la base.
 - **Tests :** `tests/apparence.test.js` (thème, mémorisation, flash, focus) et `tests/regroupement.test.js` (multi-thèmes, ordres aléatoires, repli de jointure). Comme les autres tests Playwright, ils attendent un serveur sur `http://localhost:8765/site-politique-/`.
 
+## Textes éditoriaux en Markdown
+Les champs rédigés dans Supabase restent du **Markdown** (jamais du HTML) ; le site les met en forme automatiquement.
+- **Moteur unique :** `assets/js/markdown.js` (sans dépendance). Il échappe tout le HTML avant mise en forme, n'accepte que les éléments Markdown prévus et des liens `http(s)`/ancres ; `javascript:`, `data:` etc. sont neutralisés (le texte du lien reste).
+- **Point d'entrée commun :** `UI.rich(texte)` (blocs : paragraphes, `## Sous-titre`, listes `- ` et `1. `, `**gras**`, retours à la ligne) et `UI.richInline(texte)` (contextes sans bloc : citation, chapô, carte), dans `assets/js/ui.js`. Aucune page ne contient de traitement Markdown propre ; sans le moteur, le texte est simplement échappé.
+- **Champs compatibles :** profil et biographie des candidats, description des programmes et des thématiques/familles, tous les champs d'une mesure (objectif, mécanisme, publics, modalités, évaluations des analyses…), cellules du comparateur, définition et méthodologie des indicateurs, descriptions d'élection (chapô, accueil, choix d'élection), notes de sources, textes des cas et dossiers pays. Les textes sans Markdown s'affichent comme avant.
+- **Style :** `assets/css/markdown.css` (variables de `tokens.css` uniquement). Gras et puces : couleur identitaire `--accent` ; vraies puces (`::marker`) ; sous-titres en serif avec filet `--accent-dim`.
+- **Tests :** `tests/markdown.test.js` (moteur, 100 contenus malveillants, 8 pages en clair/sombre, desktop/mobile, rétrocompatibilité).
+
 ## Cache des fichiers statiques
 GitHub Pages met JS et CSS en cache dans le navigateur. Chaque page référence donc ses fichiers avec une empreinte de contenu
 (`assets/js/db.js?v=1a2b3c4d`) : l'URL ne change que si le fichier change. **Après toute modification d'un fichier de `assets/`,

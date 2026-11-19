@@ -16,7 +16,7 @@
       d.ind.filter(i => (i.domain || "") === x).map(i => {
         const o = d.obs.filter(v => v.indicator_id === i.id);
         return `<article class="ind"><h3>${e(i.name)}</h3>
-          <dl class="kv" style="margin-top:8px">${[["Définition", i.definition], ["Unité", i.unit], ["Méthodologie", i.methodology]].filter(r => r[1]).map(r => `<dt>${r[0]}</dt><dd class="long">${e(r[1])}</dd>`).join("")}</dl>
+          <dl class="kv" style="margin-top:8px">${[["Définition", i.definition], ["Unité", i.unit], ["Méthodologie", i.methodology]].filter(r => r[1]).map(r => `<dt>${r[0]}</dt><dd>${UI.rich(r[1])}</dd>`).join("")}</dl>
           ${o.length ? `<div class="scroll"><table class="obs"><thead><tr><th>Pays</th><th>Période</th><th>Valeur</th><th>Périmètre</th><th>Source</th></tr></thead><tbody>${o.map(v => `<tr>
             <td>${e(v.countries ? v.countries.name : "")}</td><td>${e([UI.date(v.period_start), UI.date(v.period_end)].filter(Boolean).join(" → "))}</td>
             <td>${e(v.value ?? "")} ${e(i.unit || "")}</td><td>${e(v.geographic_scope || "")}</td>

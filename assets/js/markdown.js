@@ -1,7 +1,9 @@
 /* Rendu Markdown sûr, sans dépendance. Tout le texte est échappé AVANT toute mise en forme : aucun HTML
    présent dans la source n'est jamais interprété. Les liens n'acceptent que http(s) et les ancres internes.
    Pris en charge : titres, paragraphes, gras, italique, code, liens, listes (imbriquées), citations, filets, tableaux, blocs de code.
-   Les titres du texte sont décalés (« # » devient un titre de niveau `base`) pour respecter la hiérarchie de la page. */
+   Les titres du texte sont décalés (« # » devient un titre de niveau `base`) pour respecter la hiérarchie de la page.
+   Option `breaks` : un retour à la ligne simple devient un saut de ligne (<br>) ; sans elle, les lignes consécutives forment un seul paragraphe (Markdown standard).
+   Point d'entrée commun pour les pages alimentées par Supabase : UI.rich / UI.richInline (assets/js/ui.js). */
 (function (root) {
   const esc = s => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   const safeUrl = u => { const t = String(u || "").trim(); return /^(https?:\/\/[^\s<>"']+|#[\w\-%.]+)$/i.test(t) ? t : ""; };
@@ -10,7 +12,7 @@
     const hold = []; const keep = h => "\u0000" + (hold.push(h) - 1) + "\u0000";
     let s = String(raw == null ? "" : raw).replace(/\u0000/g, "");
     s = s.replace(/`([^`\n]+)`/g, (_, c) => keep(`<code>${esc(c)}</code>`));
-    s = s.replace(/\[([^\]\n]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_, t, u) => { const ok = safeUrl(u); return keep(ok ? `<a href="${esc(ok)}"${ok[0] === "#" ? "" : ' target="_blank" rel="noopener noreferrer"'}>${esc(t)}</a>` : esc(t)); });
+    s = s.replace(/\[([^\]\n]+)\]\(((?:[^()\s]|\([^()\s]*\))+)(?:\s+"[^"]*")?\)/g, (_, t, u) => { const ok = safeUrl(u); return keep(ok ? `<a href="${esc(ok)}"${ok[0] === "#" ? "" : ' target="_blank" rel="noopener noreferrer"'}>${esc(t)}</a>` : esc(t)); });
     s = esc(s);
     s = s.replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>").replace(/(^|[^\w])__([^_\n]+?)__(?!\w)/g, "$1<strong>$2</strong>");
     s = s.replace(/(^|[^*\w])\*([^*\s][^*\n]*?)\*(?!\*)/g, "$1<em>$2</em>").replace(/(^|[^\w])_([^_\s][^_\n]*?)_(?!\w)/g, "$1<em>$2</em>");
@@ -18,7 +20,8 @@
   }
 
   function render(md, opt) {
-    const base = Math.min(6, Math.max(1, (opt && opt.headingBase) || 3));
+    const base = Math.min(6, Math.max(1, (opt && opt.headingBase) || 3)), breaks = !!(opt && opt.breaks);
+    const flow = t => breaks ? inline(t).replace(/\n/g, "<br>") : inline(t);
     const lines = String(md == null ? "" : md).replace(/\r\n?/g, "\n").split("\n");
     const out = []; let i = 0;
     const isBlank = l => /^\s*$/.test(l);
@@ -27,16 +30,18 @@
 
     function list(startIdx) {
       const first = bullet(lines[startIdx]), baseIndent = first[1].length, ordered = /\d/.test(first[2][0]);
-      let html = ordered ? "<ol>" : "<ul>", k = startIdx;
+      const startNo = ordered ? parseInt(first[2], 10) : 1;
+      let html = ordered ? (startNo > 1 ? `<ol start="${startNo}">` : "<ol>") : "<ul>", k = startIdx;
       while (k < lines.length) {
         const m = bullet(lines[k]);
         if (!m || m[1].length < baseIndent) break;
+        if (m[1].length === baseIndent && /\d/.test(m[2][0]) !== ordered) break;   /* liste à puces puis liste numérotée (ou l'inverse) : deux listes distinctes */
         if (m[1].length > baseIndent) { // sous-liste : rattachée à l'élément précédent
           const sub = list(k); html = html.replace(/<\/li>$/, "") + sub.html + "</li>"; k = sub.next; continue;
         }
         let text = m[3]; k++;
-        while (k < lines.length && !isBlank(lines[k]) && !bullet(lines[k]) && /^\s+\S/.test(lines[k])) { text += " " + lines[k].trim(); k++; }
-        html += `<li>${inline(text)}</li>`;
+        while (k < lines.length && !isBlank(lines[k]) && !bullet(lines[k]) && /^\s+\S/.test(lines[k])) { text += (breaks ? "\n" : " ") + lines[k].trim(); k++; }
+        html += `<li>${flow(text)}</li>`;
         if (k < lines.length && isBlank(lines[k]) && k + 1 < lines.length && bullet(lines[k + 1]) && bullet(lines[k + 1])[1].length >= baseIndent) k++;
       }
       return { html: html + (ordered ? "</ol>" : "</ul>"), next: k };
@@ -59,7 +64,7 @@
       if (bullet(l)) { const r = list(i); out.push(r.html); i = r.next; continue; }
       const buf = [l.trim()]; i++;
       while (i < lines.length && !isBlank(lines[i]) && !startsBlock(lines[i])) buf.push(lines[i++].trim());
-      out.push(`<p>${inline(buf.join(" "))}</p>`);
+      out.push(`<p>${flow(buf.join(breaks ? "\n" : " "))}</p>`);
     }
     return out.join("\n");
   }
