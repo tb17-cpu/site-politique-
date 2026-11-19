@@ -5,7 +5,7 @@
   const MAX = 4;
   const who = m => { const c = m.program_versions && m.program_versions.programs && m.program_versions.programs.candidacies; return c ? (UI.person(c.people) || "Candidature") : ""; };
   const cid = m => { const c = m.program_versions && m.program_versions.programs && m.program_versions.programs.candidacies; return c && c.id; };
-  const cell = v => v ? `<td>${e(v)}</td>` : `<td class="na">Non renseigné</td>`;
+  const cell = v => v ? `<td>${UI.rich(v, { cell: true })}</td>` : `<td class="na">Non renseigné</td>`;
 
   const cost = m => m.announced_cost != null && m.announced_cost !== "" ? `${m.announced_cost}${m.cost_currency ? " " + m.cost_currency : ""}${m.cost_period ? " · " + m.cost_period : ""}` : "";
   const selected = () => { const ids = [...document.querySelectorAll("#cmp-pick input:checked")].map(i => i.value); return measures.filter(m => ids.includes(String(m.id))); };

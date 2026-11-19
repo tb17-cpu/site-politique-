@@ -15,7 +15,7 @@
     const parent = themes.find(x => x.id === t.parent_id), kids = themes.filter(x => x.parent_id === t.id).sort(byOrder);
     const ids = [t.id].concat(kids.map(k => k.id));
     box.innerHTML = `<p class="label">${parent ? `<a href="#${encodeURIComponent(parent.slug)}">${e(parent.name)}</a> /` : "Famille"} ${parent ? "Sous-thématique" : ""}</p><h2>${e(t.name)}</h2>
-      ${t.description ? `<p class="long" style="color:var(--fg-2)">${e(t.description)}</p>` : ""}
+      ${t.description ? `<div style="color:var(--fg-2)">${UI.rich(t.description)}</div>` : ""}
       ${kids.length ? `<ul class="fam-sub">${kids.map(k => `<li><a href="#${encodeURIComponent(k.slug)}">${e(k.name)}</a></li>`).join("")}</ul>` : ""}
       <h3 class="h-h3" style="margin:22px 0 4px;font-size:21px">Mesures publiées</h3><div id="t-measures"></div>
       <div id="t-cands"></div>`;
@@ -39,7 +39,7 @@
       return `<section class="fam" id="f-${e(f.slug)}" aria-labelledby="h-${e(f.slug)}">
         <h3 id="h-${e(f.slug)}"><a href="#${encodeURIComponent(f.slug)}" style="color:inherit" data-slug="${e(f.slug)}">${e(f.name)}</a></h3>
         <p class="fam-meta">${subs.length} sous-thématique${subs.length > 1 ? "s" : ""}</p>
-        ${f.description ? `<p style="font-size:14px;color:var(--fg-2);margin-top:6px;max-width:70ch">${e(f.description)}</p>` : ""}
+        ${f.description ? `<div style="font-size:14px;color:var(--fg-2);margin-top:6px">${UI.rich(f.description)}</div>` : ""}
         <ul class="fam-sub">${subs.map(s => `<li><a href="#${encodeURIComponent(s.slug)}" data-slug="${e(s.slug)}">${e(s.name)}</a></li>`).join("")}</ul></section>`;
     }).join("");
   }, { loading: "Chargement des thématiques…", empty: "Aucune thématique disponible.", after: () => { detail(); } });
