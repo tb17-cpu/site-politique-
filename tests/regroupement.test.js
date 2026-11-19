@@ -27,9 +27,9 @@ const shuffle=(a,seed)=>{const r=a.slice();let s=seed;for(let i=r.length-1;i>0;i
    h['content-range']=`0-0/${rows.length}`;r.fulfill({status:200,headers:h,body:r.request().method()==='HEAD'?'':JSON.stringify(rows)});});
   const p=await ctx.newPage();p.on('pageerror',e=>errs.push(e.message));
   await p.goto(B+'candidat.html#c1',{waitUntil:'networkidle'});await p.waitForTimeout(600);
-  const groups=await p.evaluate(()=>[...document.querySelectorAll('.m-group')].map(g=>({h:g.querySelector('h4').childNodes[0].textContent,m:[...g.querySelectorAll('.mlist a.t')].map(a=>a.textContent)})));
+  const groups=await p.evaluate(()=>[...document.querySelectorAll('.m-group')].map(g=>({h:g.querySelector('h4').childNodes[0].textContent,m:[...g.querySelectorAll('.mlist a.mcard')].map(a=>a.querySelector('b').textContent)})));
   const ov=await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
-  const links=await p.evaluate(()=>document.querySelectorAll('.mlist a.t').length);
+  const links=await p.evaluate(()=>document.querySelectorAll('.mlist a.mcard').length);
   await ctx.close();return {groups,errs,ov,sawTheme,links};
  };
  const ref=await run(base,false);

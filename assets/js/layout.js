@@ -24,8 +24,11 @@
       <a class="brand" href="index.html" aria-label="${esc(S.name)}, accueil">
         ${logo}<span class="brand-name">${esc(S.name)}</span>
         <span class="brand-tag">${esc(S.tagline)}</span></a>
-      <nav class="site-nav" aria-label="Navigation principale"><ul>${nav}</ul></nav>
-      <div class="elec-pick"><label for="elec-select">Élection</label><select id="elec-select" aria-label="Choisir l’élection"><option>Chargement…</option></select></div>
+      <button type="button" class="menu-btn" aria-expanded="false" aria-controls="site-menu">Menu<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="site-menu" id="site-menu">
+        <nav class="site-nav" aria-label="Navigation principale"><ul>${nav}</ul></nav>
+        <div class="elec-pick"><label for="elec-select">Élection</label><select id="elec-select" aria-label="Choisir l’élection"><option>Chargement…</option></select></div>
+      </div>
       ${themePick()}
     </div></header><div id="elec-bar"></div>`;
 
@@ -51,6 +54,14 @@
     /* Reflète le choix courant (y compris un changement fait dans un autre onglet). */
     const sync = () => { const p = window.Theme.pref(); tp.dataset.pref = p; ts.value = p; tp.querySelector(".tp-lab").textContent = (MODES.find(m => m[0] === p) || MODES[0])[1]; };
     document.addEventListener("themechange", sync); sync();
+  }
+
+  /* Menu replié sur petit écran : navigation et choix de l'élection. Échap le referme. */
+  const mb = document.querySelector(".menu-btn"), sm = document.getElementById("site-menu");
+  if (mb && sm) {
+    const set = o => { sm.classList.toggle("open", o); mb.setAttribute("aria-expanded", String(o)); setH(); };
+    mb.addEventListener("click", () => set(!sm.classList.contains("open")));
+    document.addEventListener("keydown", ev => { if (ev.key === "Escape" && sm.classList.contains("open")) { set(false); mb.focus(); } });
   }
 
   /* Hauteur du bandeau : sert à positionner la barre de pays collée sous lui. */

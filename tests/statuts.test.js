@@ -113,7 +113,7 @@ const M=[
     rep(cols.every(c=>c.bg===hex2rgb(PROD[c.k])&&th==='light'||c.fg===hex2rgb(PROD[c.k])&&th==='dark'),`${w}px ${th} : couleurs de production exactes (clair = fond de la pastille ; sombre = texte)`,cols.map(c=>[c.k,c.fg,c.bg]));
     rep(cols.every(c=>c.ring.includes(hex2rgb(PROD[c.k]))),`${w}px ${th} : contour de la pastille = couleur de production`,cols.map(c=>c.ring));
     rep(new Set(cols.map(c=>c.fg+'|'+c.bg)).size===5,`${w}px ${th} : cinq pastilles toutes distinctes`,cols);
-    rep(cols.every(c=>c.dot===c.fg&&ct(c.fg,c.bg)>=7),`${w}px ${th} : point = couleur du texte, contraste texte/fond ≥ 7:1`,cols.map(c=>c.k+' '+ct(c.fg,c.bg).toFixed(2)));
+    rep(cols.every(c=>c.dot===c.fg&&ct(c.fg,c.bg)>=(th==='dark'?4.5:7)),`${w}px ${th} : point = couleur du texte, contraste texte/fond ≥ ${th==='dark'?'4,5:1 (fond teinté)':'7:1'}`,cols.map(c=>c.k+' '+ct(c.fg,c.bg).toFixed(2)));
    }
    await p.evaluate(()=>document.documentElement.removeAttribute('data-theme'));
    rep(!/Fiabilité/i.test(await p.locator('#f-body > p:first-child').innerText().catch(()=>'')),`${w}px aucun texte « Fiabilité » dans l’en-tête de la mesure`);

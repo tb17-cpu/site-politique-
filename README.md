@@ -66,6 +66,16 @@ Les champs rédigés dans Supabase restent du **Markdown** (jamais du HTML) ; le
 - **Style :** `assets/css/markdown.css` (variables de `tokens.css` uniquement). Gras et puces : couleur identitaire `--accent` ; vraies puces (`::marker`) ; sous-titres en serif avec filet `--accent-dim`.
 - **Tests :** `tests/markdown.test.js` (moteur, 100 contenus malveillants, 8 pages en clair/sombre, desktop/mobile, rétrocompatibilité).
 
+## Présentation des programmes (variante A)
+
+- **Cartes de mesures** : chaque mesure est une carte entièrement cliquable (`.mcard` dans `.mlist`, `assets/css/data.css`), sur deux colonnes (une sur mobile). Le statut de formalisation y est en libellé court (`UI.formalization(f, { short: true })`) ; le libellé complet reste dans l'infobulle, le texte pour lecteur d'écran et la légende dépliable « Comment lire les statuts ». Les fiches mesure et la comparaison gardent le libellé complet.
+- **Groupes par thème** : filet marine de 3 px, intitulé, compteur ; « Autres propositions » plus discret (`.m-group--autres`). La règle de regroupement (thème de plus petit `display_order`, nom, id) est inchangée.
+- **Fiche candidat** : identité à gauche, panneau programme à droite. Les raccourcis (thèmes, « Parcourir le programme ») défilent par script (`data-jump`) : le fragment d'URL est l'identifiant de la candidature, jamais une ancre. Parrainages et sources vides sont masqués.
+- **Fiche mesure** : champs vides masqués (aucun message « non documenté »), « Déclaré par le candidat », « Description », « Analyse · Thème · publiée le … » (date : `published_at`, `publication_date`, à défaut `reviewed_at`), sources de l'analyse dans un menu déroulant. Aucun indicateur « Fiabilité » sur ces pages.
+- **Contrastes** : fond clair `#edf0f6`, filets `--line` / `--rule`, texte secondaire `--muted` à 7:1 sur blanc. Mode sombre : pastilles de statut sur fond teinté (texte ≥ 4,5:1), teintes de production inchangées.
+- **Mobile** : bandeau réduit (logo, apparence, Menu), navigation et choix de l'élection dans le menu, titre d'élection sur une ligne, onglets défilants.
+- Test : `node tests/refonte.test.js` (serveur statique sur 8765).
+
 ## Cache des fichiers statiques
 GitHub Pages met JS et CSS en cache dans le navigateur. Chaque page référence donc ses fichiers avec une empreinte de contenu
 (`assets/js/db.js?v=1a2b3c4d`) : l'URL ne change que si le fichier change. **Après toute modification d'un fichier de `assets/`,
