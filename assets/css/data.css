@@ -191,7 +191,7 @@
 /* Couleur du parti (parties.political_color) : repère sobre, jamais une carte entière */
 .cand{position:relative}
 .cand::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;border-radius:10px 0 0 10px;background:var(--pc,transparent);box-shadow:0 0 0 1px var(--line)}
-.cand[style*="--pc"]{padding-left:26px}
+.cand{padding-left:26px}
 .blk--party{border-top-color:var(--pc,var(--fg))}
 .party-dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--pc);margin-right:8px;vertical-align:-1px;box-shadow:0 0 0 2px var(--fg)}
 .portrait figcaption.credit{font-size:11.5px;color:var(--muted)}

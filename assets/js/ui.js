@@ -162,6 +162,26 @@
   /* Couleur du parti : lue dans parties.political_color, jamais codée en dur ; absente ou invalide : style neutre.
      Elle est indépendante du positionnement gauche-droite. */
   U.partyColor = pt => { const c = pt && String(pt.political_color || "").trim(); return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c) ? c : ""; };
+  /* Liseré des cartes candidats : toujours présent. Ordre de priorité :
+     1. candidacies.political_position_uncertain = true : jaune ocre, même si le parti a une couleur ;
+     2. parties.political_color (jamais modifiée ni écrasée) ;
+     3. à défaut, couleur du positionnement de la candidature (candidacies.political_position) ;
+     4. sinon jaune ocre (candidat sans parti ni classification claire). */
+  const COL = { red: "#CC2443", green: "#2F7D32", ocre: "#B58A22", pink: "#D9739F", blue: "#1F4FA3" };
+  const POS = {
+    far_left: ["Extrême gauche", COL.red], left: ["Gauche", COL.red], center_left: ["Centre gauche", COL.pink], green: ["Écologistes", COL.green],
+    center: ["Centre", COL.ocre], center_right: ["Centre droit", COL.blue], right: ["Droite", COL.blue], far_right: ["Extrême droite", COL.blue]
+  };
+  const POS_ALIAS = { extreme_gauche: "far_left", gauche: "left", centre_gauche: "center_left", ecologiste: "green", ecologistes: "green", ecologist: "green", ecologists: "green", ecology: "green", greens: "green",
+    centre: "center", centre_droit: "center_right", droite: "right", extreme_droite: "far_right" };
+  const posKey = v => { const k = nk(v).replace(/[\s-]+/g, "_"); const a = POS_ALIAS[k] || k; return POS[a] ? a : ""; };
+  /* Libellé français d'une valeur de positionnement ; valeur inconnue : chaîne vide, sans erreur. */
+  U.positionName = v => { const k = posKey(v); return k ? POS[k][0] : ""; };
+  U.candidacyColor = c => {
+    if (c && c.political_position_uncertain === true) return COL.ocre;
+    const pc = U.partyColor(c && c.parties); if (pc) return pc;
+    const k = posKey(c && c.political_position); return k ? POS[k][1] : COL.ocre;
+  };
   U.partyDot = pt => U.partyColor(pt) ? `<i class="party-dot" style="--pc:${U.partyColor(pt)}" aria-hidden="true"></i>` : "";
 
   /* ---------- Portrait ----------
