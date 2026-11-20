@@ -55,8 +55,8 @@
 
     const facts = [
       UI.safeUrl(p.official_website) ? `<span>${UI.link(p.official_website, p.official_website)}</span>` : ""].filter(Boolean).join("");
-    const stage = UI.candidacyStage(c);
-    const stageCard = stage ? `<div class="status-card" role="status"><b>${e(stage.label)}</b>${stage.note ? `<small>${e(stage.note)}</small>` : ""}</div>` : "";
+    const stage = Scrutin.stageCard(c, c._polls, c._results);
+    const stageCard = stage ? `<div class="status-card" role="status">${stage.label ? `<b>${e(stage.label)}</b>` : ""}${stage.note ? `<small>${e(stage.note)}</small>` : ""}${stage.lines.length ? `<ul class="sc-lines">${stage.lines.map(l => `<li class="sc-${l.kind}"><span class="sc-k">${e(l.label)}</span> <b class="sc-v">${e(l.value)}</b><small>${l.kind === "result" ? "Résultat officiel" : "Estimation d’après sondages"}${l.detail ? " · " + e(l.detail) : ""}</small></li>`).join("")}</ul>` : ""}</div>` : "";
     let h = `<section class="cand-head${panel ? "" : " cand-head--solo"}" aria-label="Candidat">
       <div class="cand-id">${UI.avatar(c.people, true)}<div>
         <h1>${e(name)}</h1>
@@ -80,7 +80,7 @@
     const id = decodeURIComponent(location.hash.slice(1));
     if (!id) { $("f-name").textContent = "Fiche candidat"; $("f-lede").textContent = ""; $("f-body").innerHTML = UI.emptyHtml("Aucune candidature sélectionnée. <a href=\"candidats.html\">Voir la liste des candidats</a>."); return; }
     F = new Map();
-    UI.mount($("f-body"), async () => { const c = await DB.candidacy(id); if (c) Election.use(c.election_id); F = await DB.formalizations(); return c; }, render, { loading: "Chargement de la fiche…", empty: "Cette candidature n’existe pas ou n’est pas publiée. <a href=\"candidats.html\">Voir la liste des candidats</a>." });
+    UI.mount($("f-body"), async () => { const c = await DB.candidacy(id); if (c) { Election.use(c.election_id); const warn = n => err => { console.warn("[Au résultat] " + n + " indisponibles (" + DB.classify(err) + ")"); return { rows: [], rounds: [] }; }; [c._polls, c._results] = await Promise.all([DB.polls(c.election_id).catch(warn("Sondages")), DB.results(c.election_id).catch(warn("Résultats"))]); } F = await DB.formalizations(); return c; }, render, { loading: "Chargement de la fiche…", empty: "Cette candidature n’existe pas ou n’est pas publiée. <a href=\"candidats.html\">Voir la liste des candidats</a>." });
   };
   /* Raccourcis (thèmes, « Parcourir le programme ») : défilement par script, jamais par ancre : le fragment d'URL est l'identifiant de la candidature. */
   $("f-body").addEventListener("click", ev => {

@@ -346,3 +346,39 @@ details.m-fold[open]>summary::before{transform:rotate(90deg)}
 .status-card b{font-size:1rem;color:var(--fg)}
 .status-card small{font-size:.875rem;color:var(--muted)}
 .decl-text{margin:0 0 var(--s-3);max-width:68ch;font-size:1.0625rem;line-height:1.6;color:var(--fg)}
+
+/* Carte de statut : lignes de résultats officiels (trait plein) et d'estimations de sondages (trait pointillé), toujours distinguées */
+.sc-lines{list-style:none;margin:var(--s-2) 0 0;padding:0;display:grid;gap:var(--s-2)}
+.sc-lines li{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:.5em;padding-left:var(--s-3);border-left:3px solid var(--line)}
+.sc-lines li.sc-result{border-left-color:var(--accent)}
+.sc-lines li.sc-poll{border-left:3px dashed var(--muted)}
+.sc-k{font-size:.875rem;color:var(--fg-2)}.sc-v{font-size:1.05rem;font-variant-numeric:tabular-nums}
+.sc-lines small{flex-basis:100%;font-size:.8rem;color:var(--muted)}
+
+/* Sélecteur de sondages (accueil d'une élection) */
+.ps-count{font-weight:400;color:var(--muted);font-size:.8rem;margin-left:.4em}
+.ps-bar{display:flex;align-items:center;gap:var(--s-3);margin:var(--s-2) 0}
+.ps-mid{flex:1;min-width:0;text-align:center}.ps-now{display:grid;gap:1px}
+.ps-mid b{font-size:1.05rem;overflow-wrap:anywhere}.ps-mid span{font-size:.875rem;color:var(--muted)}
+.ps-btn{flex:none;width:44px;height:44px;border:1px solid var(--line);border-radius:50%;background:var(--surface);color:var(--fg);font-size:1.5rem;line-height:1;cursor:pointer}
+.ps-btn:hover:not(:disabled){background:var(--surface-2)}.ps-btn:disabled{opacity:.35;cursor:default}
+.ps-tools{display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-4);align-items:center;justify-content:space-between}
+.ps-select{max-width:100%;min-height:44px;padding:0 var(--s-3);border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--fg);font:inherit;font-size:.9rem}
+.ps-pos{font-size:.85rem}
+.ps-panel.ps-in{animation:ps-in .28s ease-out}
+@keyframes ps-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.ps-panel.ps-in{animation:none}}
+
+/* Rubrique résultats officiels : distincte des sondages (bord plein, barres pleines) */
+.res{margin:var(--s-5) 0;padding:var(--s-4) var(--s-5);border:1px solid var(--line-soft);border-left:4px solid var(--accent);border-radius:var(--r);background:var(--surface)}
+.res .ov-h{margin-top:0}
+.res-tabs{display:flex;flex-wrap:wrap;gap:var(--s-2);margin:var(--s-2) 0}
+.res-tab{min-height:44px;padding:0 var(--s-4);border:1px solid var(--line);border-radius:99px;background:var(--surface);color:var(--fg);font:inherit;cursor:pointer}
+.res-tab[aria-selected=true]{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff);font-weight:600}
+.res-badge{display:inline-block;padding:.1em .6em;border-radius:99px;border:1px solid currentColor;font-size:.78rem;font-weight:600}
+.res-prov{color:var(--mix)}.res-final{color:var(--accent)}
+.bars-res .bar-f{background:var(--accent)}
+.bars-res .bar-v small{display:block;font-weight:400;color:var(--muted);font-size:.75rem}
+.res-tag{display:inline-block;margin-left:.5em;padding:0 .5em;border-radius:99px;background:var(--surface-2);font-size:.72rem;font-weight:600;color:var(--fg-2)}
+.res-tag.res-win{background:var(--accent);color:var(--on-accent,#fff)}
+.res-part{margin-top:var(--s-3)}

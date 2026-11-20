@@ -17,43 +17,96 @@
   const mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
   const dmy = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ""); return m ? { d: +m[3], m: +m[2] - 1, y: +m[1] } : null; };
   const terrain = (a, b) => { const x = dmy(a), y = dmy(b);
+    if (x && y && a.slice(0, 10) === b.slice(0, 10)) return `le ${y.d === 1 ? "1er" : y.d} ${mois[y.m]} ${y.y}`;
     if (x && y) return x.m === y.m && x.y === y.y ? `du ${x.d === 1 ? "1er" : x.d} au ${y.d} ${mois[y.m]} ${y.y}` : `du ${x.d} ${mois[x.m]} ${x.y} au ${y.d} ${mois[y.m]} ${y.y}`;
     return y ? `le ${y.d} ${mois[y.m]} ${y.y}` : ""; };
   /* Score affiché tel que publié : une valeur technique inférieure à 1 est présentée « moins de 1 % » (jamais comme un score exact). */
   const score = v => Number(v) < 1 ? "moins de 1 %" : Number(v).toFixed(1).replace(".", ",") + " %";
-  const pollBlock = P => {
-    const none = `<h2 class="ov-h">Dernier sondage</h2><p class="quiet">Aucun sondage publié pour cette élection.</p>`;
-    /* Erreur technique : message distinct de l'absence réelle, selon la nature du problème (détail dans la console). */
-    if (P.error) { const txt = P.error === "denied" ? "Les sondages ne sont pas accessibles pour le moment (accès refusé)."
-        : P.error === "missing" || P.error === "invalid" ? "Les sondages ne peuvent pas être affichés : la structure de données attendue est indisponible."
-        : "Les sondages n’ont pas pu être chargés. Réessayez dans un instant.";
-      return `<h2 class="ov-h">Dernier sondage</h2><p class="quiet" role="status" data-poll-error="${e(P.error)}">${e(txt)}</p>`; }
-    const all = P.rows.filter(r => r.value_percent != null);
-    if (!all.length) return none;
-    const key = r => [r.sources && r.sources.id || r.source_id || "", r.pollster || "", r.scenario || "", r.poll_date || "", r.fieldwork_start || ""].join("|");
-    const groups = new Map(); all.forEach(r => { const k = key(r); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
-    /* Plus récent : date de publication de la source la plus récente, puis fin du terrain (poll_date). Un sondage sans date vient
-       après ceux qui en ont. Si des sondages restent à égalité parfaite, ils sont tous présentés, chacun dans son propre bloc :
-       aucun choix arbitraire, aucun mélange de résultats. */
-    const rank = g => [(g[0].sources && g[0].sources.publication_date) || "", g[0].poll_date || ""];
-    const cmp = (A, B) => { const a = rank(A), b = rank(B); return a[0] < b[0] ? 1 : a[0] > b[0] ? -1 : a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0; };
-    const sorted = [...groups.values()].sort(cmp), top = sorted.filter(g => cmp(g, sorted[0]) === 0)
-      .sort((A, B) => String(A[0].pollster || "").localeCompare(String(B[0].pollster || "")) || String(A[0].scenario || "").localeCompare(String(B[0].scenario || "")));
-    const one = group => {
-      const rows = group.slice().sort((a, b) => b.value_percent - a.value_percent), r0 = rows[0], src = r0.sources;
-      const max = Math.max(...rows.map(r => Number(r.value_percent)), 1);
-      const commanditaire = ((/\bpour\s+([^,.;()\n·]+)/i.exec([r0.methodology, r0.notes, r0.pollster].filter(Boolean).join(" · ")) || [])[1] || "").trim();
-      const meta = [["Institut", r0.pollster && r0.pollster.replace(/\s+pour\s+.*$/i, "")], ["Commanditaire", commanditaire], ["Terrain", terrain(r0.fieldwork_start, r0.poll_date)], ["Échantillon", r0.sample_size ? r0.sample_size.toLocaleString("fr-FR") + " personnes" : ""]].filter(x => x[1]);
-      return `<section class="poll" aria-label="Sondage ${e(r0.pollster || "")}">
-        <p class="quiet">${e(r0.scenario || "")}</p>
+  /* ---- Bloc sondages : un sondage à la fois, navigation du plus récent au plus ancien ----
+     Un sondage = même source, institut, scénario et dates ; ses résultats ne sont jamais mêlés à ceux d'un autre. Scores tels
+     que publiés : aucun calcul, aucune moyenne. Le bloc est rendu en HTML, puis animé par pollWire (état dans PS). */
+  let PS = { groups: [], i: 0 };
+  const instOf = g => String(g.rows[0].pollster || "").replace(/\s+pour\s+.*$/i, "") || "Institut non précisé";
+  const whenOf = g => terrain(g.rows[0].fieldwork_start, g.rows[0].poll_date) || (g.date ? "le " + Scrutin.date(g.date) : "date non précisée");
+  const pollOne = group => {
+    const rows = group.rows.slice().sort((a, b) => b.value_percent - a.value_percent), r0 = rows[0], src = r0.sources;
+    const max = Math.max(...rows.map(r => Number(r.value_percent)), 1);
+    const commanditaire = ((/\bpour\s+([^,.;()\n·]+)/i.exec([r0.methodology, r0.notes, r0.pollster].filter(Boolean).join(" · ")) || [])[1] || "").trim();
+    const meta = [["Institut", instOf(group)], ["Commanditaire", commanditaire], ["Terrain", terrain(r0.fieldwork_start, r0.poll_date)], ["Échantillon", r0.sample_size ? r0.sample_size.toLocaleString("fr-FR") + " personnes" : ""], ["Méthode", r0.methodology], ["Précisions", r0.notes]].filter(x => x[1]);
+    return `<p class="quiet">${e(r0.scenario || "")}</p>
         <ul class="bars">${rows.map((r, i) => { const v = Number(r.value_percent), w = v < 1 ? 1.5 : Math.max(1.5, v / max * 100);
           return `<li${i < 3 ? ' class="top"' : ""}><span class="bar-n">${who(r)}</span><span class="bar-t" role="img" aria-label="${e(score(v))}"><span class="bar-f" style="width:${w.toFixed(1)}%"></span></span><span class="bar-v">${e(score(v))}</span></li>`; }).join("")}</ul>
         <dl class="kv poll-meta">${meta.map(x => `<dt>${e(x[0])}</dt><dd>${e(x[1])}</dd>`).join("")}</dl>
         <p class="quiet poll-note">Scores tels que publiés par l’institut. Un sondage n’est ni une prévision ni un résultat électoral.</p>
-        ${src ? `<p class="quiet poll-note">Source : ${UI.link(src.url, src.title || "Source du sondage") || e(src.title || "Source du sondage")}${src.publisher ? ` · ${e(src.publisher)}` : ""}</p>` : ""}
-      </section>`;
-    };
-    return `<h2 class="ov-h">${top.length > 1 ? "Derniers sondages" : "Dernier sondage"}</h2>${top.map(one).join("")}`;
+        ${src ? `<p class="quiet poll-note">Source : ${UI.link(src.url, src.title || "Source du sondage") || e(src.title || "Source du sondage")}${src.publisher ? ` · ${e(src.publisher)}` : ""}</p>` : ""}`;
+  };
+  const pollHead = () => { const g = PS.groups[PS.i], n = PS.groups.length;
+    return `<div class="ps-now"><b>${e(instOf(g))}</b> <span>${e(whenOf(g))}${PS.i === 0 ? " · le plus récent" : ""}</span></div>`; };
+  const pollBlock = P => {
+    const none = `<h2 class="ov-h">Sondages</h2><p class="quiet">Aucun sondage publié pour cette élection.</p>`;
+    /* Erreur technique : message distinct de l'absence réelle, selon la nature du problème (détail dans la console). */
+    if (P.error) { const txt = P.error === "denied" ? "Les sondages ne sont pas accessibles pour le moment (accès refusé)."
+        : P.error === "missing" || P.error === "invalid" ? "Les sondages ne peuvent pas être affichés : la structure de données attendue est indisponible."
+        : "Les sondages n’ont pas pu être chargés. Réessayez dans un instant.";
+      return `<h2 class="ov-h">Sondages</h2><p class="quiet" role="status" data-poll-error="${e(P.error)}">${e(txt)}</p>`; }
+    PS = { groups: Scrutin.pollGroups(P.rows), i: 0 };
+    const n = PS.groups.length; if (!n) return none;
+    const sel = n > 1 ? `<label class="sr-only" for="ps-select">Choisir un sondage</label><select id="ps-select" class="ps-select" data-ps="select">${PS.groups.map((g, k) => `<option value="${k}">${e((g.date ? Scrutin.date(g.date) : "sans date") + " · " + instOf(g))}</option>`).join("")}</select>` : "";
+    return `<section class="pollsel" data-pollsel><h2 class="ov-h">Sondages <small class="ps-count">${n} enregistré${n > 1 ? "s" : ""}</small></h2>
+      <div class="ps-bar"><button type="button" class="ps-btn" data-ps="older" aria-label="Sondage plus ancien">‹</button>
+        <div class="ps-mid" data-ps-head>${pollHead()}</div>
+        <button type="button" class="ps-btn" data-ps="newer" aria-label="Sondage plus récent">›</button></div>
+      <div class="ps-tools">${sel}<span class="ps-pos quiet" data-ps-pos aria-live="polite">Sondage 1 sur ${n}</span></div>
+      <section class="poll ps-panel" data-ps-panel aria-live="polite" aria-label="Sondage affiché">${pollOne(PS.groups[0])}</section></section>`;
+  };
+  const pollWire = root => {
+    const box = root.querySelector("[data-pollsel]"); if (!box) return;
+    const panel = box.querySelector("[data-ps-panel]"), n = PS.groups.length;
+    const show = k => { k = Math.max(0, Math.min(n - 1, k)); const same = k === PS.i; PS.i = k;
+      box.querySelector("[data-ps-head]").innerHTML = pollHead();
+      box.querySelector("[data-ps-pos]").textContent = `Sondage ${k + 1} sur ${n}`;
+      const sl = box.querySelector("[data-ps=select]"); if (sl) sl.value = String(k);
+      box.querySelector("[data-ps=newer]").disabled = k === 0; box.querySelector("[data-ps=older]").disabled = k === n - 1;
+      panel.innerHTML = pollOne(PS.groups[k]);
+      if (!same) { panel.classList.remove("ps-in"); void panel.offsetWidth; panel.classList.add("ps-in"); } };
+    box.addEventListener("click", ev => { const b = ev.target.closest("button[data-ps]"); if (!b || b.disabled) return; show(PS.i + (b.dataset.ps === "older" ? 1 : -1)); });
+    box.addEventListener("change", ev => { if (ev.target.matches("[data-ps=select]")) show(+ev.target.value); });
+    show(0);
+  };
+
+  /* ---- Rubrique résultats : résultats officiels tour par tour (distincte des sondages) ---- */
+  let RS = { rounds: [], i: 0 };
+  const resRound = rd => {
+    const rows = (rd.candidates || []).filter(x => x.votes != null || x.percent_expressed != null).sort((a, b) => (Number(b.percent_expressed) || 0) - (Number(a.percent_expressed) || 0) || (Number(b.votes) || 0) - (Number(a.votes) || 0));
+    const max = Math.max(...rows.map(r => Number(r.percent_expressed) || 0), 1), maxV = Math.max(...rows.map(r => Number(r.votes) || 0), 1);
+    const reg = rd.registered_voters, vot = rd.voters, abs = rd.abstentions != null ? rd.abstentions : (reg != null && vot != null ? reg - vot : null);
+    const ratio = (a, b) => a != null && b ? Scrutin.pct(a / b * 100) : "";
+    const nn = x => x == null ? "" : Scrutin.nb(x);
+    const part = [["Inscrits", nn(reg)], ["Votants", nn(vot) + (ratio(vot, reg) ? " (" + ratio(vot, reg) + ")" : "")], ["Abstentions", nn(abs) + (ratio(abs, reg) ? " (" + ratio(abs, reg) + ")" : "")],
+      ["Bulletins blancs", nn(rd.blank_votes)], ["Bulletins nuls", nn(rd.null_votes)], ["Suffrages exprimés", nn(rd.expressed_votes)]].filter(x => x[1] && x[1] !== " ");
+    const src = rd.sources;
+    return `<p class="res-state"><span class="res-badge res-${e(rd.result_status === "final" ? "final" : "prov")}">${e(rd.result_status === "final" ? "Résultats définitifs" : "Résultats provisoires")}</span>${rd.held_on ? ` <span class="quiet">Scrutin du ${e(Scrutin.date(rd.held_on))}</span>` : ""}</p>
+      ${rows.length ? `<ul class="bars bars-res">${rows.map(r => { const v = Number(r.percent_expressed), has = r.percent_expressed != null, w = has ? Math.max(1.5, v / max * 100) : Math.max(1.5, (Number(r.votes) || 0) / maxV * 100);
+        const tag = r.elected ? `<span class="res-tag res-win">Élu</span>` : r.qualified_next_round ? `<span class="res-tag">Qualifié pour le ${e(Scrutin.roundNameLow(rd.round_number + 1))}</span>` : "";
+        return `<li class="${r.elected || r.qualified_next_round ? "top" : ""}"><span class="bar-n">${who(r)}${tag}</span><span class="bar-t" role="img" aria-label="${has ? e(score(v)) : ""}"><span class="bar-f" style="width:${w.toFixed(1)}%"></span></span><span class="bar-v">${has ? e(score(v)) : ""}${r.votes != null ? `<small>${e(Scrutin.nb(r.votes))} voix</small>` : ""}</span></li>`; }).join("")}</ul>` : `<p class="quiet">Scores par candidat non renseignés pour ce tour.</p>`}
+      ${part.length ? `<dl class="kv res-part">${part.map(x => `<dt>${e(x[0])}</dt><dd>${e(x[1])}</dd>`).join("")}</dl>` : ""}
+      ${rd.notes ? `<p class="quiet poll-note">${e(rd.notes)}</p>` : ""}
+      <p class="quiet poll-note">Résultats officiels : votes réellement exprimés, à ne pas confondre avec les sondages.${src ? ` Source : ${UI.link(src.url, src.title || "Source") || e(src.title || "Source")}${src.publisher ? ` · ${e(src.publisher)}` : ""}` : ""}</p>`;
+  };
+  const resultsBlock = R => {
+    /* Emplacement toujours prévu ; invisible tant qu'aucun résultat n'est publié. */
+    if (R.error) return `<section class="res" data-results="error"><h2 class="ov-h">Résultats</h2><p class="quiet" role="status">Les résultats n’ont pas pu être chargés. Réessayez dans un instant.</p></section>`;
+    RS = { rounds: Scrutin.rounds(R), i: 0 }; RS.i = RS.rounds.length - 1;
+    if (!RS.rounds.length) return `<section class="res" data-results="none" hidden></section>`;
+    return `<section class="res" data-results="ok"><h2 class="ov-h">Résultats officiels</h2>
+      <div class="res-tabs" role="tablist" aria-label="Tours de scrutin">${RS.rounds.map((rd, k) => `<button type="button" role="tab" class="res-tab" id="rt-${k}" aria-controls="res-panel" aria-selected="${k === RS.i}" data-rt="${k}">${e(Scrutin.roundName(rd.round_number))}</button>`).join("")}</div>
+      <div class="res-panel ps-panel" id="res-panel" role="tabpanel" data-res-panel>${resRound(RS.rounds[RS.i])}</div></section>`;
+  };
+  const resWire = root => {
+    const box = root.querySelector("[data-results=ok]"); if (!box) return;
+    box.addEventListener("click", ev => { const b = ev.target.closest("[data-rt]"); if (!b) return; RS.i = +b.dataset.rt;
+      box.querySelectorAll("[data-rt]").forEach((x, k) => x.setAttribute("aria-selected", String(k === RS.i)));
+      const p = box.querySelector("[data-res-panel]"); p.innerHTML = resRound(RS.rounds[RS.i]); p.classList.remove("ps-in"); void p.offsetWidth; p.classList.add("ps-in"); });
   };
   const U_URL = u => UI.safeUrl(u);
 
@@ -78,7 +131,7 @@
     $("p-title").textContent = Election.name(el);
     $("p-label").textContent = "Vue d’ensemble · " + st.label;
     $("p-lede").innerHTML = UI.richInline(el.description) || "Candidatures, programmes, thématiques, comparateur et indicateurs de cette élection.";
-    UI.mount(mount, async () => ({ cands: await DB.candidacies(el.id), progs: await DB.programs(el.id), polls: await DB.polls(el.id).catch(err => { const kind = DB.classify(err); console.warn("[sondages] chargement impossible :", kind, err && err.message); return { error: kind, rows: [] }; }), dossier: await dossierOf(el) }), d => {
+    UI.mount(mount, async () => ({ cands: await DB.candidacies(el.id), progs: await DB.programs(el.id), polls: await DB.polls(el.id).catch(err => { const kind = DB.classify(err); console.warn("[sondages] chargement impossible :", kind, err && err.message); return { error: kind, rows: [] }; }), results: await DB.results(el.id).catch(err => { const kind = DB.classify(err); console.warn("[résultats] chargement impossible :", kind, err && err.message); return { error: kind, rounds: [] }; }), dossier: await dossierOf(el) }), d => {
       const nm = d.progs.reduce((n, p) => n + (p.program_versions || []).reduce((k, v) => k + (v.measures || []).length, 0), 0);
       const sections = [
         ["candidats", "Candidats", d.cands.length ? plural(d.cands.length, "candidature", "candidatures") : "Aucune candidature enregistrée"],
@@ -92,7 +145,7 @@
         ${kv([["Pays", el.countries && el.countries.name], ["Type de scrutin", UI.humanize(el.election_type)], ["Année", el.year],
           ["Date du scrutin", UI.date(el.scheduled_date)], ["Date effective", UI.date(el.actual_date)], ["Second tour", UI.date(el.second_round_date)],
           ["Date limite des parrainages", UI.date(el.sponsorship_deadline)], ["Situation", st.label]]) || `<p class="p-sub quiet">Calendrier non renseigné.</p>`}
-        ${pollBlock(d.polls)}${refsBlock(el)}`;
-    }, { loading: "Chargement de l’élection…", isEmpty: () => false });
+        ${resultsBlock(d.results)}${pollBlock(d.polls)}${refsBlock(el)}`;
+    }, { loading: "Chargement de l’élection…", isEmpty: () => false, after: el => { pollWire(el); resWire(el); } });
   });
 })();

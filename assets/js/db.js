@@ -54,7 +54,7 @@
      quand l'objet publié qu'elles relient (source, thème) n'est pas visible. */
   const PUBLISHED = "published";
   const WITH_STATUS = new Set(["countries", "elections", "people", "parties", "candidacies", "programs", "program_versions",
-    "themes", "measures", "sources", "analyses", "indicators", "indicator_observations", "policy_cases", "case_outcomes", "poll_snapshots", "election_sources"]);
+    "themes", "measures", "sources", "analyses", "indicators", "indicator_observations", "policy_cases", "case_outcomes", "poll_snapshots", "election_sources", "election_round_results", "election_candidate_results"]);
   const REQUIRED_EMBED = { country_dossier_section_sources: "sources", election_sources: "sources", case_measure_relations: "policy_cases", policy_case_sources: "sources", case_outcome_sources: "sources", measure_sources: "sources", analysis_sources: "sources", candidacy_sources: "sources", measure_themes: "themes" };
 
   /* Nettoyage récursif des données imbriquées : un objet imbriqué portant un statut autre que « published »
@@ -173,6 +173,22 @@
     },
 
 
+    /* Résultats officiels d'une élection, tour par tour (migration proposée 005, NON exécutée par défaut). Retourne { rounds } :
+       une liste vide signifie « aucun résultat publié ». Table absente (400/404 avant migration) : fonctionnalité inactive, sans
+       erreur affichée. Toute autre erreur (réseau, délai, accès) est propagée : jamais présentée comme une absence de résultats.
+       Chaque tour : { round_number, held_on, result_status, …participation, sources, candidates: [lignes de score] }. */
+    results: async electionId => {
+      let r;
+      try {
+        r = await rows("election_round_results", { select: `*,sources(id,title,url,publisher,publication_date,publication_status),election_candidate_results(*,candidacies(id,candidacy_status,publication_status,${PERSON},${PARTY}),${PARTY},${PERSON})`, filter: { election_id: "eq." + electionId }, order: "round_number.asc" });
+      } catch (err) {
+        if (err instanceof DbError && (err.status === 400 || err.status === 404)) { console.info("[Au résultat] Résultats électoraux : tables absentes (migration 005 non appliquée), rubrique inactive."); return { rounds: [] }; }
+        throw err;
+      }
+      const ok = x => (x.entity_kind !== "candidacy" || x.candidacies) && (x.entity_kind !== "party" || x.parties) && (x.entity_kind !== "person" || x.people);
+      return { rounds: r.map(x => Object.assign({}, x, { candidates: (x.election_candidate_results || []).filter(ok) })) };
+    },
+
     /* Sondages individuels d'une élection. Retourne { rows } : une liste vide signifie une ABSENCE RÉELLE de sondages publiés.
        Toute erreur (permission, table ou relation absente, schéma, réseau…) est propagée à l'appelant, qui la distingue avec
        DB.classify : une erreur n'est jamais présentée comme « aucun sondage ». Une ligne dont l'entité désignée (candidature,
@@ -236,7 +252,7 @@
 
     /* Les thèmes des mesures servent au regroupement de la fiche ; si cette jointure échoue, la fiche reste lisible sans regroupement. */
     candidacy: id => {
-      const sel = themes => `*,${PERSON},${PARTY},elections(id,name,year,publication_status),candidacy_sources(*,sources(*)),candidacy_sponsorship_territories(*,sources(title,url,publication_status)),programs(*,program_versions(*,measures(id,title,reliability_level,display_order,publication_status${themes ? ",measure_themes(themes(id,name,slug,parent_id,display_order,publication_status))" : ""})))`;
+      const sel = themes => `*,${PERSON},${PARTY},elections(id,name,year,scheduled_date,second_round_date,publication_status),candidacy_sources(*,sources(*)),candidacy_sponsorship_territories(*,sources(title,url,publication_status)),programs(*,program_versions(*,measures(id,title,reliability_level,display_order,publication_status${themes ? ",measure_themes(themes(id,name,slug,parent_id,display_order,publication_status))" : ""})))`;
       const q = themes => rows("candidacies", { limit: 1, select: sel(themes), filter: { id: "eq." + id } });
       return q(true).catch(e => {
         /* Repli sans les thèmes UNIQUEMENT si la jointure elle-même est refusée (colonne ou relation absente, accès refusé) ; une panne réseau ou un délai se propage. */

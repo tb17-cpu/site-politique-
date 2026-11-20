@@ -95,3 +95,12 @@ Le site n'écrit jamais en base : ces scripts s'exécutent dans l'éditeur SQL S
 
 - Ordre de la page Candidats : `candidacies.display_order` (saisi dans Supabase), sans aucun calcul ; les lignes sans ordre viennent après.
 - Page élection : un seul sondage (OpinionWay, scénario « Hypothèse 1 ») en graphique, scores tels que publiés ; une valeur inférieure à 1 s’affiche « moins de 1 % ». Critères de sélection : constante `FEATURED` dans `assets/js/election-vue.js`.
+
+
+## Sondages, résultats et carte de statut évolutive
+
+- **Sélecteur de sondages** (accueil de chaque élection uniquement) : un sondage à la fois, flèches « plus ancien / plus récent », liste déroulante, du plus récent au plus ancien. Chaque sondage reste indépendant (institut, date, terrain, échantillon, méthode, source propres).
+- **Rubrique « Résultats officiels »** (accueil de l'élection) : onglets par tour, scores (% et voix), élu et qualifiés, participation, abstention, blancs, nuls, date, caractère provisoire/définitif. Invisible tant qu'aucun résultat n'est publié.
+- **Carte de statut** (fiche candidat) : statut de la candidature, résultats officiels des tours passés (trait plein) et estimations de sondages (trait pointillé, mention « Estimation d’après sondages », date de référence). Intentions de 1er tour tant que ce tour n'a pas de résultat ; intentions de 2nd tour seulement pour les qualifiés ; aucun score pour un tour non tenu.
+- **Estimation** : dernier sondage pertinent ; moyenne simple du dernier sondage de chaque institut (21 jours, même scénario) s'il y en a plusieurs. Le tour d'un sondage est déduit du texte du scénario (`poll_snapshots` n'a pas de colonne de tour) ; tour indéterminé = ignoré.
+- **Données** : les résultats viennent des tables `election_round_results` et `election_candidate_results`, définies par la migration **proposée** `supabase/proposals/005_election_results.sql` (non appliquée). Tant qu'elle ne l'est pas, la rubrique reste inactive sans erreur. Logique partagée : `assets/js/scrutin.js`.

@@ -52,13 +52,18 @@ const poll=p=>p.evaluate(()=>{const s=document.querySelector('.poll');if(!s)retu
   await page(w,'election.html?e=it',async p=>{const r=await poll(p);
     rep(r&&r.names.join('|')==='Fratelli d’Italia|Partito Democratico|Futuro Nazionale'&&r.vals[0]==='29,0 %'&&r.vals[2]==='3,0 %',`${w}px Italie : libellés libres, ordre décroissant`,r);
     rep(r&&/commanditaire\s*La7/i.test(r.txt)&&/4 au 9 novembre 2026/.test(r.txt),`${w}px Italie : commanditaire connu et terrain`,r&&r.txt);});
-  await page(w,'election.html?e=fr',async p=>{const r=await poll(p);
-    const n=await p.locator('.poll').count(), blocks=await p.locator('.poll').evaluateAll(a=>a.map(x=>x.innerText));
-    rep(n===2&&/Derniers sondages/.test(await p.evaluate(()=>document.body.innerText)),`${w}px France : égalité parfaite -> les deux sondages affichés`,n);
-    rep(blocks.filter(b=>/Ifop/.test(b)).length===1&&blocks.filter(b=>/OpinionWay/.test(b)).length===1&&!blocks.some(b=>/Ifop/.test(b)&&/OpinionWay/.test(b)),`${w}px France : un institut par bloc (aucun mélange)`);
-    const cnt=await p.locator('.poll').evaluateAll(a=>a.map(x=>x.querySelectorAll('.bar-v').length).sort());
-    rep(JSON.stringify(cnt)===JSON.stringify([3,6]),`${w}px France : chaque bloc garde tous ses résultats (3 et 6)`,cnt);
-    rep(blocks.every(b=>/fr[12]|Notice/.test(b)),`${w}px France : chaque bloc a sa source`);});
+  await page(w,'election.html?e=fr',async p=>{
+    /* Sélecteur : un seul sondage à la fois, chacun indépendant ; l'égalité parfaite reste départagée de façon déterministe. */
+    const snap=async()=>p.locator('.poll').evaluate(x=>({t:x.innerText,v:x.querySelectorAll('.bar-v').length,links:[...x.querySelectorAll('a')].map(a=>a.href)}));
+    const a=await snap(), n=await p.locator('.poll').count();
+    rep(n===1&&/Sondages/.test(await p.evaluate(()=>document.body.innerText))&&await p.locator('[data-ps=select] option').count()===2,`${w}px France : un seul sondage affiché, deux disponibles dans le sélecteur`,n);
+    const first=/Ifop/.test(a.t)?'Ifop':'OpinionWay';
+    rep(!(/Ifop/.test(a.t)&&/OpinionWay/.test(a.t)),`${w}px France : aucun mélange entre instituts`);
+    await p.locator('[data-ps=older]').click();
+    const b=await snap(), second=/Ifop/.test(b.t)?'Ifop':'OpinionWay';
+    rep(first!==second&&!(/Ifop/.test(b.t)&&/OpinionWay/.test(b.t)),`${w}px France : la flèche affiche l’autre sondage, sans mélange`);
+    rep(JSON.stringify([a.v,b.v].sort())===JSON.stringify([3,6]),`${w}px France : chaque sondage garde tous ses résultats (3 et 6)`,[a.v,b.v]);
+    rep([a,b].every(x=>/fr[12]|Notice/.test(x.t+x.links.join())),`${w}px France : chaque sondage a sa source`);});
   await page(w,'election.html?e=d1',async p=>{const r=await poll(p);rep(r.n===1&&/Alpha/.test(r.txt)&&!/Beta/.test(r.txt),`${w}px départage : publication la plus récente (Alpha)`,r.txt);});
   await page(w,'election.html?e=d2',async p=>{const r=await poll(p);rep(r.n===1&&/Beta/.test(r.txt)&&!/Alpha/.test(r.txt),`${w}px départage : même publication -> fin de terrain la plus récente (Beta)`,r.txt);});
   await page(w,'election.html?e=d3',async p=>{const r=await poll(p);rep(r.n===1&&/Alpha/.test(r.txt)&&!/Beta/.test(r.txt),`${w}px départage : la publication prime sur la fin de terrain (Alpha)`,r.txt);});
