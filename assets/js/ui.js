@@ -27,7 +27,11 @@
     declared: "Candidature déclarée", unconfirmed: "Candidature non confirmée",
     /* Valeurs prévues par la maquette éditoriale, pas encore constatées en base : */
     rumored: "Candidature évoquée", nominated: "Candidat investi", qualified: "Qualifié pour le premier tour",
-    withdrawn: "Candidature retirée", rejected: "Candidature rejetée"
+    withdrawn: "Retiré", rejected: "Candidature rejetée",
+    validated: "Candidature officiellement validée", officially_validated: "Candidature officiellement validée", official: "Candidature officiellement validée",
+    first_round: "Premier tour", second_round: "Qualifié pour le second tour", qualified_second_round: "Qualifié pour le second tour",
+    elected: "Élu", winner: "Élu", eliminated: "Battu / éliminé", defeated: "Battu / éliminé",
+    dropped_out: "Désisté", stepped_down: "Désisté", invalidated: "Candidature invalidée"
   }, "Statut à préciser");
   /* « claimed_threshold » = seuil REVENDIQUÉ, jamais « validé officiellement ». */
   const SPONSORSHIP = table({
@@ -61,6 +65,15 @@
     return `<span class="statut"${f.raw ? ` title="${e("Valeur technique : " + f.raw)}"` : ""}>${e(f.label)}</span>`; };
   U.statusText = (fmt, v) => { const f = { cand: CANDIDACY, spons: SPONSORSHIP, second: SECOND }[fmt](v);
     return f.raw && !f.known ? `<span title="${e("Valeur technique : " + f.raw)}">${e(f.label)}</span>` : e(f.label); };
+  /* Étape réelle de la candidature (carte de statut) : un seul statut, celui de la situation constatée, jamais une liste générique.
+     Qualification au second tour : prioritaire dès qu'elle est renseignée. Sans statut renseigné : rien. Renvoie { label, note } ou null. */
+  U.candidacyStage = c => {
+    if (!c) return null;
+    if (String(c.second_round_status || "").toLowerCase() === "qualified" || (c.second_round_qualified_at != null && String(c.second_round_qualified_at).trim() !== ""))
+      return { label: "Qualifié pour le second tour", note: c.second_round_qualified_at ? U.date(c.second_round_qualified_at) : "" };
+    const f = CANDIDACY(c.candidacy_status); if (!f.raw) return null;
+    return { label: f.label, note: norm(c.candidacy_status) === "declared" && c.announcement_date ? "annoncée le " + U.date(c.announcement_date) : "" };
+  };
   U.link = (u, label) => U.safeUrl(u) ? `<a href="${e(U.safeUrl(u))}" rel="noopener" target="_blank">${e(label || u)}</a>` : e(label || "");
 
   /* ---------- Fiabilité : un seul composant ---------- */
@@ -94,7 +107,7 @@
     press_reported:      ["Information rapportée par la presse, à confirmer", "Information rapportée par la presse, à confirmer auprès du candidat ou de son parti.", "Presse, à confirmer"]
   };
   /* f = { status, date, note, source } (DB.formalizations). Rien n'est affiché sans statut valide.
-     o.full  : ajoute la justification (date de référence, source, note).
+     Pas de paragraphe d'explication : la source de référence est dans l'infobulle et dans la liste des sources de la fiche.
      o.short : libellé court (cartes de mesures). Le libellé complet reste accessible : infobulle et texte pour lecteur d'écran ; la légende dépliable le détaille. */
   U.formalization = (f, o = {}) => {
     if (!f || !FS[f.status]) return "";
@@ -102,8 +115,7 @@
     const title = `${label}${f.date ? " — référence du " + U.date(f.date) : ""}${src && src.title ? " — " + src.title : ""}. ${text}`;
     const inner = o.short ? `<span aria-hidden="true">${e(short)}</span><span class="sr-only">${e(label)}</span>` : e(label);
     const badge = `<span class="fs fs-${f.status}" title="${e(title)}"><i aria-hidden="true"></i>${inner}</span>`;
-    if (!o.full) return badge;
-    return `<span class="fs-block">${badge}<span class="fs-detail">${e(text)}${f.date ? ` Référence du ${e(U.date(f.date))}` : ""}${src ? ` · Source : ${U.link(src.url, src.title || "source") || e(src.title || "source")}${src.publisher ? " · " + e(src.publisher) : ""}` : ""}.${f.note ? ` ${e(f.note)}` : ""}</span></span>`;
+    return badge;
   };
 
   /* Légende repliable « Comment lire les statuts » : une ligne par statut réellement présent sur la page (statuts = liste de clés). */

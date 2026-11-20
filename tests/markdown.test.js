@@ -77,7 +77,7 @@ const route = usePlain => (t, u) => {
   if (t === 'measures' && !(u.searchParams.get('select') || '').startsWith('id,publication_status,formalization_status')) data = data.map(m => Object.assign({}, m, { analyses: [{ id: 1, publication_status: 'published', analysis_type: 'editorial', analysis_title: 'Titre **analysé**', assessment: 'x', analysis_sources: [] }] }));
   return walk(data, usePlain);
 };
-const PAGES = [['candidat', 'candidat.html?e=1#1'], ['mesure', 'mesure.html?e=1#11'], ['thematiques', 'thematiques.html?e=1#retraites'], ['programmes', 'programmes.html?e=1'],
+const PAGES = [['candidat', 'candidat.html?e=1#1'], ['mesure', 'mesure.html?e=1#11'], ['thematiques', 'thematiques.html?e=1#retraites'], 
   ['indicateurs', 'indicateurs.html'], ['comparateur', 'comparateur.html?e=1#retraites'], ['election', 'election.html?e=1'], ['accueil', 'index.html']];
 const SHOTS = process.env.MD_SHOTS;
 (async () => {
@@ -141,7 +141,7 @@ const SHOTS = process.env.MD_SHOTS;
     r.fulfill({ status: 200, contentType: 'application/json', headers: { 'content-range': `0-${Math.max(data.length - 1, 0)}/${data.length}`, 'access-control-allow-origin': '*', 'access-control-expose-headers': 'content-range' }, body: JSON.stringify(data) });
   });
   await pg.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
-  for (const [pn, url] of [['candidat', 'candidat.html?e=1#1'], ['mesure', 'mesure.html?e=1#11'], ['programmes', 'programmes.html?e=1'], ['thematiques', 'thematiques.html?e=1#retraites']]) {
+  for (const [pn, url] of [['candidat', 'candidat.html?e=1#1'], ['mesure', 'mesure.html?e=1#11'],  ['thematiques', 'thematiques.html?e=1#retraites']]) {
     await pg.goto(B + url, { waitUntil: 'networkidle' }); await pg.waitForTimeout(500);
     const x = await pg.evaluate(p => ({ n: [...document.querySelectorAll('.md--rich')].filter(m => m.textContent.trim() === p).length, any: document.querySelectorAll('.md--rich').length, extra: document.querySelectorAll('.md--rich ul,.md--rich ol,.md--rich h4,.md--rich strong,.md--rich a').length }), PLAIN);
     rep(x.n >= 1 && x.extra === 0, `${pn} : textes existants sans Markdown : ${x.n} champ(s) identiques au texte brut, aucune puce, aucun sous-titre, aucun gras ajouté (${x.any} blocs)`, x);

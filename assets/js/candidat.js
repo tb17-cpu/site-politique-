@@ -14,31 +14,13 @@
     const ph = document.querySelector(".p-head"); if (ph) ph.hidden = true;
     const p = c.people || {}, pt = c.parties;
     const has = v => v !== "" && v != null;
-    const sponsorBlock = () => {
-      const t = c.candidacy_sponsorship_territories || [];
-      const any = [c.sponsorship_status, c.sponsorship_count_claimed, c.sponsorship_count_official, c.sponsorship_last_checked_at, c.sponsorship_notes].some(has) || t.length;
-      if (!any) return "";
-      let x = `<section class="blk"><header><b>Parrainages</b><span>Chiffres annoncés par la candidature et chiffres constatés officiellement</span></header><div>`;
-      if (has(c.sponsorship_status)) x += `<p class="sp-status">Statut : ${UI.statusText("spons", c.sponsorship_status)}</p>`;
-      const tiles = [];
-      if (has(c.sponsorship_count_claimed)) tiles.push(`<div class="sp sp--claim"><span class="label">Annoncés par la candidature</span><strong>${e(c.sponsorship_count_claimed)}</strong><small>Déclaratif, non validé</small></div>`);
-      if (has(c.sponsorship_count_official)) tiles.push(`<div class="sp sp--off"><span class="label">Constatés officiellement</span><strong>${e(c.sponsorship_count_official)}</strong><small>Source officielle</small></div>`);
-      if (tiles.length) x += `<div class="sp-grid">${tiles.join("")}</div>`;
-      x += kv([["Dernière vérification", UI.date(c.sponsorship_last_checked_at)], ["Notes", c.sponsorship_notes]]);
-      if (t.length) x += `<h4 class="label sub-h">Par territoire</h4><div class="scroll"><table class="obs"><thead><tr><th scope="col">Territoire</th><th scope="col">Annoncés</th><th scope="col">Officiels</th><th scope="col">Vérifié le</th><th scope="col">Fiabilité</th></tr></thead><tbody>${
-        t.map(r => `<tr><td>${e(r.territory_name || r.territory_code || "")}</td><td>${e(r.sponsorship_count_reported ?? "—")}</td><td>${e(r.sponsorship_count_official ?? "—")}</td><td>${e(UI.date(r.checked_at) || "—")}</td><td>${UI.reliability(r.reliability_level, { notes: r.notes })}</td></tr>`).join("")}</tbody></table></div>`;
-      return x + `</div></section>`;
-    };
-    /* Accès au second tour : n'apparaît que lorsque la candidature est qualifiée (aucune mention avant le premier tour). */
-    const qualified = String(c.second_round_status || "").toLowerCase() === "qualified" || has(c.second_round_qualified_at);
-    const second = qualified ? "Qualifié pour le second tour" + (c.second_round_qualified_at ? ` (${e(UI.date(c.second_round_qualified_at))})` : "") : "";
     /* ---- Programmes : groupes par thème (déterministe), cartes, panneau de synthèse ---- */
     const progs = c.programs || [], seen = [], themeKeys = new Set(); let nMeasures = 0, lastPub = "", gid = 0;
     const item = m => `<li><a class="mcard" href="mesure.html#${encodeURIComponent(m.id)}"><b>${e(m.title)}</b>${UI.formalization(F.get(String(m.id)), { short: true })}</a></li>`;
     const progHtml =
       (progs.length ? progs.map(pg => {
         const vs = (pg.program_versions || []).slice().sort((a, b) => (b.version_number || 0) - (a.version_number || 0));
-        return `${progs.length > 1 ? `<h3 class="h-h3 m-vh">${e(pg.title || "Programme")}</h3>` : ""}${pg.description ? `<div class="desc">${UI.rich(pg.description)}</div>` : ""}` +
+        return `${progs.length > 1 ? `<h3 class="h-h3 m-vh">${e(pg.title || "Programme")}</h3>` : ""}` +
           (vs.length ? vs.map(v => {
             const ms = (v.measures || []).slice().sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || String(a.title || "").localeCompare(String(b.title || ""), "fr") || String(a.id).localeCompare(String(b.id)));
             /* Regroupement par thème, FIXE et indépendant de l'ordre renvoyé par la base : une mesure rattachée à plusieurs thèmes va dans
@@ -72,17 +54,16 @@
         ${nMeasures ? `<button type="button" class="btn btn--primary" data-jump="programme">Parcourir le programme</button>` : ""}</aside>` : "";
 
     const facts = [
-      has(c.announcement_date) ? `<span><b>Candidature annoncée</b> le ${e(UI.date(c.announcement_date))}</span>` : "",
-      UI.safeUrl(p.official_website) ? `<span>${UI.link(p.official_website, p.official_website)}</span>` : "",
-      second ? `<span><b>${second}</b></span>` : ""].filter(Boolean).join("");
+      UI.safeUrl(p.official_website) ? `<span>${UI.link(p.official_website, p.official_website)}</span>` : ""].filter(Boolean).join("");
+    const stage = UI.candidacyStage(c);
+    const stageCard = stage ? `<div class="status-card" role="status"><b>${e(stage.label)}</b>${stage.note ? `<small>${e(stage.note)}</small>` : ""}</div>` : "";
     let h = `<section class="cand-head${panel ? "" : " cand-head--solo"}" aria-label="Candidat">
       <div class="cand-id">${UI.avatar(c.people, true)}<div>
-        ${UI.statusBadge("cand", c.candidacy_status)}
         <h1>${e(name)}</h1>
         ${pt ? `<p class="fh-party">${UI.partyDot(pt)}<span>${e(pt.name + (pt.acronym ? ` (${pt.acronym})` : ""))}</span>${UI.positionBlock(c)}</p>` : ""}
-        ${facts ? `<div class="cand-facts">${facts}</div>` : ""}</div></div>${panel}</section>
+        ${stageCard}${facts ? `<div class="cand-facts">${facts}</div>` : ""}</div></div>${panel}</section>
       ${c.description ? `<div class="cand-bio">${UI.rich(c.description)}</div>` : ""}
-      ${p.biography ? `<div class="cand-bio">${UI.rich(p.biography)}</div>` : ""}` + sponsorBlock();
+      ${p.biography ? `<div class="cand-bio">${UI.rich(p.biography)}</div>` : ""}`;
 
     const counts = [nMeasures ? `${nMeasures} ${nMeasures > 1 ? "propositions" : "proposition"}` : "", nThemes ? `${nThemes} ${nThemes > 1 ? "thèmes" : "thème"}` : ""].filter(Boolean).join(" · ");
     h += `<section class="blk" id="programme"><header><b>Programme</b>${counts ? `<span>${counts}</span>` : ""}</header><div>${UI.formalizationLegend(seen)}${progHtml}</div></section>`;

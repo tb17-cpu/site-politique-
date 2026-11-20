@@ -20,8 +20,7 @@
     if (sel.length < 2) { setStatus(`<b>${sel.length} mesure sélectionnée.</b> Cochez au moins deux mesures, issues de candidats différents.`); return; }
     if (cands.size < 2) { setStatus(`<b>Comparaison inter-candidats impossible.</b> Les mesures cochées viennent toutes du même candidat. Cochez au moins une mesure d’un autre candidat.`, "warn"); return; }
     setStatus(`<b>${sel.length} mesures comparées</b>, ${cands.size} candidats. Quatre mesures au plus.`, "ok");
-    const rows = [["Candidat", m => who(m), 0], ["Formulation originale", m => m.original_text, 1], ["Objectif annoncé", m => m.announced_objective, 1], ["Coût annoncé", cost, 1], ["Financement annoncé", m => m.announced_funding, 1],
-      ["Mécanisme (Au résultat)", m => m.mechanism, 0], ["Publics concernés (Au résultat)", m => m.target_groups, 0], ["Modalités (Au résultat)", m => m.implementation_details, 0]];
+    const rows = [["Candidat", m => who(m), 0], ["Formulation originale", m => m.original_text, 1], ["Objectif annoncé", m => m.announced_objective, 1], ["Coût annoncé", cost, 1], ["Financement annoncé", m => m.announced_funding, 1]];
     const F = await DB.formalizations();
     out.innerHTML = `<div class="scroll"><table class="cmp"><thead><tr><th scope="col">Champ</th>${sel.map(m => `<th scope="col"><a href="mesure.html#${encodeURIComponent(m.id)}">${e(m.title)}</a></th>`).join("")}</tr></thead><tbody>
       ${rows.map(r => `<tr><th scope="row">${e(r[0]).replace(/Au résultat/g, '<span class="brand-inline">Au résultat</span>')}${r[2] ? '<small class="decl">déclaré par le candidat</small>' : ""}</th>${sel.map(m => cell(r[1](m))).join("")}</tr>`).join("")}

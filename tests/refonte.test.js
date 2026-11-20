@@ -109,7 +109,7 @@ const open = async (br, url, { w = 1280, h = 900, theme = 'light', mob = false }
     const { ctx, pg, errs } = await open(br, `mesure.html?e=1#${id}`);
     const t = await pg.evaluate(() => document.body.innerText);
     const h = await pg.evaluate(() => [...document.querySelectorAll('.blk > header b')].map(b => b.textContent));
-    rep(h.includes('Déclaré par le candidat') && h.includes('Description'), `mesure ${label} : titres « Déclaré par le candidat » et « Description »`, h);
+    rep(h.includes('Déclaré par le candidat') && !h.includes('Description') && !h.includes('Thématiques'), `mesure ${label} : « Déclaré par le candidat » conservé, rubriques Description et Thématiques supprimées`, h);
     rep(!/Formulation et éléments annoncés|Reformulation et mise en forme|Description structurée|Non documenté|Type de mesure|relue le|Les analyses ci-dessous|Fiabilité|version\s+\d|Cela ne signifie pas/i.test(t), `mesure ${label} : textes et métadonnées supprimés absents`, (t.match(/Formulation et éléments annoncés|Reformulation et mise en forme|Description structurée|Non documenté|Type de mesure|relue le|Les analyses ci-dessous|Fiabilité|version\s+\d/i) || [])[0]);
     if (id === 2) {
       rep(h.some(x => /^Analyse · .+ · publiée le /.test(x)) || h.some(x => /^Analyse( · .+)?$/.test(x)), 'mesure : titre d’analyse « Analyse · Thème · publiée le … » (date si connue)', h);
@@ -118,6 +118,26 @@ const open = async (br, url, { w = 1280, h = 900, theme = 'light', mob = false }
     }
     rep(!errs.length, `mesure ${label} : aucune erreur JS`, errs);
     await ctx.close();
+  }
+
+  /* ---------- Simplification : carte de statut, textes et rubriques supprimés ---------- */
+  {
+    const { ctx, pg, errs } = await open(br, 'candidat.html?e=1#1');
+    const r = await pg.evaluate(() => ({ cards: document.querySelectorAll('.status-card').length, t: document.body.innerText, desc: document.querySelectorAll('.blk .desc').length, badge: document.querySelectorAll('.cand-id .statut').length,
+      st: UI.candidacyStage({ candidacy_status: 'declared', announcement_date: '2026-11-06' }), q: UI.candidacyStage({ candidacy_status: 'declared', second_round_status: 'qualified', second_round_qualified_at: '2027-04-10' }),
+      none: UI.candidacyStage({}), all: ['validated', 'first_round', 'elected', 'eliminated', 'dropped_out', 'withdrawn', 'invalidated'].map(k => UI.candidacyStage({ candidacy_status: k }).label), unknown: UI.candidacyStage({ candidacy_status: 'zzz' }).label }));
+    rep(r.cards === 1 && r.badge === 0, 'fiche candidat : une seule carte de statut de candidature', [r.cards, r.badge]);
+    rep(!/Parrainages|Dernière vérification|Situation non documentée/.test(r.t), 'fiche candidat : plus de rubrique Parrainages');
+    rep(r.desc === 0, 'fiche candidat : plus de paragraphe de présentation de la sélection', r.desc);
+    rep(r.st.label === 'Candidature déclarée' && /annoncée le 6 novembre 2026/.test(r.st.note) && r.q.label === 'Qualifié pour le second tour' && r.none === null, 'statut : déclarée avec date, qualification au second tour prioritaire, rien sans statut', [r.st, r.q, r.none]);
+    rep(r.all.join('|') === 'Candidature officiellement validée|Premier tour|Élu|Battu / éliminé|Désisté|Retiré|Candidature invalidée' && r.unknown === 'Statut à préciser', 'statuts de candidature : toutes les étapes ont un libellé, valeur inconnue sans erreur', r.all);
+    rep(!errs.length, 'fiche candidat : aucune erreur JS', errs);
+    await ctx.close();
+    const m = await open(br, 'mesure.html?e=1#2'); const t = await m.pg.evaluate(() => ({ t: document.getElementById('f-body').innerText, bq: document.querySelectorAll('#f-body blockquote').length, fd: document.querySelectorAll('.fs-detail').length }));
+    rep(!/Mécanisme|Publics concernés|Modalités d’application|Reformulation|Thématiques|Référence du/.test(t.t) && t.bq === 0 && t.fd === 0, 'fiche mesure : rubriques descriptives, paragraphe de formalisation et mise en forme de citation supprimés');
+    await m.ctx.close();
+    const c = await open(br, 'comparateur.html?e=1#retraites'); const ct = await c.pg.evaluate(() => document.body.innerText);
+    rep(!/Mécanisme \(|Publics concernés \(|Modalités \(/.test(ct), 'comparateur : lignes descriptives supprimées'); await c.ctx.close();
   }
 
   /* ---------- Mobile ---------- */

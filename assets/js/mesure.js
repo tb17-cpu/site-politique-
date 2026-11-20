@@ -25,15 +25,17 @@
     const cmpTh = (x, y) => (num(x.display_order) - num(y.display_order) || 0) || String(x.name || "").localeCompare(String(y.name || ""), "fr") || String(x.id || "").localeCompare(String(y.id || ""));
     const themes = (m.measure_themes || []).map(x => x && x.themes).filter(Boolean);
     const main = themes.filter(t => t.name).sort(cmpTh)[0];
-    const fm = UI.formalization(F.get(String(m.id)), { full: true });
+    const fr = F.get(String(m.id)), fm = UI.formalization(fr);
 
     let h = fm ? `<div class="m-meta">${fm}</div>` : "";
     h += section("Déclaré par le candidat",
-      (m.original_text ? `<blockquote class="quote">${UI.richInline(m.original_text)}</blockquote>` : "") +
+      /* Texte du candidat présenté tel quel, sans mise en forme de citation : les guillemets sont réservés aux extraits exacts sourcés. */
+      (m.original_text ? `<p class="decl-text">${UI.richInline(m.original_text)}</p>` : "") +
       kv([["Objectif annoncé", m.announced_objective], ["Coût annoncé", cost], ["Financement annoncé", m.announced_funding]]), "blk--lead");
-    h += section("Description", kv([["Reformulation explicative", m.reformulation], ["Mécanisme", m.mechanism], ["Publics concernés", m.target_groups], ["Modalités d’application", m.implementation_details], ["Précisions", m.additional_details]]));
-    if (themes.length) h += `<section class="blk"><header><b>Thématiques</b></header><ul class="fam-sub">${themes.map(t => `<li><a href="thematiques.html#${encodeURIComponent(t.slug)}">${e(t.name)}</a></li>`).join("")}</ul></section>`;
-    const ms = m.measure_sources || [], msl = srcList(ms, "exact_quote", "page_reference");
+    /* Source de référence du statut : ajoutée à la liste si elle n'y figure pas déjà (rien n'est perdu en retirant son paragraphe). */
+    const ms = (m.measure_sources || []).slice(), has = u => ms.some(x => x.sources && x.sources.url === u);
+    if (fr && fr.source && fr.source.url && !has(fr.source.url)) ms.push({ sources: fr.source, evidence_date: fr.date || null });
+    const msl = srcList(ms, "exact_quote", "page_reference");
     h += section("Sources et références", msl ? `<details class="m-fold"><summary>Voir les sources (${ms.length})</summary>${msl}</details>` : "");
 
     /* Analyses d'Au résultat : « Analyse · Thème · publiée le … ». Sources dans un menu déroulant, avec leurs citations, pages et notes. */

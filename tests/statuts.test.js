@@ -97,7 +97,7 @@ const M=[
   await page(w,TT({elections:[E1],measures:M}),'mesure.html?e=e1#m1',async p=>{
    const x=await txt(p);
    rep(await p.locator('.fs-official_program').count()===1&&x.includes(L.official_program),`${w}px fiche m1 : libellé exact du statut`);
-   rep(/Référence du/.test(x)&&await p.locator('.fs-detail a').count()===1,`${w}px fiche m1 : date de référence et source cliquable`);
+   rep(!/Référence du/.test(x)&&await p.locator('.fs-detail').count()===0&&await p.locator('details.m-fold a[href]').count()>=1,`${w}px fiche m1 : pas de paragraphe de formalisation, source conservée et cliquable dans la liste des sources`);
    rep(await p.locator('#f-body > p:first-child .rel').count()===0,`${w}px fiche m1 : fiabilité de la mesure remplacée par le statut`);
    const all=await p.evaluate(async()=>{const m=await DB.formalizations();return {k:[...m.keys()].sort(),ui:Object.fromEntries(['official_program','party_position','candidate_pledge','recent_announcement','press_reported','foo',null].map(k=>[k,UI.formalization(k?{status:k,date:'2026-10-02'}:null).replace(/<[^>]+>/g,'')]))}});
    rep(JSON.stringify(all.k)===JSON.stringify(['m1','m7']),`${w}px statuts retenus : seulement les justifiés (m1, m7)`,all.k);
@@ -121,7 +121,7 @@ const M=[
   for(const [id,why] of [['m2','association d’une autre mesure'],['m3','source dépubliée'],['m4','valeur inconnue'],['m5','date manquante'],['m6','aucun statut'],['m8','aucune association']]){
    await page(w,TT({elections:[E1],measures:M}),'mesure.html?e=e1#'+id,async p=>{rep(/Mesure m\d/.test(await txt(p))&&await p.locator('.st-err').count()===0&&await p.locator('.fs').count()===0,`${w}px ${id} (${why}) : fiche affichée, aucun badge`);});
   }
-  await page(w,TT({elections:[E1],measures:M}),'mesure.html?e=e1#m7',async p=>{rep(await p.locator('.fs-party_position').count()===1&&/Note éditoriale test/.test(await txt(p)),`${w}px m7 : position du parti + note`)});
+  await page(w,TT({elections:[E1],measures:M}),'mesure.html?e=e1#m7',async p=>{rep(await p.locator('.fs-party_position').count()===1&&!/Note éditoriale test/.test(await txt(p)),`${w}px m7 : position du parti, sans note explicative`)});
   // avant migration : colonnes absentes (400) -> aucun badge, la fiche reste complète
   await page(w,{...TT({elections:[E1],measures:M}),badSelect:{re:/formalization_status/,status:400}},'mesure.html?e=e1#m1',async p=>{
    const n=await p.evaluate(async()=>(await DB.formalizations()).size);
