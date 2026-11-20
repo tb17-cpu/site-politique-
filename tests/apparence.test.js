@@ -12,7 +12,8 @@ const ELEC=[{id:1,name:'Élection présidentielle française de 2027',year:2027,
  let ctx=await mk('light'),p=await ctx.newPage();await p.goto(B+'methodologie.html',{waitUntil:'networkidle'});
  const opts=await p.$$eval('.theme-pick select option',o=>o.map(x=>[x.value,x.textContent.trim()]));
  rep(JSON.stringify(opts)===JSON.stringify([['auto','Automatique'],['light','Clair'],['dark','Sombre']]),'sélecteur : Automatique, Clair, Sombre',opts);
- rep(await p.getAttribute('html','data-theme')==='light','automatique + système clair → clair');
+ rep(await p.getAttribute('html','data-theme')==='light'&&await p.evaluate(()=>window.Theme.pref())==='light','visiteur sans préférence : clair par défaut');
+ {const cd=await mk('dark'),pd=await cd.newPage();await pd.goto(B+'methodologie.html',{waitUntil:'networkidle'});rep(await pd.getAttribute('html','data-theme')==='light'&&await pd.evaluate(()=>document.querySelector('.theme-pick select').value)==='light','visiteur sans préférence, système sombre : le site reste clair');await cd.close();}
  await p.selectOption('.theme-pick select','dark');await p.waitForTimeout(500);
  rep(await p.getAttribute('html','data-theme')==='dark','choix Sombre appliqué');
  rep(await p.evaluate(()=>localStorage.getItem('ar.theme'))==='dark','choix mémorisé');
@@ -24,7 +25,7 @@ const ELEC=[{id:1,name:'Élection présidentielle française de 2027',year:2027,
  rep(first.t==='dark'&&first.bg==='rgb(11, 20, 36)','rechargement : sombre dès le DOMContentLoaded, fond bleu nuit',first);
  rep(!first.muts||first.muts.every(x=>x==='dark'),'aucun changement de thème pendant le chargement (pas de flash)',first.muts);
  await p2.selectOption('.theme-pick select','auto');
- rep(await p2.evaluate(()=>localStorage.getItem('ar.theme'))===null,'automatique : préférence effacée');
+ rep(await p2.evaluate(()=>localStorage.getItem('ar.theme'))==='auto','automatique : choix mémorisé');
  rep(await p2.getAttribute('html','data-theme')==='light','automatique suit le système (clair)');
  await p2.emulateMedia({colorScheme:'dark'});await p2.waitForTimeout(500);
  rep(await p2.getAttribute('html','data-theme')==='dark','automatique : suit le changement système en direct (sombre)');
@@ -32,10 +33,10 @@ const ELEC=[{id:1,name:'Élection présidentielle française de 2027',year:2027,
  // 3. stockage indisponible
  ctx=await br.newContext({colorScheme:'dark'});await ctx.addInitScript(()=>{Object.defineProperty(window,'localStorage',{get(){throw new Error('blocked')}})});
  p=await ctx.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));await p.goto(B+'index.html',{waitUntil:'networkidle'});
- rep(await p.getAttribute('html','data-theme')==='dark'&&!errs.length,'stockage bloqué : suit le système, sans erreur',errs);await ctx.close();
+ rep(await p.getAttribute('html','data-theme')==='light'&&!errs.length,'stockage bloqué : clair par défaut, sans erreur',errs);await ctx.close();
  // 4. focus clavier
  for(const th of ['light','dark']){
-  ctx=await br.newContext({colorScheme:th,viewport:{width:1280,height:800}});await ctx.route('**/rest/v1/**',r=>{if(r.request().method()==='OPTIONS')return r.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-expose-headers':'content-range'}});const t=new URL(r.request().url()).pathname.split('/').pop();const d=t==='elections'?ELEC:[];r.fulfill({status:200,headers:{'content-type':'application/json','access-control-allow-origin':'*','access-control-expose-headers':'content-range','content-range':`0-0/${d.length}`},body:JSON.stringify(d)})});
+  ctx=await br.newContext({colorScheme:th,viewport:{width:1280,height:800}});await ctx.addInitScript(v=>{try{localStorage.setItem('ar.theme',v)}catch(e){}},th);await ctx.route('**/rest/v1/**',r=>{if(r.request().method()==='OPTIONS')return r.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-expose-headers':'content-range'}});const t=new URL(r.request().url()).pathname.split('/').pop();const d=t==='elections'?ELEC:[];r.fulfill({status:200,headers:{'content-type':'application/json','access-control-allow-origin':'*','access-control-expose-headers':'content-range','content-range':`0-0/${d.length}`},body:JSON.stringify(d)})});
   p=await ctx.newPage();await p.goto(B+'index.html',{waitUntil:'networkidle'});
   const pe=await ctx.newPage();await pe.goto(B+'election.html?e=1',{waitUntil:'networkidle'});
   for(const [zone,sel] of [['bandeau élection','.elec-bar .eb-nav a'],['pied de page','.site-footer a'],['en-tête','.site-nav a'],['contenu','main a']]){

@@ -1,11 +1,12 @@
 /* Apparence du site : clair, sombre ou automatique (préférence du système).
    Chargé dans <head>, de façon synchrone, AVANT les feuilles de style : <html data-theme="light|dark"> est posé avant le premier
-   affichage, il n'y a donc aucun flash de couleurs. Le choix (clé « ar.theme ») est mémorisé dans le navigateur ; sans choix, ou si
-   le stockage est indisponible, le mode suit le système (« automatique »). Le sélecteur de l'en-tête est construit par layout.js. */
+   affichage, il n'y a donc aucun flash de couleurs. Le choix (clé « ar.theme » : light, dark ou auto) est mémorisé dans le navigateur.
+   Sans choix enregistré, ou si le stockage est indisponible, le site s'ouvre en CLAIR, quel que soit le réglage du système ;
+   « automatique » (suivre le système) n'est actif que si le visiteur l'a choisi. Le sélecteur de l'en-tête est construit par layout.js. */
 (function () {
-  var KEY = "ar.theme", root = document.documentElement, mq = null, pref = "auto";
-  var read = function () { try { var v = localStorage.getItem(KEY); return v === "light" || v === "dark" ? v : "auto"; } catch (e) { return "auto"; } };
-  var write = function (v) { try { if (v === "auto") localStorage.removeItem(KEY); else localStorage.setItem(KEY, v); } catch (e) { /* stockage indisponible : le choix vaut pour cette page seulement */ } };
+  var KEY = "ar.theme", root = document.documentElement, mq = null, pref = "light";
+  var read = function () { try { var v = localStorage.getItem(KEY); return v === "light" || v === "dark" || v === "auto" ? v : "light"; } catch (e) { return "light"; } };
+  var write = function (v) { try { localStorage.setItem(KEY, v); } catch (e) { /* stockage indisponible : le choix vaut pour cette page seulement */ } };
   var system = function () { return mq && mq.matches ? "dark" : "light"; };
   try { mq = window.matchMedia("(prefers-color-scheme: dark)"); } catch (e) { mq = null; }
   var COLORS = { light: "#ffffff", dark: "#0f1a2f" };   /* barre du navigateur sur mobile = couleur de l'en-tête */
@@ -31,6 +32,6 @@
   window.Theme = {
     pref: function () { return pref; },
     theme: function () { return root.getAttribute("data-theme"); },
-    set: function (v) { pref = v === "light" || v === "dark" ? v : "auto"; write(pref); apply(true); }
+    set: function (v) { pref = v === "dark" || v === "auto" ? v : "light"; write(pref); apply(true); }
   };
 })();
