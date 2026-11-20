@@ -6,7 +6,8 @@
   const dmy = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ""); return m ? { d: +m[3], m: +m[2] - 1, y: +m[1] } : null; };
   const date = iso => { const x = dmy(iso); return x ? `${x.d === 1 ? "1er" : x.d} ${mois[x.m]} ${x.y}` : ""; };
   const pct = v => Number(v) < 1 ? "moins de 1 %" : Number(v).toFixed(1).replace(".", ",") + " %";
-  const pct0 = v => Number.isInteger(Math.round(v * 10) / 10) && Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)).replace(".", ",") + " %" : pct(v);
+  /* Estimation : entier si la valeur est ronde (28 %), sinon une décimale (28,5 %). */
+  const pct0 = v => Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) + " %" : pct(v);
   const nb = n => Number(n).toLocaleString("fr-FR");
   const day = iso => { const x = dmy(iso); return x ? Date.UTC(x.y, x.m, x.d) / 864e5 : null; };
 

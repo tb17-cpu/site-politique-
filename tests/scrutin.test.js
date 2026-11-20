@@ -9,7 +9,7 @@ const ELS=['e1','e2','e3','e4','e5'].map(id=>mkEl(id));
 ELS[3].second_round_date=null; // e4 : scrutin à un seul tour
 const per=(id,fn,ln)=>({id:'p'+id,first_name:fn,last_name:ln,...pb});
 const cand=(id,el,fn,ln,st='declared')=>({id,election_id:el,candidacy_status:st,...pb,people:per(id,fn,ln),parties:null,elections:{id:el,name:'Présidentielle fictive '+el,year:2027,scheduled_date:'2027-04-10',second_round_date:'2027-04-24',...pb},programs:[],candidacy_sources:[],candidacy_sponsorship_territories:[]});
-const C=[];['e1','e2','e3','e4'].forEach(el=>[['A','Alice','Alpha'],['B','Bruno','Beta'],['C','Carla','Gamma'],['D','David','Delta']].forEach(([k,f,l])=>C.push(cand(k+'-'+el,el,f,l))));
+const C=[];['e1','e2','e3','e4','e5'].forEach(el=>[['A','Alice','Alpha'],['B','Bruno','Beta'],['C','Carla','Gamma'],['D','David','Delta']].forEach(([k,f,l])=>C.push(cand(k+'-'+el,el,f,l))));
 const src=(id,pub)=>({id,title:'Notice '+id,url:'https://example.org/'+id,publisher:'Commission',publication_date:pub,...pb});
 const S=[];
 const poll=(el,tag,pollster,pub,end,scen,vals,start)=>{const so=src(el+tag,pub);vals.forEach(([k,v],i)=>S.push({id:el+tag+i,election_id:el,snapshot_date:pub,record_kind:'poll',poll_date:end,fieldwork_start:start||end,pollster,entity_kind:'candidacy',candidacy_id:k+'-'+el,candidacies:C.find(c=>c.id===k+'-'+el),scenario:scen,methodology:'Méthode '+pollster,notes:null,sample_size:1000+i,value_percent:v,...pb,sources:so}))};
@@ -19,6 +19,7 @@ poll('e1','b','OpinionWay','2026-11-08','2026-11-05','Premier tour, hypothèse 1
 poll('e1','c','Elabe','2026-08-01','2026-07-30','Premier tour, hypothèse 1',[['A',25],['C',12]]);
 poll('e1','d','Odoxa','2026-11-14','2026-11-13','Second tour : Alpha face à Beta',[['A',47],['B',53]]);   // second tour : jamais utilisé avant le 1er tour
 poll('e1','e','Harris','2026-11-15','2026-11-14','Sondage sans mention',[['D',44],['A',56]]);                 // 2 entités sans mention : tour indéterminé, ignoré
+poll('e5','a','Ifop','2026-11-12','2026-11-10','Premier tour',[['A',30],['B',20],['C',10]]); // e5 : un seul sondage
 // e2 : après le 1er tour (résultats provisoires), sondage de 2nd tour pour les qualifiés A et B
 poll('e2','a','Ifop','2027-04-15','2027-04-14','Second tour : Alpha face à Beta',[['A',47],['B',53]]);
 poll('e2','b','Ifop','2027-04-01','2027-04-01','Premier tour',[['A',27],['B',21],['C',15]]);
@@ -73,7 +74,9 @@ const card=async(p)=>{await p.waitForSelector('.status-card',{timeout:4000}).cat
     rep(/Inscrits/i.test(t2)&&/Abstentions/i.test(t2)&&/Bulletins blancs/i.test(t2)&&/Bulletins nuls/i.test(t2)&&/75,0 %/.test(t2),`${w}px résultats : participation, abstention, blancs, nuls`,t2);
     await p.locator('.res-tab').first().click(); const t1=await t();
     rep(/28,5 %/.test(t1)&&/Qualifié pour le second tour/.test(t1)&&!/Élu/.test(t1)&&/10\s?032\s?000 voix/.test(t1),`${w}px résultats : premier tour, qualifiés identifiés`,t1.slice(0,300));
-    rep(await p.locator('.res').count()===1&&await p.locator('.pollsel').count()===0||await p.locator('.pollsel').count()===0,`${w}px résultats : sondages et résultats restent distincts`);
+    rep(await p.locator('.res').count()===1&&await p.locator('.pollsel').count()===0,`${w}px résultats : sans sondage, seule la rubrique résultats est présente`);
+    await p.locator('.res-tab').first().focus(); await p.keyboard.press('ArrowRight');
+    rep(await p.locator('.res-tab[aria-selected=true]').innerText()==='Second tour'&&await p.evaluate(()=>document.activeElement.textContent)==='Second tour',`${w}px résultats : onglets utilisables au clavier (flèches)`);
     rep(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),`${w}px résultats : pas de débordement horizontal`);});
   await page(w,'election.html?e=e2',async p=>{const t=await p.locator('[data-results=ok]').innerText();
     rep(/Résultats provisoires/.test(t)&&await p.locator('.res-tab').count()===1&&!/Second tour/.test(t),`${w}px résultats provisoires : un seul tour, pas de second tour fictif`,t.slice(0,200));});
@@ -97,6 +100,22 @@ const card=async(p)=>{await p.waitForSelector('.status-card',{timeout:4000}).cat
   await page(w,'candidat.html#B-e3',async p=>{const c=await card(p);rep(c&&/Élu/.test(c.t)&&c.lines.length===2&&/52,8 %/.test(c.lines[1].t),`${w}px après 2nd tour : élu`,c);});
   await page(w,'candidat.html#A-e4',async p=>{const c=await card(p);rep(c&&c.lines.length===1&&/Premier tour/.test(c.lines[0].t)&&!/Second tour|Qualifié|Élu|Battu/.test(c.t),`${w}px scrutin à un tour : score, aucun second tour artificiel (aucun marquage de qualification -> statut inchangé)`,c);});
  }
+ // un seul sondage : pas de flèches ni de liste inutiles
+ await page(1280,'election.html?e=e5',async p=>{rep(await p.locator('.ps-btn').count()===0&&await p.locator('[data-ps=select]').count()===0&&await p.locator('.poll').count()===1,'un seul sondage : ni flèches ni liste, affichage direct')}); 
+ // sondages ET résultats ensemble (e2 : sondages + résultats provisoires) : deux rubriques distinctes, thèmes clair/sombre, mobile et bureau
+ for(const th of ['light','dark'])for(const w of [1280,400]) await page(w,'election.html?e=e2',async p=>{
+   rep(await p.locator('.res').count()===1&&await p.locator('.poll').count()===1,`${th} ${w}px : résultats et sondages distincts sur la même page`);
+   rep(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),`${th} ${w}px accueil : pas de débordement horizontal`);
+   const cr=await p.evaluate(()=>{const lum=s=>{const m=s.match(/[\d.]+/g).map(Number);const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return .2126*f(m[0])+.7152*f(m[1])+.0722*f(m[2])};const bgOf=e=>{while(e){const c=getComputedStyle(e).backgroundColor;if(!/rgba\(0, 0, 0, 0\)|transparent/.test(c))return c;e=e.parentElement}return 'rgb(255,255,255)'};
+     return ['.res-tab[aria-selected=true]','.res-badge','.ps-pos','.ps-select','.bar-v','.res-tag'].filter(q=>document.querySelector(q)).map(q=>{const e=document.querySelector(q),a=lum(getComputedStyle(e).color),b=lum(bgOf(e));return [q,+((Math.max(a,b)+.05)/(Math.min(a,b)+.05)).toFixed(2)]})});
+   rep(cr.every(x=>x[1]>=4.5),`${th} ${w}px : contrastes de la rubrique résultats et du sélecteur ≥ 4,5`,cr);
+ },null,th);
+ // carte de statut : thèmes clair/sombre, bureau/mobile (débordement, contraste, lisibilité)
+ for(const th of ['light','dark'])for(const w of [1280,400]) await page(w,'candidat.html#A-e2',async p=>{await p.waitForSelector('.status-card');
+   const r=await p.evaluate(()=>{const lum=s=>{const m=s.match(/[\d.]+/g).map(Number);const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return .2126*f(m[0])+.7152*f(m[1])+.0722*f(m[2])};const bg=getComputedStyle(document.querySelector('.status-card')).backgroundColor;
+     const c=['.status-card b','.sc-k','.sc-lines small'].map(q=>{const e=document.querySelector(q),a=lum(getComputedStyle(e).color),b=lum(bg);return +((Math.max(a,b)+.05)/(Math.min(a,b)+.05)).toFixed(2)});
+     const sc=document.querySelector('.status-card').getBoundingClientRect();return {c,over:document.documentElement.scrollWidth>innerWidth+1,inside:sc.right<=innerWidth+1}});
+   rep(!r.over&&r.inside&&r.c.every(x=>x>=4.5),`${th} ${w}px carte de statut : pas de débordement, contrastes ≥ 4,5`,r)},null,th);
  // cohérence : mêmes données pour l'accueil et la carte (e3, A : 28,5 % au 1er tour partout)
  await page(1280,'election.html?e=e3',async p=>{await p.locator('.res-tab').first().click();rep(/28,5 %/.test(await p.locator('[data-results=ok]').innerText()),'cohérence : accueil = 28,5 % pour A (premier tour)');});
  // mode sombre : la rubrique et la carte restent lisibles (contraste texte/fond de la carte)

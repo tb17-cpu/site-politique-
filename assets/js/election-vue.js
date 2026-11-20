@@ -53,9 +53,9 @@
     const n = PS.groups.length; if (!n) return none;
     const sel = n > 1 ? `<label class="sr-only" for="ps-select">Choisir un sondage</label><select id="ps-select" class="ps-select" data-ps="select">${PS.groups.map((g, k) => `<option value="${k}">${e((g.date ? Scrutin.date(g.date) : "sans date") + " · " + instOf(g))}</option>`).join("")}</select>` : "";
     return `<section class="pollsel" data-pollsel><h2 class="ov-h">Sondages <small class="ps-count">${n} enregistré${n > 1 ? "s" : ""}</small></h2>
-      <div class="ps-bar"><button type="button" class="ps-btn" data-ps="older" aria-label="Sondage plus ancien">‹</button>
+      <div class="ps-bar">${n > 1 ? `<button type="button" class="ps-btn" data-ps="older" aria-label="Sondage plus ancien">‹</button>` : ""}
         <div class="ps-mid" data-ps-head>${pollHead()}</div>
-        <button type="button" class="ps-btn" data-ps="newer" aria-label="Sondage plus récent">›</button></div>
+        ${n > 1 ? `<button type="button" class="ps-btn" data-ps="newer" aria-label="Sondage plus récent">›</button>` : ""}</div>
       <div class="ps-tools">${sel}<span class="ps-pos quiet" data-ps-pos aria-live="polite">Sondage 1 sur ${n}</span></div>
       <section class="poll ps-panel" data-ps-panel aria-live="polite" aria-label="Sondage affiché">${pollOne(PS.groups[0])}</section></section>`;
   };
@@ -66,7 +66,7 @@
       box.querySelector("[data-ps-head]").innerHTML = pollHead();
       box.querySelector("[data-ps-pos]").textContent = `Sondage ${k + 1} sur ${n}`;
       const sl = box.querySelector("[data-ps=select]"); if (sl) sl.value = String(k);
-      box.querySelector("[data-ps=newer]").disabled = k === 0; box.querySelector("[data-ps=older]").disabled = k === n - 1;
+      const nw = box.querySelector("[data-ps=newer]"), od = box.querySelector("[data-ps=older]"); if (nw) nw.disabled = k === 0; if (od) od.disabled = k === n - 1;
       panel.innerHTML = pollOne(PS.groups[k]);
       if (!same) { panel.classList.remove("ps-in"); void panel.offsetWidth; panel.classList.add("ps-in"); } };
     box.addEventListener("click", ev => { const b = ev.target.closest("button[data-ps]"); if (!b || b.disabled) return; show(PS.i + (b.dataset.ps === "older" ? 1 : -1)); });
@@ -99,13 +99,16 @@
     RS = { rounds: Scrutin.rounds(R), i: 0 }; RS.i = RS.rounds.length - 1;
     if (!RS.rounds.length) return `<section class="res" data-results="none" hidden></section>`;
     return `<section class="res" data-results="ok"><h2 class="ov-h">Résultats officiels</h2>
-      <div class="res-tabs" role="tablist" aria-label="Tours de scrutin">${RS.rounds.map((rd, k) => `<button type="button" role="tab" class="res-tab" id="rt-${k}" aria-controls="res-panel" aria-selected="${k === RS.i}" data-rt="${k}">${e(Scrutin.roundName(rd.round_number))}</button>`).join("")}</div>
+      <div class="res-tabs" role="tablist" aria-label="Tours de scrutin">${RS.rounds.map((rd, k) => `<button type="button" role="tab" class="res-tab" tabindex="${k === RS.i ? 0 : -1}" id="rt-${k}" aria-controls="res-panel" aria-selected="${k === RS.i}" data-rt="${k}">${e(Scrutin.roundName(rd.round_number))}</button>`).join("")}</div>
       <div class="res-panel ps-panel" id="res-panel" role="tabpanel" data-res-panel>${resRound(RS.rounds[RS.i])}</div></section>`;
   };
   const resWire = root => {
     const box = root.querySelector("[data-results=ok]"); if (!box) return;
+    box.addEventListener("keydown", ev => { const b = ev.target.closest("[data-rt]"); if (!b || !/^(ArrowLeft|ArrowRight|Home|End)$/.test(ev.key)) return;
+      const t = [...box.querySelectorAll("[data-rt]")], k = ev.key === "Home" ? 0 : ev.key === "End" ? t.length - 1 : (t.indexOf(b) + (ev.key === "ArrowRight" ? 1 : -1) + t.length) % t.length;
+      ev.preventDefault(); t[k].focus(); t[k].click(); });
     box.addEventListener("click", ev => { const b = ev.target.closest("[data-rt]"); if (!b) return; RS.i = +b.dataset.rt;
-      box.querySelectorAll("[data-rt]").forEach((x, k) => x.setAttribute("aria-selected", String(k === RS.i)));
+      box.querySelectorAll("[data-rt]").forEach((x, k) => { x.setAttribute("aria-selected", String(k === RS.i)); x.tabIndex = k === RS.i ? 0 : -1; });
       const p = box.querySelector("[data-res-panel]"); p.innerHTML = resRound(RS.rounds[RS.i]); p.classList.remove("ps-in"); void p.offsetWidth; p.classList.add("ps-in"); });
   };
   const U_URL = u => UI.safeUrl(u);
