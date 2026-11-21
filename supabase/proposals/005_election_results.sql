@@ -2,7 +2,7 @@
 -- À relire puis à exécuter uniquement par le propriétaire du projet. Ni le site ni Claude ne l'exécutent. Nouvelles tables seulement :
 -- aucune table, ligne, politique ou permission existante n'est modifiée. Tant qu'elle n'est pas appliquée, le site n'affiche aucune rubrique
 -- « Résultats » (DB.results traite l'absence de table comme « aucun résultat », sans erreur).
--- Prérequis (schéma réel, vérifié pour la migration 002) : elections.id, sources.id, candidacies.id, parties.id, people.id sont de type uuid ;
+-- Prérequis (schéma réel, vérifié pour la migration 002) : candidacies.second_round_status et second_round_qualified_at existent (vue de rapprochement) ; elections.id, sources.id, candidacies.id, parties.id, people.id sont de type uuid ;
 -- candidacies.election_id existe.
 --
 -- Modèle : une ligne par tour (election_round_results : participation, date, provisoire/définitif) et une ligne par candidat, liste ou parti
@@ -130,7 +130,8 @@ create trigger err_guard before insert or update on public.election_round_result
 create function public.election_candidate_guard() returns trigger language plpgsql as $$
 declare r public.election_round_results%rowtype;
 begin
-  select * into r from public.election_round_results where id = new.round_result_id;
+  -- Verrou du tour parent dès la première écriture (BEFORE, avant la vérification de clé étrangère : pas d'interblocage KEY SHARE / UPDATE).
+  select * into r from public.election_round_results where id = new.round_result_id for update;
   if tg_op = 'UPDATE' and new.round_result_id <> old.round_result_id then
     raise exception 'le tour d''un score est immuable';
   end if;
@@ -150,6 +151,7 @@ create trigger ecr_guard before insert or update on public.election_candidate_re
 create function public.election_round_totals_verify(rid uuid) returns void language plpgsql as $$
 declare sp numeric; sv numeric; ev bigint;
 begin
+  perform 1 from public.election_round_results where id = rid for update;   -- sérialise les écritures concurrentes sur ce tour (voir election_candidate_guard)
   select coalesce(sum(percent_expressed),0), coalesce(sum(votes),0) into sp, sv from public.election_candidate_results where round_result_id = rid;
   select expressed_votes into ev from public.election_round_results where id = rid;
   if sp > 100.5 then raise exception 'la somme des pourcentages du tour dépasse 100,5 %% (%)', sp; end if;
@@ -169,6 +171,11 @@ create constraint trigger err_totals after update of expressed_votes on public.e
 -- Contrainte différée : l'ordre d'insertion dans une même transaction est libre ; le contrôle a lieu à la fin de la transaction.
 create function public.election_round_outcomes_verify(rid uuid) returns void language plpgsql as $$
 begin
+  -- Concurrence : deux transactions qui écrivent dans le même tour (l'une un élu, l'autre un qualifié) ne se voient pas avant leur validation.
+  -- Le verrou FOR UPDATE du tour parent (pris dès la première écriture par election_candidate_guard, conservé jusqu'à la fin de la
+  -- transaction) les SÉRIALISE : la seconde attend la première, puis ce contrôle différé lit les lignes validées par la première (READ COMMITTED,
+  -- niveau par défaut de Supabase : chaque requête voit les validations antérieures). Reverrouillage ici par sécurité (sans attente si déjà détenu).
+  perform 1 from public.election_round_results where id = rid for update;
   if exists (select 1 from public.election_candidate_results where round_result_id = rid and elected)
      and exists (select 1 from public.election_candidate_results where round_result_id = rid and qualified_next_round) then
     raise exception 'incohérence : le tour % comporte à la fois un élu et des candidats qualifiés pour le tour suivant', rid;
@@ -178,6 +185,43 @@ create function public.election_round_outcomes_check() returns trigger language 
 begin perform public.election_round_outcomes_verify(new.round_result_id); return null; end $$;
 create constraint trigger ecr_outcomes after insert or update of elected, qualified_next_round, round_result_id on public.election_candidate_results
   deferrable initially deferred for each row execute function public.election_round_outcomes_check();
+
+
+-- Vues de CONTRÔLE éditorial (propriétaire uniquement, jamais exposées à l'API publique ; security_invoker).
+-- a) Même candidat : issue terminale (élu, ou éliminé/battu sur résultat définitif) à un tour PUIS présent dans un tour ultérieur. Ce n'est pas
+--    interdit en base (aucune règle universelle : scrutins à plusieurs élus, dépouillements particuliers) ; le site neutralise l'affichage
+--    (aucun statut d'issue pour ce candidat) et cette vue permet de retrouver et corriger la donnée.
+create view public.election_result_path_conflicts with (security_invoker = true) as
+  with e as (
+    select r.id as round_id, r.election_id, r.round_number, r.result_status, s.id as score_id, s.entity_kind,
+           coalesce(s.candidacy_id::text, s.party_id::text, s.person_id::text, lower(btrim(s.entity_label))) as entity_key,
+           s.elected, s.qualified_next_round,
+           (select bool_or(x.elected) from public.election_candidate_results x where x.round_result_id = r.id) as round_has_elected,
+           (select bool_or(x.qualified_next_round) from public.election_candidate_results x where x.round_result_id = r.id) as round_has_qualified
+      from public.election_round_results r join public.election_candidate_results s on s.round_result_id = r.id)
+  select a.election_id, a.entity_kind, a.entity_key, a.round_number as terminal_round,
+         case when a.elected then 'élu' else 'éliminé ou battu' end as terminal_outcome, b.round_number as later_round
+    from e a join e b on b.election_id = a.election_id and b.entity_kind = a.entity_kind and b.entity_key = a.entity_key and b.round_number > a.round_number
+   where a.elected or (a.result_status = 'final' and not a.qualified_next_round and (a.round_has_elected or a.round_has_qualified));
+revoke all on public.election_result_path_conflicts from anon, authenticated, public;
+
+-- b) Anciennes colonnes candidacies.second_round_status / second_round_qualified_at : informations DÉCLARATIVES (aucune source, aucune provenance,
+--    aucun lien avec les résultats). Le site ne les traite pas comme une preuve. Cette vue les rapproche des résultats enregistrés pour
+--    permettre la vérification éditoriale : « confirmé » (le résultat du tour 1 qualifie bien le candidat), « déclaré sans résultat
+--    confirmant » (à vérifier ou à saisir dans les résultats), « résultat sans déclaration ». Aucune donnée n'est modifiée ni supprimée.
+create view public.candidacy_second_round_reconciliation with (security_invoker = true) as
+  select c.id as candidacy_id, c.election_id, c.second_round_status::text as declared_status, c.second_round_qualified_at::text as declared_at,
+         q.qualified as result_qualified,
+         case when (lower(coalesce(c.second_round_status::text,'')) = 'qualified' or c.second_round_qualified_at is not null) and coalesce(q.qualified,false) then 'confirmé par les résultats'
+              when (lower(coalesce(c.second_round_status::text,'')) = 'qualified' or c.second_round_qualified_at is not null) then 'déclaré sans résultat confirmant'
+              when coalesce(q.qualified,false) then 'résultat sans déclaration'
+              else null end as verdict
+    from public.candidacies c
+    left join lateral (select bool_or(s.qualified_next_round) as qualified
+                         from public.election_round_results r join public.election_candidate_results s on s.round_result_id = r.id
+                        where r.election_id = c.election_id and s.candidacy_id = c.id and r.publication_status = 'published') q on true
+   where lower(coalesce(c.second_round_status::text,'')) = 'qualified' or c.second_round_qualified_at is not null or coalesce(q.qualified,false);
+revoke all on public.candidacy_second_round_reconciliation from anon, authenticated, public;
 
 alter table public.election_round_results enable row level security;
 alter table public.election_candidate_results enable row level security;
@@ -208,4 +252,5 @@ revoke all on public.election_round_results, public.election_candidate_results f
 grant select on public.election_round_results, public.election_candidate_results to anon, authenticated;
 commit;
 -- Retour arrière : drop table public.election_candidate_results, public.election_round_results;
+--                  drop view public.candidacy_second_round_reconciliation, public.election_result_path_conflicts;
 --                  drop function public.election_candidate_guard(), public.election_round_guard(), public.election_round_totals_check(), public.election_round_totals_parent_check(), public.election_round_totals_verify(uuid), public.election_round_outcomes_check(), public.election_round_outcomes_verify(uuid), public.election_results_touch();

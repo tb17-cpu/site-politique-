@@ -89,8 +89,18 @@
     return { nEl, nQ, final, provisional: prov, contradictory, usable: (final || prov) && !contradictory };
   };
   /* Issue d'une ligne de résultat dans son tour : { kind: elected|qualified|eliminated|beaten, provisional } ou null (aucune conclusion). */
+  /* Issue TERMINALE d'une ligne dans son tour (élu, ou éliminé/battu sur résultat définitif) : elle clôt le parcours du candidat. */
+  const terminal = (en, rd) => { const v = verdict(rd);
+    return v.usable && (en.elected || (v.final && !en.qualified_next_round && (v.nEl > 0 || v.nQ > 0))); };
+  /* Parcours incohérent : un même candidat porte une issue terminale à un tour ET figure dans un autre tour (avant : « élu » puis candidat d'un tour
+     antérieur ne pose pas de problème en soi, mais une issue terminale ANTÉRIEURE suivie d'une présence ultérieure, ou l'inverse vue depuis la ligne
+     antérieure, est contradictoire). Aucune issue n'est alors affichée pour ce candidat (aucun statut ultérieur n'écrase silencieusement une victoire
+     antérieure, aucune victoire ne masque un résultat ultérieur) ; les scores de chaque tour restent visibles. Pas de règle sur le nombre d'élus. */
+  const pathConflict = (en, rd, rds) => rds.some(r => r !== rd && (r.candidates || []).some(x => sameEntity(x, en) &&
+    (r.round_number < rd.round_number ? terminal(x, r) : terminal(en, rd))));
   const outcome = (en, rd, rds) => {
     const v = verdict(rd); if (!en || !v.usable) return null;
+    if (pathConflict(en, rd, rds)) return null;
     if (en.elected) return { kind: "elected", provisional: !v.final };
     if (en.qualified_next_round) {
       /* Qualifié mais un tour suivant publié ne le mentionne pas : incohérent, aucune conclusion. */
@@ -143,5 +153,17 @@
     return { label: st ? st.label : "", note: st ? st.note : "", provisional: !!(st && st.provisional), kind: st ? st.kind : "", lines };
   };
 
-  g.Scrutin = { date, pct, nb, roundName, roundNameLow, statusName, pollGroups, roundOf, roundLabel, estimate, WINDOW_DAYS, MAX_AGE_DAYS, rounds, entryOf, stageCard, status, outcome, verdict, tagFor, dmy };
+  /* Rapprochement éditorial (diagnostic, lecture seule) : colonnes DÉCLARATIVES second_round_status / second_round_qualified_at (sans source ni
+     provenance) comparées aux résultats publiés. N'alimente AUCUN affichage public : ni preuve, ni statut. Retourne { confirmed, unconfirmed, undeclared }. */
+  const qualificationAudit = (candidacies, results) => {
+    const rds = rounds(results), out = { confirmed: [], unconfirmed: [], undeclared: [] };
+    (candidacies || []).forEach(c => {
+      const declared = String(c.second_round_status || "").trim().toLowerCase() === "qualified" || !!c.second_round_qualified_at;
+      const q = rds.some(rd => { const en = entryOf(rd, c); return en && outcome(en, rd, rds) && outcome(en, rd, rds).kind === "qualified"; });
+      if (declared && q) out.confirmed.push(c.id); else if (declared) out.unconfirmed.push(c.id); else if (q) out.undeclared.push(c.id);
+    });
+    return out;
+  };
+
+  g.Scrutin = { qualificationAudit, date, pct, nb, roundName, roundNameLow, statusName, pollGroups, roundOf, roundLabel, estimate, WINDOW_DAYS, MAX_AGE_DAYS, rounds, entryOf, stageCard, status, outcome, verdict, tagFor, dmy };
 })(window);

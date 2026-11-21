@@ -103,6 +103,48 @@ select pg_temp.expect_fail($$update election_candidate_results set qualified_nex
 select pg_temp.expect_fail($$update election_candidate_results set elected = true where round_result_id='00000000-0000-0000-0000-0000000000d6' and entity_label='C'; set constraints all immediate$$, 'déclarer élu un candidat dans un tour qui a des qualifiés refusé (UPDATE)', 'élu et des candidats qualifiés');
 select pg_temp.expect_ok($$update election_candidate_results set elected = true, qualified_next_round = false where round_result_id='00000000-0000-0000-0000-0000000000d6' and entity_label in ('A','B'); update election_candidate_results set elected = false where round_result_id='00000000-0000-0000-0000-0000000000d6'; set constraints all immediate$$, 'correction cohérente dans une même transaction acceptée');
 
+-- 005 : vues de contrôle éditorial (propriétaire uniquement) -----------------------------------------------------------------------------------
+insert into elections(id) values ('00000000-0000-0000-0000-00000000e301'),('00000000-0000-0000-0000-00000000e302'),('00000000-0000-0000-0000-00000000e303');
+insert into candidacies(id,election_id,second_round_status,second_round_qualified_at) values
+ ('00000000-0000-0000-0000-0000000e3a01','00000000-0000-0000-0000-00000000e301','qualified',null),
+ ('00000000-0000-0000-0000-0000000e3a02','00000000-0000-0000-0000-00000000e301','not_reached','2027-04-11'),
+ ('00000000-0000-0000-0000-0000000e3a03','00000000-0000-0000-0000-00000000e301',null,null),
+ ('00000000-0000-0000-0000-0000000e3a04','00000000-0000-0000-0000-00000000e301','not_reached',null),
+ ('00000000-0000-0000-0000-0000000e3b01','00000000-0000-0000-0000-00000000e302',null,null),
+ ('00000000-0000-0000-0000-0000000e3b02','00000000-0000-0000-0000-00000000e302',null,null),
+ ('00000000-0000-0000-0000-0000000e3c01','00000000-0000-0000-0000-00000000e303',null,null),
+ ('00000000-0000-0000-0000-0000000e3c02','00000000-0000-0000-0000-00000000e303',null,null),
+ ('00000000-0000-0000-0000-0000000e3c03','00000000-0000-0000-0000-00000000e303',null,null);
+insert into election_round_results(id,election_id,round_number,held_on,result_status,source_id,publication_status) values ('00000000-0000-0000-0000-0000000d3001','00000000-0000-0000-0000-00000000e301',1,'2027-04-10','final','00000000-0000-0000-0000-0000000000b1','published');
+insert into election_candidate_results(round_result_id,entity_kind,candidacy_id,votes,qualified_next_round,publication_status) values
+ ('00000000-0000-0000-0000-0000000d3001','candidacy','00000000-0000-0000-0000-0000000e3a01',50,true,'published'),
+ ('00000000-0000-0000-0000-0000000d3001','candidacy','00000000-0000-0000-0000-0000000e3a02',30,false,'published'),
+ ('00000000-0000-0000-0000-0000000d3001','candidacy','00000000-0000-0000-0000-0000000e3a03',20,true,'published');
+select pg_temp.expect_ok($q$do $x$ declare v text; begin
+  select verdict into v from candidacy_second_round_reconciliation where candidacy_id='00000000-0000-0000-0000-0000000e3a01'; if v is distinct from 'confirmé par les résultats' then raise exception 'a01 %', v; end if;
+  select verdict into v from candidacy_second_round_reconciliation where candidacy_id='00000000-0000-0000-0000-0000000e3a02'; if v is distinct from 'déclaré sans résultat confirmant' then raise exception 'a02 %', v; end if;
+  select verdict into v from candidacy_second_round_reconciliation where candidacy_id='00000000-0000-0000-0000-0000000e3a03'; if v is distinct from 'résultat sans déclaration' then raise exception 'a03 %', v; end if;
+  if exists (select 1 from candidacy_second_round_reconciliation where candidacy_id='00000000-0000-0000-0000-0000000e3a04') then raise exception 'a04 listé à tort (not_reached, aucune qualification)'; end if;
+end $x$$q$, 'rapprochement des colonnes déclaratives et des résultats : confirmé / déclaré sans résultat / résultat sans déclaration');
+-- conflits de parcours : élu ou éliminé à un tour puis présent plus tard ; un qualifié présent au tour suivant n'est PAS un conflit
+insert into election_round_results(id,election_id,round_number,held_on,result_status) values
+ ('00000000-0000-0000-0000-0000000d3101','00000000-0000-0000-0000-00000000e302',1,'2027-04-10','final'),('00000000-0000-0000-0000-0000000d3102','00000000-0000-0000-0000-00000000e302',2,'2027-04-24','final'),
+ ('00000000-0000-0000-0000-0000000d3201','00000000-0000-0000-0000-00000000e303',1,'2027-04-10','final'),('00000000-0000-0000-0000-0000000d3202','00000000-0000-0000-0000-00000000e303',2,'2027-04-24','final');
+insert into election_candidate_results(round_result_id,entity_kind,candidacy_id,votes,elected,qualified_next_round) values
+ ('00000000-0000-0000-0000-0000000d3101','candidacy','00000000-0000-0000-0000-0000000e3b01',60,true,false),('00000000-0000-0000-0000-0000000d3101','candidacy','00000000-0000-0000-0000-0000000e3b02',40,false,false),
+ ('00000000-0000-0000-0000-0000000d3102','candidacy','00000000-0000-0000-0000-0000000e3b01',55,false,false),('00000000-0000-0000-0000-0000000d3102','candidacy','00000000-0000-0000-0000-0000000e3b02',45,false,false),
+ ('00000000-0000-0000-0000-0000000d3201','candidacy','00000000-0000-0000-0000-0000000e3c01',40,false,true),('00000000-0000-0000-0000-0000000d3201','candidacy','00000000-0000-0000-0000-0000000e3c02',35,false,true),('00000000-0000-0000-0000-0000000d3201','candidacy','00000000-0000-0000-0000-0000000e3c03',25,false,false),
+ ('00000000-0000-0000-0000-0000000d3202','candidacy','00000000-0000-0000-0000-0000000e3c01',55,true,false),('00000000-0000-0000-0000-0000000d3202','candidacy','00000000-0000-0000-0000-0000000e3c02',45,false,false),('00000000-0000-0000-0000-0000000d3202','candidacy','00000000-0000-0000-0000-0000000e3c03',5,false,false);
+select pg_temp.expect_ok($q$do $x$ declare n int; begin
+  select count(*) into n from election_result_path_conflicts where election_id='00000000-0000-0000-0000-00000000e302'; if n <> 2 then raise exception 'e302 : % conflits (attendu 2 : élu puis réapparu, battu puis réapparu)', n; end if;
+  select count(*) into n from election_result_path_conflicts where election_id='00000000-0000-0000-0000-00000000e303'; if n <> 1 then raise exception 'e303 : % conflits (attendu 1 : éliminé puis réapparu ; qualifiés au tour suivant normaux)', n; end if;
+end $x$$q$, 'vue des conflits de parcours : élu/battu qui réapparaît détecté, qualifié présent au tour suivant non signalé');
+select pg_temp.expect_ok($$select 1$$, 'ces cas ne sont PAS interdits en base (aucune règle universelle) : insertions acceptées plus haut');
+set role anon;
+select pg_temp.expect_fail($$select * from election_result_path_conflicts$$, 'anon ne peut pas lire la vue des conflits', 'permission denied');
+select pg_temp.expect_fail($$select * from candidacy_second_round_reconciliation$$, 'anon ne peut pas lire la vue de rapprochement', 'permission denied');
+reset role;
+
 -- 006 : un changement d'identité de sondage ne doit pas faire rejoindre à une ligne un groupe de tour différent
 -- Groupe de référence : (f001, source NULL, 'Zed', 'S', 2026-10-01, fieldwork NULL) au tour 1 (inséré plus haut).
 insert into poll_snapshots(id,election_id,snapshot_date,poll_date,pollster,scenario,entity_kind,entity_label,value_percent,round,round_basis,fieldwork_start,source_id) values

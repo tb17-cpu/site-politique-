@@ -14,6 +14,17 @@ alter table public.poll_snapshots add constraint poll_round_basis_chk check (
 comment on column public.poll_snapshots.round is 'Tour de scrutin visé par le sondage (1, 2…). NULL : indéterminé, jamais utilisé pour une estimation.';
 comment on column public.poll_snapshots.round_basis is 'declared : saisi par l''éditeur ; backfill_text : repris du libellé du scénario (mention explicite et non ambiguë) lors de la migration.';
 
+-- 2a. Concurrence : les écritures concurrentes d'un même sondage (même identité) sont sérialisées par un verrou consultatif transactionnel
+--     (BEFORE, tenu jusqu'à la fin de la transaction) ; le contrôle différé ci-dessous voit alors les lignes validées par l'autre transaction (READ COMMITTED).
+create function public.poll_round_lock() returns trigger language plpgsql as $$
+begin
+  if new.record_kind = 'poll' then
+    perform pg_advisory_xact_lock(hashtextextended(concat_ws('|', new.election_id::text, new.source_id::text, new.pollster, new.scenario, new.poll_date::text, new.fieldwork_start::text), 0));
+  end if;
+  return new;
+end $$;
+create trigger poll_round_lock_trg before insert or update on public.poll_snapshots for each row execute function public.poll_round_lock();
+
 -- 2. Cohérence : toutes les lignes d'un même sondage (élection, source, institut, scénario, dates) portent le même tour (contrôle différé).
 create function public.poll_round_consistency() returns trigger language plpgsql as $$
 begin
@@ -58,4 +69,4 @@ revoke all on public.poll_snapshots_round_review from anon, authenticated, publi
 --    where record_kind = 'poll' and round is null and election_id = '…' and source_id = '…' and pollster = '…' and scenario = '…';
 commit;
 -- Retour arrière : drop view public.poll_snapshots_round_review; drop trigger poll_round_consistency_trg on public.poll_snapshots;
---                  drop function public.poll_round_consistency(); alter table public.poll_snapshots drop column round_basis, drop column round;
+--                  drop function public.poll_round_consistency(); drop trigger poll_round_lock_trg on public.poll_snapshots; drop function public.poll_round_lock(); alter table public.poll_snapshots drop column round_basis, drop column round;

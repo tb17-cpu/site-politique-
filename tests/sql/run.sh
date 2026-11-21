@@ -11,3 +11,4 @@ $P -f supabase/proposals/006_poll_round.sql
 $P -f supabase/proposals/005_election_results.sql
 $P -t -A -f tests/sql/005_006_contraintes.sql | tee /tmp/ar_sql_out.txt | grep -v "^$"
 ! grep -q "^FAIL" /tmp/ar_sql_out.txt
+sh tests/sql/concurrence.sh

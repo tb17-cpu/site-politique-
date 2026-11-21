@@ -194,6 +194,19 @@
         });
         return bad.length ? [KO, "sans traduction (libellé de repli affiché) : " + uniq(bad).join(", ")] : [OK, "toutes les valeurs visibles sont traduites"];
       });
+
+      /* Colonnes DÉCLARATIVES de second tour : jamais une preuve ni un affichage public ; simple rapprochement informatif avec les résultats publiés. */
+      await guard("Qualifications", "Colonnes déclaratives second_round_status / second_round_qualified_at", async () => {
+        const c = await DB.raw("candidacies", { select: "id,election_id,second_round_status,second_round_qualified_at", limit: PAGE });
+        const vals = {}; c.forEach(x => { const k = x.second_round_status == null ? "(vide)" : String(x.second_round_status); vals[k] = (vals[k] || 0) + 1; });
+        const decl = c.filter(x => String(x.second_round_status || "").toLowerCase() === "qualified" || x.second_round_qualified_at);
+        const dist = Object.keys(vals).sort().map(k => `${k} : ${vals[k]}`).join(" ; ") || "aucune candidature visible";
+        if (!decl.length) return [INFO, `aucune qualification déclarée (valeurs : ${dist}). Le site n’affiche une qualification que sur résultat enregistré.`];
+        const byEl = {}; c.forEach(x => (byEl[x.election_id] = byEl[x.election_id] || []).push(x));
+        const sum = { confirmed: 0, unconfirmed: 0, undeclared: 0 };
+        for (const el of Object.keys(byEl)) { const a = Scrutin.qualificationAudit(byEl[el], await DB.results(el)); sum.confirmed += a.confirmed.length; sum.unconfirmed += a.unconfirmed.length; sum.undeclared += a.undeclared.length; }
+        return [sum.unconfirmed ? WARN : INFO, `${decl.length} qualification(s) déclarée(s) (valeurs : ${dist}) : ${sum.confirmed} confirmée(s) par un résultat, ${sum.unconfirmed} déclarée(s) sans résultat confirmant (non affichées), ${sum.undeclared} résultat(s) sans déclaration. Colonnes conservées, jamais traitées comme preuve.`];
+      });
     } else {
       ["Comptages", "Thématiques", "Élection", "Visibilité", "Données personnelles"].forEach(g => add(g, "Contrôles de la rubrique « " + g + " »", NA, "non exécutés : connexion impossible"));
     }
