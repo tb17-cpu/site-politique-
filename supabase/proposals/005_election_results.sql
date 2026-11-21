@@ -16,7 +16,7 @@
 --  3. Doublons : une seule ligne par (tour, candidature), (tour, parti), (tour, personne) et (tour, libellé libre normalisé) ; un seul résultat par (élection, n° de tour).
 --  4. Chiffres : votants ≤ inscrits ; blancs + nuls ≤ votants ; identités abstentions = inscrits − votants et exprimés = votants − blancs − nuls
 --     lorsque toutes les valeurs sont renseignées ; somme des pourcentages ≤ 100,5 % et somme des voix ≤ suffrages exprimés (contrôle différé :
---     fin de transaction) ; élu et qualifié pour le tour suivant s'excluent.
+--     fin de transaction, aussi déclenché par toute modification de expressed_votes du tour) ; élu et qualifié pour le tour suivant s'excluent.
 --  5. Provisoire puis définitif : le passage définitif → provisoire est interdit ; l'élection et le n° de tour d'un résultat sont immuables ;
 --     le tour parent d'un score est immuable.
 begin;
@@ -143,18 +143,25 @@ begin
 end $$;
 create trigger ecr_guard before insert or update on public.election_candidate_results for each row execute function public.election_candidate_guard();
 
--- Totaux d'un tour (contrôle différé : tolérant à l'insertion ligne par ligne dans une même transaction)
-create function public.election_round_totals_check() returns trigger language plpgsql as $$
-declare rid uuid := coalesce(new.round_result_id, old.round_result_id); sp numeric; sv numeric; ev bigint; n int;
+-- Totaux d'un tour (contrôles différés : tolérants à l'insertion ligne par ligne dans une même transaction).
+-- Déclenchés par un changement des scores (table enfant) ET par une modification de expressed_votes sur le tour (table parente) :
+-- on ne peut pas réduire les suffrages exprimés sous la somme des voix déjà enregistrées.
+create function public.election_round_totals_verify(rid uuid) returns void language plpgsql as $$
+declare sp numeric; sv numeric; ev bigint;
 begin
   select coalesce(sum(percent_expressed),0), coalesce(sum(votes),0) into sp, sv from public.election_candidate_results where round_result_id = rid;
   select expressed_votes into ev from public.election_round_results where id = rid;
   if sp > 100.5 then raise exception 'la somme des pourcentages du tour dépasse 100,5 %% (%)', sp; end if;
   if ev is not null and sv > ev then raise exception 'la somme des voix (%) dépasse les suffrages exprimés (%)', sv, ev; end if;
-  return null;
 end $$;
+create function public.election_round_totals_check() returns trigger language plpgsql as $$
+begin perform public.election_round_totals_verify(coalesce(new.round_result_id, old.round_result_id)); return null; end $$;
+create function public.election_round_totals_parent_check() returns trigger language plpgsql as $$
+begin perform public.election_round_totals_verify(new.id); return null; end $$;
 create constraint trigger ecr_totals after insert or update or delete on public.election_candidate_results
   deferrable initially deferred for each row execute function public.election_round_totals_check();
+create constraint trigger err_totals after update of expressed_votes on public.election_round_results
+  deferrable initially deferred for each row execute function public.election_round_totals_parent_check();
 
 alter table public.election_round_results enable row level security;
 alter table public.election_candidate_results enable row level security;
@@ -185,4 +192,4 @@ revoke all on public.election_round_results, public.election_candidate_results f
 grant select on public.election_round_results, public.election_candidate_results to anon, authenticated;
 commit;
 -- Retour arrière : drop table public.election_candidate_results, public.election_round_results;
---                  drop function public.election_candidate_guard(), public.election_round_guard(), public.election_round_totals_check(), public.election_results_touch();
+--                  drop function public.election_candidate_guard(), public.election_round_guard(), public.election_round_totals_check(), public.election_round_totals_parent_check(), public.election_round_totals_verify(uuid), public.election_results_touch();

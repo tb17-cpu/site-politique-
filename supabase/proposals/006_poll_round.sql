@@ -28,7 +28,8 @@ begin
   end if;
   return null;
 end $$;
-create constraint trigger poll_round_consistency_trg after insert or update of round on public.poll_snapshots
+-- Déclenché aussi quand un champ d'identité du sondage change : une ligne ne peut pas rejoindre (ni créer) un groupe de tour différent.
+create constraint trigger poll_round_consistency_trg after insert or update of round, record_kind, election_id, source_id, pollster, scenario, poll_date, fieldwork_start on public.poll_snapshots
   deferrable initially deferred for each row execute function public.poll_round_consistency();
 
 -- 3. Anciennes lignes : remplissage UNIQUEMENT si le scénario mentionne explicitement un seul tour. Aucune déduction par le nombre de candidats.

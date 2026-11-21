@@ -46,12 +46,18 @@
   const norm = x => String(x || "").toLowerCase().replace(/\s+/g, " ").trim();
   const inst = g => norm(String(g.rows[0].pollster || "").replace(/\s+pour\s+.*$/i, ""));
   const sig = g => g.rows.map(r => r.entity_kind + ":" + (r.candidacy_id || r.party_id || r.person_id || norm(r.entity_label))).sort().join("|");
-  const WINDOW_DAYS = 21;
+  const WINDOW_DAYS = 21;     /* moyenne : sondages comparables à moins de 21 jours du sondage de référence */
+  const MAX_AGE_DAYS = 30;    /* fraîcheur : au-delà de 30 jours avant aujourd'hui, aucune estimation n'est présentée comme actuelle */
+  const today = () => { const d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5; };
   const estimate = (groups, c, round) => {
     const ok = groups.filter(g => g.round === round && g.date && day(g.date) != null && valueOf(g, c) != null);
     if (!ok.length) return null;
     /* Référence : fin de terrain la plus récente ; à égalité, ordre de publication (groups est déjà trié). */
-    const top = ok.reduce((a, b) => day(b.date) > day(a.date) ? b : a), t0 = day(top.date), sc = norm(top.rows[0].scenario), sg = sig(top);
+    const top = ok.reduce((a, b) => day(b.date) > day(a.date) ? b : a), t0 = day(top.date);
+    /* Fraîcheur (règle distincte de la fenêtre de moyenne) : sondage de référence plus ancien que 30 jours -> aucune estimation (le sondage
+       reste consultable dans le sélecteur). Une date postérieure à aujourd'hui compte pour 0 jour. */
+    if (today() - t0 > MAX_AGE_DAYS) return null;
+    const sc = norm(top.rows[0].scenario), sg = sig(top);
     const comparable = sc ? ok.filter(g => norm(g.rows[0].scenario) === sc && sig(g) === sg && inst(g) && t0 - day(g.date) >= 0 && t0 - day(g.date) <= WINDOW_DAYS) : [];
     const byInst = new Map(); comparable.forEach(g => { const k = inst(g), p = byInst.get(k); if (!p || day(g.date) > day(p.date)) byInst.set(k, g); });
     const set = [...byInst.values()];
@@ -74,7 +80,10 @@
      - estimation du 1er tour seulement tant que ce tour n'a pas de résultat ; du 2nd tour seulement pour un candidat qualifié ;
      - le résultat de chaque tour passé est conservé. */
   const stageCard = (c, polls, results) => {
-    const base = g.UI.candidacyStage(c) || null;
+    /* candidacy_status « eliminated » / « defeated » ne suffit JAMAIS à afficher « Éliminé » ou « Battu » : seul un résultat définitif cohérent
+       (voir plus bas) peut le conclure. Sans confirmation, ce statut brut est ignoré (aucun statut d'élimination affiché). */
+    const claimsLoss = /^(eliminated|defeated)$/.test(String(c.candidacy_status || "").trim().toLowerCase());
+    const base = g.UI.candidacyStage(claimsLoss ? Object.assign({}, c, { candidacy_status: "" }) : c) || null;
     const rds = rounds(results), lines = [];
     let label = base && base.label, note = base && base.note || "";
     const closed = /^(withdrawn|dropped_out|stepped_down|invalidated|rejected)$/.test(String(c.candidacy_status || "").toLowerCase());
@@ -105,9 +114,11 @@
     if (qualified && !has(2)) add(2, "Intentions de vote au second tour");
     /* Intentions du tour à venir placées après les résultats déjà obtenus. */
     lines.sort((a, b) => (a.kind === b.kind ? a.round - b.round : a.kind === "result" ? -1 : 1));
+    /* Garde-fou : aucun statut d'élimination ne coexiste avec une estimation de sondage. */
+    if (/^(Éliminé|Battu)/.test(label || "")) for (let i = lines.length - 1; i >= 0; i--) if (lines[i].kind === "poll") lines.splice(i, 1);
     if (!label && !lines.length) return null;
     return { label: label || "", note, lines };
   };
 
-  g.Scrutin = { date, pct, nb, roundName, roundNameLow, statusName, pollGroups, roundOf, roundLabel, estimate, rounds, entryOf, stageCard, dmy };
+  g.Scrutin = { date, pct, nb, roundName, roundNameLow, statusName, pollGroups, roundOf, roundLabel, estimate, WINDOW_DAYS, MAX_AGE_DAYS, rounds, entryOf, stageCard, dmy };
 })(window);

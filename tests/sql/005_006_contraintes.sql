@@ -79,6 +79,33 @@ do $t$ begin
 end $t$;
 select pg_temp.expect_ok($$insert into poll_snapshots(election_id,snapshot_date,poll_date,pollster,scenario,entity_kind,entity_label,value_percent) values ('00000000-0000-0000-0000-00000000f001','2026-11-01','2026-10-02','Old','sans mention','other','L',10)$$, 'ancienne ligne sans tour acceptée (tour indéterminé)');
 
+-- 005 : expressed_votes réduit sous la somme des voix déjà enregistrées (contrôle différé déclenché côté table parente)
+insert into election_round_results(id,election_id,round_number,held_on,result_status,expressed_votes) values ('00000000-0000-0000-0000-0000000000d3','00000000-0000-0000-0000-00000000f002',1,'2027-04-10','provisional',1000);
+insert into election_candidate_results(round_result_id,entity_kind,candidacy_id,votes) values ('00000000-0000-0000-0000-0000000000d3','candidacy','00000000-0000-0000-0000-00000000c0f2',600);
+insert into election_candidate_results(round_result_id,entity_kind,entity_label,votes) values ('00000000-0000-0000-0000-0000000000d3','other','Liste Y',300);
+select pg_temp.expect_fail($$update election_round_results set expressed_votes = 800 where id='00000000-0000-0000-0000-0000000000d3'; set constraints all immediate$$, 'réduire expressed_votes sous la somme des voix (900) refusé', 'dépasse les suffrages exprimés');
+select pg_temp.expect_fail($$update election_round_results set expressed_votes = 899 where id='00000000-0000-0000-0000-0000000000d3'; set constraints all immediate$$, 'réduire expressed_votes à 899 (< 900) refusé', 'dépasse les suffrages exprimés');
+select pg_temp.expect_ok($$update election_round_results set expressed_votes = 900 where id='00000000-0000-0000-0000-0000000000d3'; set constraints all immediate$$, 'expressed_votes égal à la somme des voix accepté');
+select pg_temp.expect_ok($$update election_round_results set expressed_votes = 5000 where id='00000000-0000-0000-0000-0000000000d3'; set constraints all immediate$$, 'augmenter expressed_votes accepté');
+select pg_temp.expect_ok($$update election_round_results set notes = 'x' where id='00000000-0000-0000-0000-0000000000d3'; set constraints all immediate$$, 'modification sans effet sur les totaux acceptée');
+
+-- 006 : un changement d'identité de sondage ne doit pas faire rejoindre à une ligne un groupe de tour différent
+-- Groupe de référence : (f001, source NULL, 'Zed', 'S', 2026-10-01, fieldwork NULL) au tour 1 (inséré plus haut).
+insert into poll_snapshots(id,election_id,snapshot_date,poll_date,pollster,scenario,entity_kind,entity_label,value_percent,round,round_basis,fieldwork_start,source_id) values
+ ('00000000-0000-0000-0000-0000000006a1','00000000-0000-0000-0000-00000000f001','2026-11-01','2026-10-01','Yel','S','other','M1',10,2,'declared',null,null),
+ ('00000000-0000-0000-0000-0000000006a2','00000000-0000-0000-0000-00000000f001','2026-11-01','2026-10-01','Zed','T','other','M2',10,2,'declared',null,null),
+ ('00000000-0000-0000-0000-0000000006a3','00000000-0000-0000-0000-00000000f001','2026-11-01','2026-09-01','Zed','S','other','M3',10,2,'declared',null,null),
+ ('00000000-0000-0000-0000-0000000006a4','00000000-0000-0000-0000-00000000f001','2026-11-01','2026-10-01','Zed','S','other','M4',10,2,'declared','2026-09-01',null),
+ ('00000000-0000-0000-0000-0000000006a5','00000000-0000-0000-0000-00000000f001','2026-11-01','2026-10-01','Zed','S','other','M5',10,2,'declared',null,'00000000-0000-0000-0000-0000000000b1'),
+ ('00000000-0000-0000-0000-0000000006a6','00000000-0000-0000-0000-00000000f002','2026-11-01','2026-10-01','Zed','S','other','M6',10,2,'declared',null,null);
+select pg_temp.expect_fail($$update poll_snapshots set pollster='Zed' where id='00000000-0000-0000-0000-0000000006a1'; set constraints all immediate$$, 'changer pollster pour rejoindre un groupe de tour différent refusé', 'même tour');
+select pg_temp.expect_fail($$update poll_snapshots set scenario='S' where id='00000000-0000-0000-0000-0000000006a2'; set constraints all immediate$$, 'changer scenario pour rejoindre un groupe de tour différent refusé', 'même tour');
+select pg_temp.expect_fail($$update poll_snapshots set poll_date='2026-10-01' where id='00000000-0000-0000-0000-0000000006a3'; set constraints all immediate$$, 'changer poll_date pour rejoindre un groupe de tour différent refusé', 'même tour');
+select pg_temp.expect_fail($$update poll_snapshots set fieldwork_start=null where id='00000000-0000-0000-0000-0000000006a4'; set constraints all immediate$$, 'changer fieldwork_start pour rejoindre un groupe de tour différent refusé', 'même tour');
+select pg_temp.expect_fail($$update poll_snapshots set source_id=null where id='00000000-0000-0000-0000-0000000006a5'; set constraints all immediate$$, 'changer source_id pour rejoindre un groupe de tour différent refusé', 'même tour');
+select pg_temp.expect_fail($$update poll_snapshots set election_id='00000000-0000-0000-0000-00000000f001' where id='00000000-0000-0000-0000-0000000006a6'; set constraints all immediate$$, 'changer election_id pour rejoindre un groupe de tour différent refusé', 'même tour');
+select pg_temp.expect_ok($$update poll_snapshots set round=1, round_basis='declared' where id='00000000-0000-0000-0000-0000000006a1'; update poll_snapshots set pollster='Zed' where id='00000000-0000-0000-0000-0000000006a1'; set constraints all immediate$$, 'rejoindre un groupe du MÊME tour est accepté');
+
 -- Droits : lecture publique seule, vue de revue non exposée
 set role anon;
 select pg_temp.expect_ok($$select count(*) from election_round_results$$, 'anon peut lire les tours (RLS)');
