@@ -9,6 +9,6 @@ $P -f tests/sql/stub_schema.sql
 $P -f supabase/migrations/002_poll_snapshots.sql
 $P -f supabase/proposals/006_poll_round.sql
 $P -f supabase/proposals/005_election_results.sql
-$P -t -A -f tests/sql/005_006_contraintes.sql | tee /tmp/ar_sql_out.txt | grep -v "^$"
-! grep -q "^FAIL" /tmp/ar_sql_out.txt
+$P -t -A -f tests/sql/005_006_contraintes.sql > /tmp/ar_sql_out.txt; grep -v "^$" /tmp/ar_sql_out.txt
+if grep -q "^FAIL" /tmp/ar_sql_out.txt; then echo "ÉCHEC SQL"; exit 1; fi
 sh tests/sql/concurrence.sh

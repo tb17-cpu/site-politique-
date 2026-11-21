@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
 const B='http://localhost:8765/site-politique-/';
 let res=0,bad=0; const rep=(ok,n,i)=>{res++;if(!ok)bad++;console.log(ok?'ok  ':'FAIL',n,ok?'':JSON.stringify(i||''))};
 const pb={publication_status:'published'};
-const IDS=['p1','p3','p4','q1'];
+const IDS=['p1','p3','p4','q1','p5','p6','p7','p8','p9'];
 const ELS=IDS.map(id=>({id,name:'Scrutin fictif '+id,year:2027,election_type:'presidential',scheduled_date:'2027-04-10',second_round_date:'2027-04-24',...pb,country_id:'fr',description:null,countries:{id:'fr',name:'France',iso2:'FR',...pb}}));
 const NAMES=[['A','Alice','Alpha'],['B','Bruno','Beta'],['C','Carla','Gamma'],['D','David','Delta'],['E','Elsa','Epsilon']];
 const C=[];
@@ -24,6 +24,17 @@ rr('p4',1,'final',[['A',34,'q'],['B',33,'q'],['C',33]]); rr('p4',2,'final',[['A'
 // q1 : colonnes déclaratives vs résultats : A (status qualified) confirmé ; B (qualified_at) confirmé ; C (status qualified) NON confirmé ; D (not_reached) rien ; E qualifié par résultat sans déclaration
 set('q1','A',{second_round_status:'qualified'}); set('q1','B',{second_round_qualified_at:'2027-04-11'}); set('q1','C',{second_round_status:'qualified'}); set('q1','D',{second_round_status:'not_reached'});
 rr('q1',1,'final',[['A',25,'q'],['B',22,'q'],['E',20,'q'],['C',18],['D',15]]);
+// Qualification acquise au tour 1 et second tour PROVISOIRE (ou sans conclusion pour le candidat) : elle ne disparaît pas.
+// p5 : r2 provisoire, B élu provisoire ; A figure au tour 2 sans issue -> A reste « Qualifié », B « Élu provisoire »
+rr('p5',1,'final',[['A',30,'q'],['B',28,'q'],['C',22],['D',20]]); rr('p5',2,'provisional',[['A',49],['B',51,'e']]);
+// p6 : r2 provisoire sans aucune issue renseignée -> A et B restent « Qualifié »
+rr('p6',1,'final',[['A',30,'q'],['B',28,'q'],['C',42]]); rr('p6',2,'provisional',[['A',50],['B',50]]);
+// p7 : trois tours : A qualifié au tour 2 (définitif) puis tour 3 provisoire sans issue -> « Qualifié pour le tour 3 » ; B qualifié au 1, éliminé au 2 (définitif)
+rr('p7',1,'final',[['A',30,'q'],['B',28,'q'],['C',42]]); rr('p7',2,'final',[['A',55,'q'],['B',45]]); rr('p7',3,'provisional',[['A',52]]);
+// p8 : tour 2 DÉFINITIF mais sans élu ni qualifié renseignés : pas de conclusion, la qualification n'est pas perdue
+rr('p8',1,'final',[['A',30,'q'],['B',28,'q'],['C',42]]); rr('p8',2,'final',[['A',50],['B',50]]);
+// p9 : tour 2 définitif avec un élu : le non-élu n'est plus qualifié, il est « Battu » (un résultat définitif ultérieur remplace)
+rr('p9',1,'final',[['A',30,'q'],['B',28,'q'],['C',42]]); rr('p9',2,'final',[['A',45],['B',55,'e']]);
 const D={elections:ELS,candidacies:C,programs:[],poll_snapshots:[],election_round_results:RR};
 async function page(w,url,fn,theme){
   const b=await chromium.launch(); const c=await b.newContext({viewport:{width:w,height:900}}); const errs=[];
@@ -59,6 +70,19 @@ const OUT=/Élu|Qualifié|Éliminé|Battu/i;
   await page(w,'candidat.html#B-p4',async p=>{const c=await card(p);rep(c.has&&/Élu/.test(c.t)&&/Premier tour/.test(c.t)&&/Second tour/.test(c.t),`${T} qualifié puis élu : « Élu », parcours complet`,c.t);},th);
   await page(w,'candidat.html#A-p4',async p=>{const c=await card(p);rep(c.has&&!OUT.test(c.t.replace(/Battu/,'')) ,`${T} qualifié puis non élu au tour 2 : pas de « Qualifié » périmé`,c.t);},th);
   await page(w,'candidat.html#C-p4',async p=>{const c=await card(p);rep(c.has&&/Éliminé au premier tour/.test(c.t),`${T} éliminé au tour 1, absent du tour 2 : « Éliminé »`,c.t);},th);
+  // qualification conservée pendant un second tour provisoire, et autres transitions
+  await page(w,'candidat.html#A-p5',async p=>{const c=await card(p);rep(c.has&&/Qualifié pour le second tour/.test(c.t)&&/provisoires/.test(c.t)&&!/Battu|Éliminé|Élu/.test(c.t)&&/30,0 %/.test(c.t)&&/49,0 %/.test(c.t),`${T} qualifié au tour 1, second tour provisoire (adversaire élu provisoire) : « Qualifié » conservé, mention provisoire, scores des deux tours`,c.t);},th);
+  await page(w,'candidat.html#B-p5',async p=>{const c=await card(p);rep(c.has&&/Élu provisoire/.test(c.t)&&!/Qualifié/.test(c.t),`${T} qualifié au tour 1 puis élu provisoire au tour 2 : « Élu provisoire » (progression, pas une perte)`,c.t);},th);
+  await page(w,'candidat.html#A-p6',async p=>{const c=await card(p);rep(c.has&&/Qualifié pour le second tour/.test(c.t)&&/provisoires/.test(c.t)&&!/Battu|Éliminé|Élu/.test(c.t),`${T} qualifié au tour 1, second tour provisoire sans aucune issue : « Qualifié » conservé`,c.t);},th);
+  await page(w,'candidats.html?e=p6',async p=>{const l=await list(p);const g=k=>l.find(x=>x.t.includes(k)).badge;rep(/Qualifié/i.test(g('Alice'))&&/Qualifié/i.test(g('Bruno'))&&!OUT.test(g('Carla').replace(/Battu|Éliminé/i,'')),`${T} liste p6 : mêmes qualifications que la fiche`,l.map(x=>x.badge));},th);
+  await page(w,'candidats.html?e=p5',async p=>{const l=await list(p);const g=k=>l.find(x=>x.t.includes(k)).badge;rep(/Qualifié/i.test(g('Alice'))&&/Élu provisoire/i.test(g('Bruno')),`${T} liste p5 : A qualifié, B élu provisoire`,l.map(x=>x.badge));},th);
+  await page(w,'candidat.html#A-p7',async p=>{const c=await card(p);rep(c.has&&/Qualifié pour le tour 3/.test(c.t)&&!/tour 4|Battu|Éliminé/.test(c.t),`${T} 3 tours : qualifié au tour 2 (définitif), tour 3 provisoire : « Qualifié pour le tour 3 » conservé`,c.t);},th);
+  await page(w,'candidat.html#B-p7',async p=>{const c=await card(p);rep(c.has&&/Éliminé au second tour/.test(c.t)&&!/Qualifié/.test(c.t),`${T} 3 tours : qualifié au 1, éliminé au 2 (définitif) : « Éliminé » remplace la qualification`,c.t);},th);
+  await page(w,'candidat.html#A-p8',async p=>{const c=await card(p);rep(c.has&&/Qualifié pour le second tour/.test(c.t)&&!/Battu|Éliminé/.test(c.t),`${T} tour 2 définitif sans issue renseignée : absence de conclusion, qualification conservée`,c.t);},th);
+  await page(w,'candidat.html#A-p9',async p=>{const c=await card(p);rep(c.has&&/Battu/.test(c.t)&&!/Qualifié/.test(c.t),`${T} tour 2 définitif avec un élu : « Battu » remplace la qualification`,c.t);},th);
+  await page(w,'candidat.html#B-p9',async p=>{const c=await card(p);rep(c.has&&/Élu/.test(c.t)&&!/provisoire/.test(c.t),`${T} tour 2 définitif : « Élu » ferme`,c.t);},th);
+  await page(w,'election.html?e=p5',async p=>{const first=await p.evaluate(()=>0);await p.locator('.res-tab').first().click();const t1=await p.locator('.res-tag').allInnerTexts();
+    rep(t1.filter(x=>/Qualifié pour le second tour/.test(x)).length===2,`${T} rubrique résultats p5, onglet tour 1 : les deux qualifications restent affichées`,t1);},th);
   // colonnes déclaratives : aucune qualification affichée d'après elles seules
   for(const k of ['C','D']) await page(w,`candidat.html#${k}-q1`,async p=>{const c=await card(p);rep(!/Qualifié/.test(c.t),`${T} q1 ${k} : colonne déclarative sans résultat confirmant : aucune qualification`,c.t);},th);
   await page(w,'candidat.html#A-q1',async p=>{const c=await card(p);rep(/Qualifié pour le second tour/.test(c.t),`${T} q1 A : qualification affichée parce que le RÉSULTAT la confirme`,c.t);},th);

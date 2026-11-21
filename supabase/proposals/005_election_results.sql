@@ -18,6 +18,8 @@
 --     lorsque toutes les valeurs sont renseignées ; somme des pourcentages ≤ 100,5 % et somme des voix ≤ suffrages exprimés (contrôle différé :
 --     fin de transaction, aussi déclenché par toute modification de expressed_votes du tour) ; élu et qualifié pour le tour suivant s'excluent, ligne par ligne ET à l'échelle du tour (contrainte différée
 --     inter-lignes : aucun élu avec des qualifiés dans un même tour ; aucune limite sur le nombre d'élus).
+--  4bis. Séquence : un tour publié et définitif ne peut être supprimé ni dépublié tant que le tour suivant reste publié (contrôle différé, y compris
+--     en concurrence avec la publication du tour suivant).
 --  5. Provisoire puis définitif : le passage définitif → provisoire est interdit ; l'élection et le n° de tour d'un résultat sont immuables ;
 --     le tour parent d'un score est immuable.
 begin;
@@ -117,14 +119,38 @@ begin
     end if;
   end if;
   if new.publication_status = 'published' and new.round_number > 1 then
-    if not exists (select 1 from public.election_round_results p where p.election_id = new.election_id and p.round_number = new.round_number - 1
-                      and p.publication_status = 'published' and p.result_status = 'final') then
+    -- FOR SHARE : le tour précédent est verrouillé jusqu'à la fin de la transaction ; une suppression ou une dépublication concurrente de ce tour
+    -- attend, puis le contrôle différé election_round_sequence_verify() voit le tour suivant validé (voir plus bas).
+    perform 1 from public.election_round_results p where p.election_id = new.election_id and p.round_number = new.round_number - 1
+                      and p.publication_status = 'published' and p.result_status = 'final' for share;
+    if not found then
       raise exception 'le tour % ne peut être publié que si le tour précédent est publié et définitif', new.round_number;
     end if;
   end if;
   return new;
 end $$;
 create trigger err_guard before insert or update on public.election_round_results for each row execute function public.election_round_guard();
+
+-- Séquence des tours : on ne peut ni supprimer, ni dépublier, ni repasser en provisoire un tour publié tant que le tour SUIVANT reste publié.
+-- Contrôle DIFFÉRÉ (fin de transaction) : l'ordre des opérations dans une transaction est indifférent (supprimer le tour 2 puis le tour 1 est accepté),
+-- et la suppression d'une élection entière (cascade) ou d'un tour sans suite publiée n'est jamais gênée. Une opération sur un tour non publié ne
+-- crée aucune incohérence et n'est pas contrôlée. Les scores d'un tour supprimé le sont par cascade (leurs propres gardes s'appliquent).
+create function public.election_round_sequence_verify(eid uuid, n smallint) returns void language plpgsql as $$
+begin
+  if exists (select 1 from public.election_round_results s where s.election_id = eid and s.round_number = n + 1 and s.publication_status = 'published')
+     and not exists (select 1 from public.election_round_results p where p.election_id = eid and p.round_number = n
+                       and p.publication_status = 'published' and p.result_status = 'final') then
+    raise exception 'le tour % reste publié alors que le tour % n''est plus publié et définitif : supprimer ou dépublier d''abord le tour %', n + 1, n, n + 1;
+  end if;
+end $$;
+create function public.election_round_sequence_check() returns trigger language plpgsql as $$
+begin perform public.election_round_sequence_verify(old.election_id, old.round_number); return null; end $$;
+create constraint trigger err_sequence_del after delete on public.election_round_results
+  deferrable initially deferred for each row when (old.publication_status = 'published') execute function public.election_round_sequence_check();
+create constraint trigger err_sequence_upd after update of publication_status, result_status on public.election_round_results
+  deferrable initially deferred for each row when (old.publication_status = 'published' and old.result_status = 'final'
+                                                    and (new.publication_status <> 'published' or new.result_status <> 'final'))
+  execute function public.election_round_sequence_check();
 
 -- Garde des scores : tour parent publié, candidature de la bonne élection, tour parent immuable
 create function public.election_candidate_guard() returns trigger language plpgsql as $$
@@ -251,6 +277,6 @@ revoke insert, update, delete, truncate, references, trigger on public.election_
 revoke all on public.election_round_results, public.election_candidate_results from anon, authenticated, public;
 grant select on public.election_round_results, public.election_candidate_results to anon, authenticated;
 commit;
--- Retour arrière : drop table public.election_candidate_results, public.election_round_results;
---                  drop view public.candidacy_second_round_reconciliation, public.election_result_path_conflicts;
---                  drop function public.election_candidate_guard(), public.election_round_guard(), public.election_round_totals_check(), public.election_round_totals_parent_check(), public.election_round_totals_verify(uuid), public.election_round_outcomes_check(), public.election_round_outcomes_verify(uuid), public.election_results_touch();
+-- Retour arrière (ordre à respecter : vues, tables, fonctions) : drop view public.candidacy_second_round_reconciliation, public.election_result_path_conflicts;
+--                  drop table public.election_candidate_results, public.election_round_results;
+--                  drop function public.election_round_sequence_check(), public.election_round_sequence_verify(uuid, smallint), public.election_candidate_guard(), public.election_round_guard(), public.election_round_totals_check(), public.election_round_totals_parent_check(), public.election_round_totals_verify(uuid), public.election_round_outcomes_check(), public.election_round_outcomes_verify(uuid), public.election_results_touch();

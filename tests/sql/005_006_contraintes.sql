@@ -162,6 +162,38 @@ select pg_temp.expect_fail($$update poll_snapshots set source_id=null where id='
 select pg_temp.expect_fail($$update poll_snapshots set election_id='00000000-0000-0000-0000-00000000f001' where id='00000000-0000-0000-0000-0000000006a6'; set constraints all immediate$$, 'changer election_id pour rejoindre un groupe de tour différent refusé', 'même tour');
 select pg_temp.expect_ok($$update poll_snapshots set round=1, round_basis='declared' where id='00000000-0000-0000-0000-0000000006a1'; update poll_snapshots set pollster='Zed' where id='00000000-0000-0000-0000-0000000006a1'; set constraints all immediate$$, 'rejoindre un groupe du MÊME tour est accepté');
 
+-- Suppression / dépublication d'un tour : jamais de tour suivant publié sans tour précédent publié et définitif (contrôle différé : on force le contrôle avec SET CONSTRAINTS)
+create function pg_temp.mkseq(n int, r2 text) returns void language plpgsql as $f$
+declare e uuid := ('00000000-0000-0000-0000-00000000f9' || lpad(n::text,2,'0'))::uuid;
+        a uuid := ('00000000-0000-0000-0000-0000000d9' || lpad(n::text,2,'0') || '1')::uuid;
+        b uuid := ('00000000-0000-0000-0000-0000000d9' || lpad(n::text,2,'0') || '2')::uuid;
+begin
+  insert into elections(id) values (e);
+  insert into election_round_results(id,election_id,round_number,held_on,result_status,source_id,publication_status) values (a,e,1,'2027-04-10','final','00000000-0000-0000-0000-0000000000b1','published');
+  insert into election_candidate_results(round_result_id,entity_kind,entity_label,votes,publication_status) values (a,'other','Liste S'||n,10,'published');
+  if r2 is not null then
+    insert into election_round_results(id,election_id,round_number,held_on,result_status,source_id,publication_status) values (b,e,2,'2027-04-24',r2,'00000000-0000-0000-0000-0000000000b1','published');
+  end if;
+end $f$;
+select pg_temp.mkseq(1,'provisional'), pg_temp.mkseq(2,null), pg_temp.mkseq(3,'final'), pg_temp.mkseq(4,'final'), pg_temp.mkseq(5,'final'), pg_temp.mkseq(6,'final');
+-- tour 2 en brouillon : c'est un tour non publié, il ne gêne pas la suppression du tour 1
+insert into election_round_results(id,election_id,round_number,held_on,result_status,publication_status) values ('00000000-0000-0000-0000-0000000d9023','00000000-0000-0000-0000-00000000f902',2,'2027-04-24','provisional','draft');
+select pg_temp.expect_fail($$delete from election_round_results where id='00000000-0000-0000-0000-0000000d9011'; set constraints all immediate$$, 'supprimer le tour 1 alors que le tour 2 reste publié (provisoire) : refusé', 'reste publié');
+select pg_temp.expect_fail($$delete from election_round_results where id='00000000-0000-0000-0000-0000000d9031'; set constraints all immediate$$, 'supprimer le tour 1 alors que le tour 2 (définitif) reste publié : refusé', 'reste publié');
+select pg_temp.expect_fail($$update election_round_results set publication_status='draft' where id='00000000-0000-0000-0000-0000000d9031'; set constraints all immediate$$, 'dépublier le tour 1 alors que le tour 2 reste publié : refusé', 'dépublier');
+do $t$ begin
+  insert into _r values ((select count(*) from election_round_results where election_id='00000000-0000-0000-0000-00000000f903')=2
+                          and (select count(*) from election_candidate_results where entity_label='Liste S3')=1,
+                         'après les refus : les deux tours et les scores du tour 1 sont intacts');
+end $t$;
+select pg_temp.expect_ok($$delete from election_round_results where id='00000000-0000-0000-0000-0000000d9012'; set constraints all immediate$$, 'supprimer le DERNIER tour publié : accepté');
+select pg_temp.expect_ok($$delete from election_round_results where id='00000000-0000-0000-0000-0000000d9011'; set constraints all immediate$$, 'puis supprimer le tour 1 devenu seul (ses scores partent en cascade) : accepté');
+select pg_temp.expect_ok($$delete from election_round_results where id='00000000-0000-0000-0000-0000000d9021'; set constraints all immediate$$, 'supprimer le tour 1 dont le tour 2 est seulement brouillon : accepté');
+select pg_temp.expect_ok($$delete from election_round_results where id='00000000-0000-0000-0000-0000000d9042'; delete from election_round_results where id='00000000-0000-0000-0000-0000000d9041'; set constraints all immediate$$, 'tour 2 puis tour 1 dans la même transaction : accepté');
+select pg_temp.expect_ok($$delete from election_round_results where id='00000000-0000-0000-0000-0000000d9051'; delete from election_round_results where id='00000000-0000-0000-0000-0000000d9052'; set constraints all immediate$$, 'tour 1 puis tour 2 dans la même transaction (ordre indifférent) : accepté');
+select pg_temp.expect_ok($$delete from election_round_results where election_id='00000000-0000-0000-0000-00000000f906'; set constraints all immediate$$, 'suppression de tous les tours d''une élection en une instruction : accepté');
+select pg_temp.expect_ok($$delete from election_round_results where id='00000000-0000-0000-0000-0000000d9023'; set constraints all immediate$$, 'supprimer un tour brouillon : accepté');
+
 -- Droits : lecture publique seule, vue de revue non exposée
 set role anon;
 select pg_temp.expect_ok($$select count(*) from election_round_results$$, 'anon peut lire les tours (RLS)');

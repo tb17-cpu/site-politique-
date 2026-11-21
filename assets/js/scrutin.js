@@ -116,20 +116,37 @@
   const tagFor = (en, rd, rds) => { const o = outcome(en, rd, rds); if (!o || (o.kind !== "elected" && o.kind !== "qualified")) return null;
     return o.kind === "elected" ? { text: o.provisional ? "Élu provisoire" : "Élu", provisional: o.provisional, win: true } : { text: "Qualifié pour le " + roundNameLow(rd.round_number + 1), provisional: o.provisional, win: false }; };
 
-  /* Statut d'un candidat : { label, note, provisional, kind } ou null. Seule source pour la fiche, la liste et la carte. */
+  /* Issue COURANTE d'un candidat : celle du dernier tour où il figure. Quand ce tour ne conclut rien pour lui (résultats provisoires sans issue
+     pour lui, tour sans élu ni qualifiés renseignés, tour incohérent), la qualification DÉFINITIVEMENT acquise à un tour antérieur est conservée :
+     l'absence de résultat définitif n'est pas une perte de qualification. Seul un résultat ultérieur qui conclut (élu, battu, éliminé, nouvelle
+     qualification) la remplace. Valable pour toute transition entre tours (1 -> 2, 2 -> 3, …). Une qualification antérieure seulement
+     PROVISOIRE n'est jamais reportée. Retourne { o, rd, carried } ou null. */
+  const current = (c, rds) => {
+    const ent = rds.map(r => ({ rd: r, en: entryOf(r, c) })).filter(x => x.en);
+    if (!ent.length) return null;
+    const last = ent[ent.length - 1], o = outcome(last.en, last.rd, rds);
+    if (o) return { o, rd: last.rd, carried: false };
+    for (let i = ent.length - 2; i >= 0; i--) {
+      const q = outcome(ent[i].en, ent[i].rd, rds);
+      if (q) return q.kind === "qualified" && !q.provisional ? { o: q, rd: ent[i].rd, carried: true, latest: last.rd } : null;
+    }
+    return null;
+  };
+
+  /* Statut d'un candidat : { label, note, provisional, kind, round } ou null. Seule source pour la fiche, la liste et la carte. */
   const status = (c, results) => {
     const rds = rounds(results), raw = g.UI.candidacyStage(c);   /* statuts de candidature uniquement (jamais d'issue brute) */
     if (raw && raw.closed) return { label: raw.label, note: raw.note, kind: "closed", provisional: false };
-    let en = null, rd = null;
-    rds.forEach(r => { const x = entryOf(r, c); if (x) { en = x; rd = r; } });
-    if (en) { const o = outcome(en, rd, rds);
-      if (!o) return null;
-      const next = roundNameLow(rd.round_number + 1), at = roundNameLow(rd.round_number), note = o.provisional ? "résultats provisoires" : "";
-      if (o.kind === "elected") return { label: o.provisional ? "Élu provisoire" : "Élu", note: o.provisional ? "résultats provisoires" : "au " + at, kind: "elected", provisional: o.provisional };
-      if (o.kind === "qualified") return { label: "Qualifié pour le " + next, note, kind: "qualified", provisional: o.provisional };
-      return { label: o.kind === "beaten" ? "Battu" : "Éliminé au " + at, note: "", kind: o.kind, provisional: false };
+    const cur = current(c, rds);
+    if (cur) { const o = cur.o, rd = cur.rd;
+      const next = roundNameLow(rd.round_number + 1), at = roundNameLow(rd.round_number);
+      /* qualification reportée : le tour suivant est en cours, ses résultats sont provisoires ou ne concluent pas encore */
+      const note = o.provisional ? "résultats provisoires" : cur.carried && cur.latest.result_status === "provisional" ? "résultats du " + roundNameLow(cur.latest.round_number) + " provisoires" : "";
+      if (o.kind === "elected") return { label: o.provisional ? "Élu provisoire" : "Élu", note: o.provisional ? "résultats provisoires" : "au " + at, kind: "elected", provisional: o.provisional, round: rd.round_number };
+      if (o.kind === "qualified") return { label: "Qualifié pour le " + next, note, kind: "qualified", provisional: o.provisional, round: rd.round_number };
+      return { label: o.kind === "beaten" ? "Battu" : "Éliminé au " + at, note: "", kind: o.kind, provisional: false, round: rd.round_number };
     }
-    /* Statut de candidature (avant le vote) : pertinent seulement tant qu'aucun résultat n'existe pour l'élection. */
+    /* Aucun statut issu des résultats. Statut de candidature (avant le vote) : pertinent seulement tant qu'aucun résultat n'existe pour l'élection. */
     return raw && !rds.length ? { label: raw.label, note: raw.note, kind: "candidacy", provisional: false } : null;
   };
 
@@ -147,7 +164,7 @@
     const add = (round, text) => { if (over) return; const e = estimate(groups, c, round); if (!e) return;
       lines.push({ kind: "poll", round, label: text, value: pct0(e.value), detail: (e.mode === "average" ? "moyenne de " + e.n + " sondages · " : "") + "au " + date(e.date) }); };
     if (!rds.length) add(1, "Intentions de vote au premier tour");
-    if (st && st.kind === "qualified" && !has(rds.length ? Math.max(...rds.map(r => r.round_number)) + 1 : 2)) add(rds.length ? Math.max(...rds.map(r => r.round_number)) + 1 : 2, "Intentions de vote au " + roundNameLow(rds.length ? Math.max(...rds.map(r => r.round_number)) + 1 : 2));
+    if (st && st.kind === "qualified" && !has(st.round + 1)) add(st.round + 1, "Intentions de vote au " + roundNameLow(st.round + 1));
     lines.sort((a, b) => (a.kind === b.kind ? a.round - b.round : a.kind === "result" ? -1 : 1));
     if (!st && !lines.length) return null;
     return { label: st ? st.label : "", note: st ? st.note : "", provisional: !!(st && st.provisional), kind: st ? st.kind : "", lines };

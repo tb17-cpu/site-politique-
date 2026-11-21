@@ -47,6 +47,15 @@ $P -v ON_ERROR_STOP=1 -c "insert into elections(id) values ('${E}099') on confli
 race 6 "insert into poll_snapshots(election_id,snapshot_date,poll_date,pollster,scenario,entity_kind,entity_label,value_percent,round,round_basis) values ('${E}099','2026-11-01','2026-10-01','Cc','S','other','L1',10,1,'declared');" "insert into poll_snapshots(election_id,snapshot_date,poll_date,pollster,scenario,entity_kind,entity_label,value_percent,round,round_basis) values ('${E}099','2026-11-01','2026-10-01','Cc','S','other','L2',20,2,'declared');"
 rc1=$(cat /tmp/ar_rc1); rc2=$(cat /tmp/ar_rc2); nr=$($P -t -A -c "select count(distinct round) from poll_snapshots where pollster='Cc'")
 [ "$rc1" != "$rc2" ] && [ "$nr" = 1 ] && ok "concurrence 6 : lignes d'un même sondage avec tours différents, simultanées -> une seule validée" || ko "concurrence 6 : rc=$rc1/$rc2 tours=$nr"
+# 7-8. séquence des tours : suppression du tour 1 et publication du tour 2, simultanées (dans les deux ordres) -> jamais un tour 2 publié sans tour 1
+mk2(){ $P -v ON_ERROR_STOP=1 -c "insert into elections(id) values ('${E}00$1'); insert into election_round_results(id,election_id,round_number,held_on,result_status,source_id,publication_status) values ('00000000-0000-0000-0000-00000000d${1}01','${E}00$1',1,'2027-04-10','final','00000000-0000-0000-0000-0000000000b1','published')"; }
+r2(){ echo "insert into election_round_results(id,election_id,round_number,held_on,result_status,source_id,publication_status) values ('00000000-0000-0000-0000-00000000d${1}02','${E}00$1',2,'2027-04-24','final','00000000-0000-0000-0000-0000000000b1','published');"; }
+del1(){ echo "delete from election_round_results where id='00000000-0000-0000-0000-00000000d${1}01';"; }
+seq(){ $P -t -A -c "select (select count(*) from election_round_results where election_id='${E}00$1' and round_number=1) || '|' || (select count(*) from election_round_results where election_id='${E}00$1' and round_number=2)"; }
+mk2 7; race 7 "$(del1 7)" "$(r2 7)"
+st=$(seq 7); [ "$(cat /tmp/ar_rc1)" = 0 ] && [ "$(cat /tmp/ar_rc2)" != 0 ] && [ "$st" = "0|0" ] && ok "concurrence 7 : suppression du tour 1 puis publication simultanée du tour 2 -> publication refusée ($st)" || ko "concurrence 7 : rc=$(cat /tmp/ar_rc1)/$(cat /tmp/ar_rc2) état=$st"
+mk2 8; race 8 "$(r2 8)" "$(del1 8)"
+st=$(seq 8); [ "$(cat /tmp/ar_rc1)" = 0 ] && [ "$(cat /tmp/ar_rc2)" != 0 ] && [ "$st" = "1|1" ] && grep -q "reste publié" /tmp/ar_c2 && ok "concurrence 8 : publication du tour 2 puis suppression simultanée du tour 1 -> suppression refusée ($st)" || ko "concurrence 8 : rc=$(cat /tmp/ar_rc1)/$(cat /tmp/ar_rc2) état=$st"
 rm -f /tmp/ar_c1 /tmp/ar_c2 /tmp/ar_rc1 /tmp/ar_rc2
 echo "concurrence : $([ $R = 0 ] && echo 'tous les contrôles passent' || echo 'ÉCHEC')"
 exit $R
