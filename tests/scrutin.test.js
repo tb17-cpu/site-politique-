@@ -62,6 +62,7 @@ async function page(w,url,fn,st,theme,clock){
     if(st&&st[t]==='abort')return r.abort('failed');
     let rows=D[t]||[];rows=rows.filter(x=>{for(const [k,v] of u.searchParams){if(k.includes('.')||!v.startsWith('eq.'))continue;if(k in x&&String(x[k])!==v.slice(3))return false}return true});
     h['content-range']=`0-0/${rows.length}`;r.fulfill({status:200,headers:h,body:JSON.stringify(rows)})});
+  await c.route(/fonts\.(googleapis|gstatic)\.com/,r=>r.abort());
   const p=await c.newPage();p.on('pageerror',e=>errs.push(e.message));
   await p.goto(B+url,{waitUntil:'networkidle'});await p.waitForTimeout(500);
   await fn(p); rep(!errs.length,`  ${w}px ${url} : aucune erreur JS`,errs); await b.close();
@@ -86,7 +87,7 @@ const card=async(p)=>{await p.waitForSelector('.status-card',{timeout:4000}).cat
     await p.locator('[data-ps=newer]').click(); rep(/Sondage 4 sur 5/.test(await txt())&&/Ifop|OpinionWay/.test(await txt()),`${w}px sélecteur : retour vers le plus récent`);
     rep(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),`${w}px sélecteur : pas de débordement horizontal`);
     const bb=await p.locator('.ps-btn').first().boundingBox(); rep(bb.width>=44&&bb.height>=44,`${w}px sélecteur : flèches de 44 px minimum`,bb);
-    rep(await p.locator('[data-results]').evaluate(x=>x.hidden),`${w}px sans résultat : rubrique résultats invisible (emplacement prévu)`);
+    rep(await p.locator('[data-results],.res').count()===0&&!/Résultats officiels/.test(await p.evaluate(()=>document.body.innerText)),`${w}px sans résultat : aucune rubrique, aucun titre, aucun emplacement réservé`);
   });
   // ---- 12 : rubrique résultats ----
   await page(w,'election.html?e=e3',async p=>{
@@ -102,7 +103,7 @@ const card=async(p)=>{await p.waitForSelector('.status-card',{timeout:4000}).cat
     rep(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),`${w}px résultats : pas de débordement horizontal`);});
   await page(w,'election.html?e=e2',async p=>{const t=await p.locator('[data-results=ok]').innerText();
     rep(/Résultats provisoires/.test(t)&&await p.locator('.res-tab').count()===1&&!/Second tour/.test(t),`${w}px résultats provisoires : un seul tour, pas de second tour fictif`,t.slice(0,200));});
-  await page(w,'election.html?e=e1',async p=>{rep(await p.locator('[data-results=none]').count()===1,`${w}px table absente (404) : rubrique inactive sans erreur`);},{election_round_results:404});
+  await page(w,'election.html?e=e1',async p=>{rep(await p.locator('[data-results],.res').count()===0&&!/Résultats/.test(await p.evaluate(()=>document.querySelector('main, #p-body, body').innerText)),`${w}px table absente (404) : rien n'est affiché, sans erreur`);},{election_round_results:404});
   // ---- 10/11 : carte de statut ----
   await page(w,'candidat.html#A-e1',async p=>{const c=await card(p);
     rep(c&&/Candidat|Candidate|Déclar/i.test(c.t)&&c.lines.length===1&&/Intentions de vote au premier tour/.test(c.lines[0].t)&&/29 %/.test(c.lines[0].t)&&/moyenne de 2 sondages/.test(c.lines[0].t)&&/au 10 novembre 2026/.test(c.lines[0].t),`${w}px carte avant 1er tour : moyenne de sondages comparables, date de référence`,c);
@@ -116,10 +117,10 @@ const card=async(p)=>{await p.waitForSelector('.status-card',{timeout:4000}).cat
     rep(r&&/Premier tour/.test(r.t)&&/28,5 %/.test(r.t)&&/10\s?032\s?000 voix/.test(r.t)&&/Résultat officiel/.test(r.t)&&/provisoires/.test(r.t),`${w}px après 1er tour : score réel, voix, caractère provisoire`,r);
     rep(s&&/Intentions de vote au second tour/.test(s.t)&&/47 %/.test(s.t)&&/Estimation d’après sondages/.test(s.t),`${w}px après 1er tour : intentions de 2nd tour distinguées du résultat`,s);
     rep(c&&c.lines.filter(l=>/premier tour/i.test(l.t)&&/sc-poll/.test(l.k)).length===0,`${w}px après 1er tour : plus d'intentions de 1er tour`,c);});
-  await page(w,'candidat.html#C-e2',async p=>{const c=await card(p);rep(c&&!/Éliminé|Battu/.test(c.t)&&/situation à confirmer/.test(c.t)&&c.lines.length===1&&/sc-result/.test(c.lines[0].k)&&/15,0 %/.test(c.lines[0].t),`${w}px résultats provisoires : jamais « éliminé », score conservé, aucune intention`,c);});
+  await page(w,'candidat.html#C-e2',async p=>{const c=await card(p);rep(c&&!/Éliminé|Battu/.test(c.t)&&!/situation à confirmer/.test(c.t)&&c.lines.length===1&&/sc-result/.test(c.lines[0].k)&&/15,0 %/.test(c.lines[0].t),`${w}px résultats provisoires : jamais « éliminé », score conservé, aucune intention`,c);});
   await page(w,'candidat.html#C-e3',async p=>{const c=await card(p);rep(c&&/Éliminé au premier tour/.test(c.t)&&c.lines.length===1&&/sc-result/.test(c.lines[0].k)&&/15,0 %/.test(c.lines[0].t)&&!/situation à confirmer/.test(c.t),`${w}px résultats définitifs + qualifications : éliminé, score réel conservé, aucune intention`,c);});
-  await page(w,'candidat.html#C-e4',async p=>{const c=await card(p);rep(c&&!/Éliminé|Battu|Qualifié|Élu/.test(c.t)&&/déclarée/i.test(c.t)&&c.lines.length===1&&/26,0 %/.test(c.lines[0].t),`${w}px définitif sans aucune qualification saisie : aucune conclusion (statut inchangé)`,c);});
-  for(const k of ['A','B','C']) await page(w,'candidat.html#'+k+'-e6',async p=>{const c=await card(p);rep(c&&!/Éliminé|Battu|Qualifié|Élu/.test(c.t)&&/déclarée/i.test(c.t),`${w}px indicateurs incohérents (élu et qualifié au même tour) : aucune conclusion pour ${k}`,c);});
+  await page(w,'candidat.html#C-e4',async p=>{const c=await card(p);rep(c&&!/Éliminé|Battu|Qualifié|Élu|déclarée/i.test(c.t)&&c.lines.length===1&&/26,0 %/.test(c.lines[0].t),`${w}px définitif sans aucune qualification saisie : aucune conclusion, score conservé, statut de candidature plus pertinent`,c);});
+  for(const k of ['A','B','C']) await page(w,'candidat.html#'+k+'-e6',async p=>{const c=await card(p);rep(c&&!/Éliminé|Battu|Qualifié|Élu|déclarée/i.test(c.t),`${w}px indicateurs incohérents (élu et qualifié au même tour) : aucune conclusion pour ${k}`,c);});
   await page(w,'candidat.html#A-e2',async p=>{const c=await card(p);rep(c&&/Qualifié pour le second tour/.test(c.t)&&/résultats provisoires/.test(c.t),`${w}px qualifié sur résultats provisoires : mention « résultats provisoires »`,c);});
   // ---- statuts bruts « éliminé » / « battu » : jamais suffisants ----
   await page(w,'candidat.html#A-e8',async p=>{const c=await card(p);rep(c&&/Éliminé au premier tour/.test(c.t)&&c.lines.length===1&&/sc-result/.test(c.lines[0].k),`${w}px statut brut « eliminated » CONFIRMÉ par résultat définitif cohérent : Éliminé, aucune estimation`,c);});
@@ -128,7 +129,7 @@ const card=async(p)=>{await p.waitForSelector('.status-card',{timeout:4000}).cat
   for(const k of ['A','B']) await page(w,'candidat.html#'+k+'-e9',async p=>{const c=await card(p);
     rep(c&&!/Éliminé|Battu|éliminé/i.test(c.t)&&c.lines.length===1&&/sc-poll/.test(c.lines[0].k),`${w}px statut brut sans résultat (${k}) : aucun statut d'élimination, estimation seule`,c);});
   await page(w,'candidat.html#D-e9',async p=>{const c=await card(p);rep(c===null,`${w}px statut brut « eliminated » sans résultat ni sondage : aucune carte, aucun statut d'élimination`,c);});
-  await page(w,'candidat.html#A-e10',async p=>{const c=await card(p);rep(c&&!/Éliminé|Battu|éliminé/i.test(c.t)&&/situation à confirmer/.test(c.t),`${w}px statut brut « eliminated » + résultats PROVISOIRES : aucune élimination affichée`,c);});
+  await page(w,'candidat.html#A-e10',async p=>{const c=await card(p);rep(c&&!/Éliminé|Battu|éliminé/i.test(c.t)&&/provisoires/.test(c.t),`${w}px statut brut « eliminated » + résultats PROVISOIRES : aucune élimination affichée (score provisoire seul)`,c);});
   await page(w,'candidat.html#A-e3',async p=>{const c=await card(p);rep(c&&/Battu/.test(c.t)&&!c.lines.some(l=>/sc-poll/.test(l.k)),`${w}px battu : aucune estimation même avec un sondage de 2nd tour récent`,c);});
   await page(w,'candidats.html?e=e8',async p=>{const t=await p.locator('.cand').evaluateAll(a=>a.map(x=>x.innerText));const f=k=>t.find(x=>x.includes(k))||'';
     rep(/Éliminé au premier tour/i.test(f('Alice'))&&!/Battu|éliminé/i.test(f('Bruno'))&&!/Battu|éliminé/i.test(f('David')),`${w}px liste des candidats : « éliminé » seulement si confirmé par un résultat définitif`,t);});

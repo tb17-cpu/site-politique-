@@ -383,3 +383,9 @@ details.m-fold[open]>summary::before{transform:rotate(90deg)}
 .res-tag.res-win{background:var(--accent);color:var(--on-accent,#fff)}
 .res-part{margin-top:var(--s-3)}
 .ps-now .ps-round{font-weight:600;color:var(--fg-2)}
+
+/* « Élu provisoire » / « Qualifié » sur résultats provisoires : distinction visuelle explicite (trait pointillé) */
+.status-card.is-prov{border-left-style:dashed}
+.statut--prov{border-style:dashed}
+.res-tag.res-prov{background:transparent;border:1px dashed currentColor;color:var(--fg-2)}
+.res-tag.res-win.res-prov{background:transparent;color:var(--accent);border-color:var(--accent)}

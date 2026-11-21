@@ -56,7 +56,7 @@
     const facts = [
       UI.safeUrl(p.official_website) ? `<span>${UI.link(p.official_website, p.official_website)}</span>` : ""].filter(Boolean).join("");
     const stage = Scrutin.stageCard(c, c._polls, c._results);
-    const stageCard = stage ? `<div class="status-card" role="status">${stage.label ? `<b>${e(stage.label)}</b>` : ""}${stage.note ? `<small>${e(stage.note)}</small>` : ""}${stage.lines.length ? `<ul class="sc-lines">${stage.lines.map(l => `<li class="sc-${l.kind}"><span class="sc-k">${e(l.label)}</span> <b class="sc-v">${e(l.value)}</b><small>${l.kind === "result" ? "Résultat officiel" : "Estimation d’après sondages"}${l.detail ? " · " + e(l.detail) : ""}</small></li>`).join("")}</ul>` : ""}</div>` : "";
+    const stageCard = stage ? `<div class="status-card${stage.provisional ? " is-prov" : ""}" role="status">${stage.label ? `<b>${e(stage.label)}</b>` : ""}${stage.note ? `<small>${e(stage.note)}</small>` : ""}${stage.lines.length ? `<ul class="sc-lines">${stage.lines.map(l => `<li class="sc-${l.kind}"><span class="sc-k">${e(l.label)}</span> <b class="sc-v">${e(l.value)}</b><small>${l.kind === "result" ? "Résultat officiel" : "Estimation d’après sondages"}${l.detail ? " · " + e(l.detail) : ""}</small></li>`).join("")}</ul>` : ""}</div>` : "";
     let h = `<section class="cand-head${panel ? "" : " cand-head--solo"}" aria-label="Candidat">
       <div class="cand-id">${UI.avatar(c.people, true)}<div>
         <h1>${e(name)}</h1>

@@ -67,7 +67,7 @@ const poll=p=>p.evaluate(()=>{const s=document.querySelector('.poll');if(!s)retu
   await page(w,'election.html?e=d1',async p=>{const r=await poll(p);rep(r.n===1&&/Alpha/.test(r.txt)&&!/Beta/.test(r.txt),`${w}px départage : publication la plus récente (Alpha)`,r.txt);});
   await page(w,'election.html?e=d2',async p=>{const r=await poll(p);rep(r.n===1&&/Beta/.test(r.txt)&&!/Alpha/.test(r.txt),`${w}px départage : même publication -> fin de terrain la plus récente (Beta)`,r.txt);});
   await page(w,'election.html?e=d3',async p=>{const r=await poll(p);rep(r.n===1&&/Alpha/.test(r.txt)&&!/Beta/.test(r.txt),`${w}px départage : la publication prime sur la fin de terrain (Alpha)`,r.txt);});
-  await page(w,'election.html?e=xx',async p=>{const x=await p.evaluate(()=>document.body.innerText);rep(/Aucun sondage publié pour cette élection/.test(x)&&!(await p.locator('.bars').count()),`${w}px élection sans sondage : mention sobre, page intacte`);});
+  await page(w,'election.html?e=xx',async p=>{const x=await p.evaluate(()=>document.body.innerText);rep(!/Aucun sondage|Sondages/.test(x)&&!(await p.locator('.bars,.pollsel').count()),`${w}px élection sans sondage : aucun bloc, aucun titre, aucun message de remplacement (page intacte)`);});
  }
  const seen=new Set(); for(let i=0;i<5;i++){await page(1280,'election.html?e=fr',async p=>{seen.add((await p.locator('.poll').evaluateAll(a=>a.map(x=>/Ifop/.test(x.innerText)?'I':'O'))).join())})}
  rep(seen.size===1,'égalité : ordre d’affichage identique sur 5 chargements',[...seen]);
@@ -81,7 +81,7 @@ const poll=p=>p.evaluate(()=>{const s=document.querySelector('.poll');if(!s)retu
    rep(/Calendrier|Candidats|élection/i.test(x)&&(await p.locator('h1').count())>=1,`${w}px ${label} : le reste de la page reste affiché`);
   },null,{poll_snapshots:code,code:pg});
  }
- await page(1280,'election.html?e=xx',async p=>{const x=await p.evaluate(()=>document.body.innerText);rep(/Aucun sondage publié pour cette élection/.test(x)&&await p.locator('[data-poll-error]').count()===0,'absence réelle : « Aucun sondage publié » conservé, sans message d’erreur');});
+ await page(1280,'election.html?e=xx',async p=>{const x=await p.evaluate(()=>document.body.innerText);rep(!/Aucun sondage/.test(x)&&await p.locator('[data-poll-error]').count()===0,'absence réelle : rien n’est affiché (ni bloc, ni message), et aucun message d’erreur');});
  await page(1280,'election.html?e=es',async p=>{rep(await p.locator('[data-poll-error]').count()===0&&await p.locator('.poll').count()===1,'aucune erreur : sondage affiché normalement');});
  console.log(`${res} contrôles, ${bad} échec(s)`);process.exit(bad?1:0);
 })();

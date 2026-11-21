@@ -43,14 +43,13 @@
   const pollHead = () => { const g = PS.groups[PS.i], n = PS.groups.length;
     return `<div class="ps-now"><b>${e(instOf(g))}</b> <span>${e(whenOf(g))}${PS.i === 0 ? " · le plus récent" : ""}</span> <span class="ps-round">${e(Scrutin.roundLabel(g.round))}</span></div>`; };
   const pollBlock = P => {
-    const none = `<h2 class="ov-h">Sondages</h2><p class="quiet">Aucun sondage publié pour cette élection.</p>`;
     /* Erreur technique : message distinct de l'absence réelle, selon la nature du problème (détail dans la console). */
     if (P.error) { const txt = P.error === "denied" ? "Les sondages ne sont pas accessibles pour le moment (accès refusé)."
         : P.error === "missing" || P.error === "invalid" ? "Les sondages ne peuvent pas être affichés : la structure de données attendue est indisponible."
         : "Les sondages n’ont pas pu être chargés. Réessayez dans un instant.";
       return `<h2 class="ov-h">Sondages</h2><p class="quiet" role="status" data-poll-error="${e(P.error)}">${e(txt)}</p>`; }
     PS = { groups: Scrutin.pollGroups(P.rows), i: 0 };
-    const n = PS.groups.length; if (!n) return none;
+    const n = PS.groups.length; if (!n) return "";
     const sel = n > 1 ? `<label class="sr-only" for="ps-select">Choisir un sondage</label><select id="ps-select" class="ps-select" data-ps="select">${PS.groups.map((g, k) => `<option value="${k}">${e((g.date ? Scrutin.date(g.date) : "sans date") + " · " + instOf(g))}</option>`).join("")}</select>` : "";
     return `<section class="pollsel" data-pollsel><h2 class="ov-h">Sondages <small class="ps-count">${n} enregistré${n > 1 ? "s" : ""}</small></h2>
       <div class="ps-bar">${n > 1 ? `<button type="button" class="ps-btn" data-ps="older" aria-label="Sondage plus ancien">‹</button>` : ""}
@@ -87,17 +86,22 @@
     const src = rd.sources;
     return `<p class="res-state"><span class="res-badge res-${e(rd.result_status === "final" ? "final" : "prov")}">${e(rd.result_status === "final" ? "Résultats définitifs" : "Résultats provisoires")}</span>${rd.held_on ? ` <span class="quiet">Scrutin du ${e(Scrutin.date(rd.held_on))}</span>` : ""}</p>
       ${rows.length ? `<ul class="bars bars-res">${rows.map(r => { const v = Number(r.percent_expressed), has = r.percent_expressed != null, w = has ? Math.max(1.5, v / max * 100) : Math.max(1.5, (Number(r.votes) || 0) / maxV * 100);
-        const tag = r.elected ? `<span class="res-tag res-win">Élu</span>` : r.qualified_next_round ? `<span class="res-tag">Qualifié pour le ${e(Scrutin.roundNameLow(rd.round_number + 1))}</span>` : "";
-        return `<li class="${r.elected || r.qualified_next_round ? "top" : ""}"><span class="bar-n">${who(r)}${tag}</span><span class="bar-t" role="img" aria-label="${has ? e(score(v)) : ""}"><span class="bar-f" style="width:${w.toFixed(1)}%"></span></span><span class="bar-v">${has ? e(score(v)) : ""}${r.votes != null ? `<small>${e(Scrutin.nb(r.votes))} voix</small>` : ""}</span></li>`; }).join("")}</ul>` : `<p class="quiet">Scores par candidat non renseignés pour ce tour.</p>`}
+        const tg = Scrutin.tagFor(r, rd, RS.rounds), tag = tg ? `<span class="res-tag${tg.win ? " res-win" : ""}${tg.provisional ? " res-prov" : ""}">${e(tg.text)}</span>` : "";
+        return `<li class="${tg ? "top" : ""}"><span class="bar-n">${who(r)}${tag}</span><span class="bar-t" role="img" aria-label="${has ? e(score(v)) : ""}"><span class="bar-f" style="width:${w.toFixed(1)}%"></span></span><span class="bar-v">${has ? e(score(v)) : ""}${r.votes != null ? `<small>${e(Scrutin.nb(r.votes))} voix</small>` : ""}</span></li>`; }).join("")}</ul>` : `<p class="quiet">Scores par candidat non renseignés pour ce tour.</p>`}
       ${part.length ? `<dl class="kv res-part">${part.map(x => `<dt>${e(x[0])}</dt><dd>${e(x[1])}</dd>`).join("")}</dl>` : ""}
       ${rd.notes ? `<p class="quiet poll-note">${e(rd.notes)}</p>` : ""}
       <p class="quiet poll-note">Résultats officiels : votes réellement exprimés, à ne pas confondre avec les sondages.${src ? ` Source : ${UI.link(src.url, src.title || "Source") || e(src.title || "Source")}${src.publisher ? ` · ${e(src.publisher)}` : ""}` : ""}</p>`;
   };
+  /* Calendrier : uniquement les dates et informations renseignées ; aucune donnée -> ni titre ni message. */
+  const calendar = (el, st) => { const k = kv([["Pays", el.countries && el.countries.name], ["Type de scrutin", UI.humanize(el.election_type)], ["Année", el.year],
+      ["Date du scrutin", UI.date(el.scheduled_date)], ["Date effective", UI.date(el.actual_date)], ["Second tour", UI.date(el.second_round_date)],
+      ["Date limite des parrainages", UI.date(el.sponsorship_deadline)], ["Situation", st.label]]);
+    return k ? `<h2 class="ov-h">Calendrier</h2>${k}` : ""; };
   const resultsBlock = R => {
-    /* Emplacement toujours prévu ; invisible tant qu'aucun résultat n'est publié. */
+    /* Aucun résultat publié : rien du tout (ni bloc, ni titre, ni emplacement réservé, ni message de remplacement). */
     if (R.error) return `<section class="res" data-results="error"><h2 class="ov-h">Résultats</h2><p class="quiet" role="status">Les résultats n’ont pas pu être chargés. Réessayez dans un instant.</p></section>`;
     RS = { rounds: Scrutin.rounds(R), i: 0 }; RS.i = RS.rounds.length - 1;
-    if (!RS.rounds.length) return `<section class="res" data-results="none" hidden></section>`;
+    if (!RS.rounds.length) return "";
     return `<section class="res" data-results="ok"><h2 class="ov-h">Résultats officiels</h2>
       <div class="res-tabs" role="tablist" aria-label="Tours de scrutin">${RS.rounds.map((rd, k) => `<button type="button" role="tab" class="res-tab" tabindex="${k === RS.i ? 0 : -1}" id="rt-${k}" aria-controls="res-panel" aria-selected="${k === RS.i}" data-rt="${k}">${e(Scrutin.roundName(rd.round_number))}</button>`).join("")}</div>
       <div class="res-panel ps-panel" id="res-panel" role="tabpanel" data-res-panel>${resRound(RS.rounds[RS.i])}</div></section>`;
@@ -132,7 +136,7 @@
     const st = Election.status(el);
     document.title = Election.name(el) + " · Au résultat";
     $("p-title").textContent = Election.name(el);
-    $("p-label").textContent = "Vue d’ensemble · " + st.label;
+    $("p-label").textContent = "Vue d’ensemble" + (st.label ? " · " + st.label : "");
     $("p-lede").innerHTML = UI.richInline(el.description) || "Candidatures, programmes, thématiques, comparateur et indicateurs de cette élection.";
     UI.mount(mount, async () => ({ cands: await DB.candidacies(el.id), progs: await DB.programs(el.id), polls: await DB.polls(el.id).catch(err => { const kind = DB.classify(err); console.warn("[sondages] chargement impossible :", kind, err && err.message); return { error: kind, rows: [] }; }), results: await DB.results(el.id).catch(err => { const kind = DB.classify(err); console.warn("[résultats] chargement impossible :", kind, err && err.message); return { error: kind, rounds: [] }; }), dossier: await dossierOf(el) }), d => {
       const nm = d.progs.reduce((n, p) => n + (p.program_versions || []).reduce((k, v) => k + (v.measures || []).length, 0), 0);
@@ -144,10 +148,7 @@
         ["indicateurs", "Indicateurs", "Données et sources du pays"]].concat(d.dossier ? [["pays", "Comprendre le pays", "Le contexte politique, économique et institutionnel"]] : []);
       const hrefs = { candidats: "candidats.html", programmes: "programmes.html", thematiques: "thematiques.html", comparateur: "comparateur.html", indicateurs: "indicateurs.html", pays: "pays.html" };
       return `<div class="p-grid">${sections.map(s => `<a class="p-cell" href="${hrefs[s[0]]}"><span class="tag">${e(s[1])}</span><h3>${e(s[2])}</h3></a>`).join("")}</div>
-        <h2 class="ov-h">Calendrier</h2>
-        ${kv([["Pays", el.countries && el.countries.name], ["Type de scrutin", UI.humanize(el.election_type)], ["Année", el.year],
-          ["Date du scrutin", UI.date(el.scheduled_date)], ["Date effective", UI.date(el.actual_date)], ["Second tour", UI.date(el.second_round_date)],
-          ["Date limite des parrainages", UI.date(el.sponsorship_deadline)], ["Situation", st.label]]) || `<p class="p-sub quiet">Calendrier non renseigné.</p>`}
+        ${calendar(el, st)}
         ${resultsBlock(d.results)}${pollBlock(d.polls)}${refsBlock(el)}`;
     }, { loading: "Chargement de l’élection…", isEmpty: () => false, after: el => { pollWire(el); resWire(el); } });
   });

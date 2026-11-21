@@ -125,12 +125,12 @@ const open = async (br, url, { w = 1280, h = 900, theme = 'light', mob = false }
     const { ctx, pg, errs } = await open(br, 'candidat.html?e=1#1');
     const r = await pg.evaluate(() => ({ cards: document.querySelectorAll('.status-card').length, t: document.body.innerText, desc: document.querySelectorAll('.blk .desc').length, badge: document.querySelectorAll('.cand-id .statut').length,
       st: UI.candidacyStage({ candidacy_status: 'declared', announcement_date: '2026-11-06' }), q: UI.candidacyStage({ candidacy_status: 'declared', second_round_status: 'qualified', second_round_qualified_at: '2027-04-10' }),
-      none: UI.candidacyStage({}), all: ['validated', 'first_round', 'elected', 'eliminated', 'dropped_out', 'withdrawn', 'invalidated'].map(k => UI.candidacyStage({ candidacy_status: k }).label), unknown: UI.candidacyStage({ candidacy_status: 'zzz' }).label }));
+      none: UI.candidacyStage({}), all: ['validated', 'first_round', 'elected', 'eliminated', 'dropped_out', 'withdrawn', 'invalidated'].map(k => UI.candidacyStage({ candidacy_status: k })).filter(Boolean).map(x => x.label), unknown: UI.candidacyStage({ candidacy_status: 'zzz' }) }));
     rep(r.cards === 1 && r.badge === 0, 'fiche candidat : une seule carte de statut de candidature', [r.cards, r.badge]);
     rep(!/Parrainages|Dernière vérification|Situation non documentée/.test(r.t), 'fiche candidat : plus de rubrique Parrainages');
     rep(r.desc === 0, 'fiche candidat : plus de paragraphe de présentation de la sélection', r.desc);
-    rep(r.st.label === 'Candidature déclarée' && /annoncée le 6 novembre 2026/.test(r.st.note) && r.q.label === 'Qualifié pour le second tour' && r.none === null, 'statut : déclarée avec date, qualification au second tour prioritaire, rien sans statut', [r.st, r.q, r.none]);
-    rep(r.all.join('|') === 'Candidature officiellement validée|Premier tour|Élu|Battu / éliminé|Désisté|Retiré|Candidature invalidée' && r.unknown === 'Statut à préciser', 'statuts de candidature : toutes les étapes ont un libellé, valeur inconnue sans erreur', r.all);
+    rep(r.st.label === 'Candidature déclarée' && /annoncée le 6 novembre 2026/.test(r.st.note) && r.q.label === 'Candidature déclarée' && r.none === null, 'statut de candidature : déclarée avec date ; second_round_* brut ignoré (jamais une preuve de qualification) ; rien sans statut', [r.st, r.q, r.none]);
+    rep(r.all.join('|') === 'Candidature officiellement validée|Premier tour|Désisté|Retiré|Candidature invalidée' && r.unknown === null, 'statuts de candidature : seules les étapes de candidature ont un libellé ; issues brutes (elected, eliminated) et valeur inconnue : rien', r.all);
     rep(!errs.length, 'fiche candidat : aucune erreur JS', errs);
     await ctx.close();
     const m = await open(br, 'mesure.html?e=1#2'); const t = await m.pg.evaluate(() => ({ t: document.getElementById('f-body').innerText, bq: document.querySelectorAll('#f-body blockquote').length, fd: document.querySelectorAll('.fs-detail').length }));

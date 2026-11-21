@@ -74,51 +74,74 @@
   const rounds = res => ((res && res.rounds) || []).filter(r => r && r.round_number != null).slice().sort((a, b) => a.round_number - b.round_number);
   const entryOf = (rd, c) => (rd.candidates || []).find(x => isRes(x, c)) || null;
 
-  /* Carte de statut : { label, note, lines } à partir du statut de la candidature (UI.candidacyStage) et, selon l'avancement du
-     scrutin, des résultats officiels (kind « result ») et des estimations de sondages (kind « poll »). Chaque ligne : { kind, label, value, detail }.
-     - tour non tenu (aucun résultat publié) : aucun score ;
-     - estimation du 1er tour seulement tant que ce tour n'a pas de résultat ; du 2nd tour seulement pour un candidat qualifié ;
-     - le résultat de chaque tour passé est conservé. */
-  const stageCard = (c, polls, results) => {
-    /* candidacy_status « eliminated » / « defeated » ne suffit JAMAIS à afficher « Éliminé » ou « Battu » : seul un résultat définitif cohérent
-       (voir plus bas) peut le conclure. Sans confirmation, ce statut brut est ignoré (aucun statut d'élimination affiché). */
-    const claimsLoss = /^(eliminated|defeated)$/.test(String(c.candidacy_status || "").trim().toLowerCase());
-    const base = g.UI.candidacyStage(claimsLoss ? Object.assign({}, c, { candidacy_status: "" }) : c) || null;
-    const rds = rounds(results), lines = [];
-    let label = base && base.label, note = base && base.note || "";
-    const closed = /^(withdrawn|dropped_out|stepped_down|invalidated|rejected)$/.test(String(c.candidacy_status || "").toLowerCase());
-    let qualified = false, over = false;
-    rds.forEach(rd => {
-      const en = entryOf(rd, c); if (!en) return;
-      const parts = [en.percent_expressed != null ? pct(en.percent_expressed) + " des suffrages exprimés" : "", en.votes != null ? nb(en.votes) + " voix" : ""].filter(Boolean);
-      if (parts.length) lines.push({ kind: "result", round: rd.round_number, label: roundName(rd.round_number), value: parts[0], detail: [parts[1], statusName(rd.result_status) && "résultats " + statusName(rd.result_status).toLowerCase(), rd.held_on && "scrutin du " + date(rd.held_on)].filter(Boolean).join(" · ") });
-      if (closed) return;
-      /* Conclusion fiable : « Éliminé » / « Battu » exigent un résultat DÉFINITIF, des qualifications ou un élu renseignés pour ce tour et
-         cohérents (jamais à la fois un élu et des qualifiés). Un résultat provisoire, sans qualification saisie ou incohérent ne
-         permet aucune conclusion négative : le statut de la candidature reste inchangé. Élu / qualifié (indicateurs saisis) restent
-         affichés, avec la mention « résultats provisoires » tant que le tour n'est pas définitif. */
-      const nEl = (rd.candidates || []).filter(x => x.elected).length, nQ = (rd.candidates || []).filter(x => x.qualified_next_round).length;
-      const coherent = !(nEl > 0 && nQ > 0), final = rd.result_status === "final", prov = final ? "" : "résultats provisoires";
-      if (en.elected && coherent) { label = "Élu"; note = ["au " + roundNameLow(rd.round_number), prov].filter(Boolean).join(" · "); over = final; qualified = false; }
-      else if (en.qualified_next_round && coherent) { label = "Qualifié pour le " + roundNameLow(rd.round_number + 1); note = prov; qualified = true; over = false; }
-      else if (coherent && (nEl > 0 || nQ > 0)) {
-        if (final) { label = nEl > 0 ? "Battu" : "Éliminé au " + roundNameLow(rd.round_number); note = ""; over = true; qualified = false; }
-        else { note = "Résultats provisoires : situation à confirmer"; }
-      }
-    });
-    const has = n => rds.some(r => r.round_number === n && entryOf(r, c));
-    const groups = pollGroups(polls && polls.rows);
-    const add = (round, text) => { if (over || closed) return; const e = estimate(groups, c, round); if (!e) return;
-      lines.push({ kind: "poll", round, label: text, value: pct0(e.value), detail: (e.mode === "average" ? "moyenne de " + e.n + " sondages · " : "") + "au " + date(e.date) }); };
-    if (!has(1) && !rds.length) add(1, "Intentions de vote au premier tour");
-    if (qualified && !has(2)) add(2, "Intentions de vote au second tour");
-    /* Intentions du tour à venir placées après les résultats déjà obtenus. */
-    lines.sort((a, b) => (a.kind === b.kind ? a.round - b.round : a.kind === "result" ? -1 : 1));
-    /* Garde-fou : aucun statut d'élimination ne coexiste avec une estimation de sondage. */
-    if (/^(Éliminé|Battu)/.test(label || "")) for (let i = lines.length - 1; i >= 0; i--) if (lines[i].kind === "poll") lines.splice(i, 1);
-    if (!label && !lines.length) return null;
-    return { label: label || "", note, lines };
+  /* ====== Logique métier unique des statuts électoraux (fiche, liste, carte de statut, rubrique résultats) ======
+     Principe : une valeur brute de candidacies (« elected », « winner », « eliminated », « defeated », « second_round »…) n'est JAMAIS une
+     preuve. Élu, qualifié, éliminé, battu ne se déduisent que des résultats enregistrés (election_candidate_results), tour par tour :
+       - résultat « final » cohérent  -> statut ferme (Élu, Qualifié pour le tour suivant, Éliminé, Battu) ;
+       - résultat « provisional » cohérent -> « Élu provisoire » ou « Qualifié … » avec mention ; aucune conclusion négative ;
+       - incohérence (élu ET qualifiés dans le même tour, statut de résultat inconnu) -> AUCUN statut issu de ce tour ;
+       - pas de résultat -> aucun statut d'issue. Le nombre d'élus n'est pas limité (scrutins à plusieurs élus).
+     Information absente ou non pertinente à la phase : rien n'est produit (null), jamais de texte de remplacement. */
+  const verdict = rd => {
+    const cs = rd.candidates || [], nEl = cs.filter(x => x.elected).length, nQ = cs.filter(x => x.qualified_next_round).length;
+    const final = rd.result_status === "final", prov = rd.result_status === "provisional";
+    const contradictory = nEl > 0 && nQ > 0;
+    return { nEl, nQ, final, provisional: prov, contradictory, usable: (final || prov) && !contradictory };
+  };
+  /* Issue d'une ligne de résultat dans son tour : { kind: elected|qualified|eliminated|beaten, provisional } ou null (aucune conclusion). */
+  const outcome = (en, rd, rds) => {
+    const v = verdict(rd); if (!en || !v.usable) return null;
+    if (en.elected) return { kind: "elected", provisional: !v.final };
+    if (en.qualified_next_round) {
+      /* Qualifié mais un tour suivant publié ne le mentionne pas : incohérent, aucune conclusion. */
+      const later = rds.filter(r => r.round_number > rd.round_number);
+      if (later.length && !later.some(r => (r.candidates || []).some(x => sameEntity(x, en)))) return null;
+      return { kind: "qualified", provisional: !v.final };
+    }
+    if ((v.nEl > 0 || v.nQ > 0) && v.final) return { kind: v.nEl > 0 ? "beaten" : "eliminated", provisional: false };
+    return null;
+  };
+  const sameEntity = (a, b) => a.entity_kind === b.entity_kind && (a.candidacy_id || a.party_id || a.person_id || norm(a.entity_label)) === (b.candidacy_id || b.party_id || b.person_id || norm(b.entity_label));
+  /* Pastille d'un candidat dans la rubrique résultats : seulement une issue valide (élu / qualifié) ; jamais de statut contradictoire. */
+  const tagFor = (en, rd, rds) => { const o = outcome(en, rd, rds); if (!o || (o.kind !== "elected" && o.kind !== "qualified")) return null;
+    return o.kind === "elected" ? { text: o.provisional ? "Élu provisoire" : "Élu", provisional: o.provisional, win: true } : { text: "Qualifié pour le " + roundNameLow(rd.round_number + 1), provisional: o.provisional, win: false }; };
+
+  /* Statut d'un candidat : { label, note, provisional, kind } ou null. Seule source pour la fiche, la liste et la carte. */
+  const status = (c, results) => {
+    const rds = rounds(results), raw = g.UI.candidacyStage(c);   /* statuts de candidature uniquement (jamais d'issue brute) */
+    if (raw && raw.closed) return { label: raw.label, note: raw.note, kind: "closed", provisional: false };
+    let en = null, rd = null;
+    rds.forEach(r => { const x = entryOf(r, c); if (x) { en = x; rd = r; } });
+    if (en) { const o = outcome(en, rd, rds);
+      if (!o) return null;
+      const next = roundNameLow(rd.round_number + 1), at = roundNameLow(rd.round_number), note = o.provisional ? "résultats provisoires" : "";
+      if (o.kind === "elected") return { label: o.provisional ? "Élu provisoire" : "Élu", note: o.provisional ? "résultats provisoires" : "au " + at, kind: "elected", provisional: o.provisional };
+      if (o.kind === "qualified") return { label: "Qualifié pour le " + next, note, kind: "qualified", provisional: o.provisional };
+      return { label: o.kind === "beaten" ? "Battu" : "Éliminé au " + at, note: "", kind: o.kind, provisional: false };
+    }
+    /* Statut de candidature (avant le vote) : pertinent seulement tant qu'aucun résultat n'existe pour l'élection. */
+    return raw && !rds.length ? { label: raw.label, note: raw.note, kind: "candidacy", provisional: false } : null;
   };
 
-  g.Scrutin = { date, pct, nb, roundName, roundNameLow, statusName, pollGroups, roundOf, roundLabel, estimate, WINDOW_DAYS, MAX_AGE_DAYS, rounds, entryOf, stageCard, dmy };
+  /* Carte de statut : { label, note, provisional, lines } — statut commun (status) + lignes de résultats officiels (kind « result ») et
+     d'estimations de sondages (kind « poll »). Rien à afficher -> null (aucune carte, aucun titre, aucun message de remplacement).
+     Estimation du 1er tour : tant qu'aucun résultat n'existe ; du tour suivant : pour un qualifié valide dont ce tour n'a pas de résultat. */
+  const stageCard = (c, polls, results) => {
+    const rds = rounds(results), st = status(c, results), lines = [];
+    rds.forEach(rd => { const en = entryOf(rd, c); if (!en) return;
+      const parts = [en.percent_expressed != null ? pct(en.percent_expressed) + " des suffrages exprimés" : "", en.votes != null ? nb(en.votes) + " voix" : ""].filter(Boolean);
+      if (parts.length) lines.push({ kind: "result", round: rd.round_number, label: roundName(rd.round_number), value: parts[0], detail: [parts[1], statusName(rd.result_status) && "résultats " + statusName(rd.result_status).toLowerCase(), rd.held_on && "scrutin du " + date(rd.held_on)].filter(Boolean).join(" · ") }); });
+    const over = !!st && (st.kind === "elected" && !st.provisional || st.kind === "beaten" || st.kind === "eliminated" || st.kind === "closed");
+    const has = n => rds.some(r => r.round_number === n && entryOf(r, c));
+    const groups = pollGroups(polls && polls.rows);
+    const add = (round, text) => { if (over) return; const e = estimate(groups, c, round); if (!e) return;
+      lines.push({ kind: "poll", round, label: text, value: pct0(e.value), detail: (e.mode === "average" ? "moyenne de " + e.n + " sondages · " : "") + "au " + date(e.date) }); };
+    if (!rds.length) add(1, "Intentions de vote au premier tour");
+    if (st && st.kind === "qualified" && !has(rds.length ? Math.max(...rds.map(r => r.round_number)) + 1 : 2)) add(rds.length ? Math.max(...rds.map(r => r.round_number)) + 1 : 2, "Intentions de vote au " + roundNameLow(rds.length ? Math.max(...rds.map(r => r.round_number)) + 1 : 2));
+    lines.sort((a, b) => (a.kind === b.kind ? a.round - b.round : a.kind === "result" ? -1 : 1));
+    if (!st && !lines.length) return null;
+    return { label: st ? st.label : "", note: st ? st.note : "", provisional: !!(st && st.provisional), kind: st ? st.kind : "", lines };
+  };
+
+  g.Scrutin = { date, pct, nb, roundName, roundNameLow, statusName, pollGroups, roundOf, roundLabel, estimate, WINDOW_DAYS, MAX_AGE_DAYS, rounds, entryOf, stageCard, status, outcome, verdict, tagFor, dmy };
 })(window);

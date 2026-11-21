@@ -16,7 +16,8 @@
 --  3. Doublons : une seule ligne par (tour, candidature), (tour, parti), (tour, personne) et (tour, libellé libre normalisé) ; un seul résultat par (élection, n° de tour).
 --  4. Chiffres : votants ≤ inscrits ; blancs + nuls ≤ votants ; identités abstentions = inscrits − votants et exprimés = votants − blancs − nuls
 --     lorsque toutes les valeurs sont renseignées ; somme des pourcentages ≤ 100,5 % et somme des voix ≤ suffrages exprimés (contrôle différé :
---     fin de transaction, aussi déclenché par toute modification de expressed_votes du tour) ; élu et qualifié pour le tour suivant s'excluent.
+--     fin de transaction, aussi déclenché par toute modification de expressed_votes du tour) ; élu et qualifié pour le tour suivant s'excluent, ligne par ligne ET à l'échelle du tour (contrainte différée
+--     inter-lignes : aucun élu avec des qualifiés dans un même tour ; aucune limite sur le nombre d'élus).
 --  5. Provisoire puis définitif : le passage définitif → provisoire est interdit ; l'élection et le n° de tour d'un résultat sont immuables ;
 --     le tour parent d'un score est immuable.
 begin;
@@ -163,6 +164,21 @@ create constraint trigger ecr_totals after insert or update or delete on public.
 create constraint trigger err_totals after update of expressed_votes on public.election_round_results
   deferrable initially deferred for each row execute function public.election_round_totals_parent_check();
 
+-- Cohérence ENTRE lignes d'un même tour : un tour ne peut pas comporter à la fois un candidat élu et un ou plusieurs candidats qualifiés pour le
+-- tour suivant (toutes lignes du tour, publiées ou non). Aucune limite sur le NOMBRE d'élus ni de qualifiés (scrutins à plusieurs élus).
+-- Contrainte différée : l'ordre d'insertion dans une même transaction est libre ; le contrôle a lieu à la fin de la transaction.
+create function public.election_round_outcomes_verify(rid uuid) returns void language plpgsql as $$
+begin
+  if exists (select 1 from public.election_candidate_results where round_result_id = rid and elected)
+     and exists (select 1 from public.election_candidate_results where round_result_id = rid and qualified_next_round) then
+    raise exception 'incohérence : le tour % comporte à la fois un élu et des candidats qualifiés pour le tour suivant', rid;
+  end if;
+end $$;
+create function public.election_round_outcomes_check() returns trigger language plpgsql as $$
+begin perform public.election_round_outcomes_verify(new.round_result_id); return null; end $$;
+create constraint trigger ecr_outcomes after insert or update of elected, qualified_next_round, round_result_id on public.election_candidate_results
+  deferrable initially deferred for each row execute function public.election_round_outcomes_check();
+
 alter table public.election_round_results enable row level security;
 alter table public.election_candidate_results enable row level security;
 
@@ -192,4 +208,4 @@ revoke all on public.election_round_results, public.election_candidate_results f
 grant select on public.election_round_results, public.election_candidate_results to anon, authenticated;
 commit;
 -- Retour arrière : drop table public.election_candidate_results, public.election_round_results;
---                  drop function public.election_candidate_guard(), public.election_round_guard(), public.election_round_totals_check(), public.election_round_totals_parent_check(), public.election_round_totals_verify(uuid), public.election_results_touch();
+--                  drop function public.election_candidate_guard(), public.election_round_guard(), public.election_round_totals_check(), public.election_round_totals_parent_check(), public.election_round_totals_verify(uuid), public.election_round_outcomes_check(), public.election_round_outcomes_verify(uuid), public.election_results_touch();

@@ -25,7 +25,7 @@
     if (end && end < today) return { key: "past", label: "Terminée" };
     if (start && start > today) return { key: "upcoming", label: "À venir" };
     if (start || end) return { key: "live", label: "En cours" };
-    return { key: "unknown", label: "Calendrier à préciser" };
+    return { key: "unknown", label: "" };   /* aucune date : aucune situation affichée (jamais de texte de remplacement) */
   };
   const when = el => { const d = el.actual_date || el.scheduled_date; return d ? new Date(String(d).slice(0, 10) + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : ""; };
 
@@ -48,7 +48,7 @@
     const sel = document.getElementById("elec-select"); if (!sel) return;
     if (loadErr) { sel.innerHTML = `<option>Élections indisponibles</option>`; sel.disabled = true; return; }
     if (!list.length) { sel.innerHTML = `<option>Aucune élection publiée</option>`; sel.disabled = true; return; }
-    const opt = el => `<option value="${esc(el.id)}"${cur && String(cur.id) === String(el.id) ? " selected" : ""}>${esc(name(el))} · ${esc(status(el).label)}</option>`;
+    const opt = el => `<option value="${esc(el.id)}"${cur && String(cur.id) === String(el.id) ? " selected" : ""}>${esc(name(el))}${status(el).label ? " · " + esc(status(el).label) : ""}</option>`;
     const act = list.filter(x => status(x).key !== "past"), past = list.filter(x => status(x).key === "past");
     sel.disabled = false;
     sel.innerHTML = `<option value=""${cur ? "" : " selected"}>Choisir une élection…</option>` +
@@ -70,7 +70,7 @@
     if (body.dataset.scope !== "election" || !cur) { bar.innerHTML = ""; return; }
     const st = status(cur);
     bar.innerHTML = `<div class="elec-bar"><div class="wrap">
-      <div class="eb-title"><span class="label">Élection</span><b>${esc(name(cur))}</b><span class="eb-st eb-${st.key}">${esc(st.label)}</span></div>
+      <div class="eb-title"><span class="label">Élection</span><b>${esc(name(cur))}</b>${st.label ? `<span class="eb-st eb-${st.key}">${esc(st.label)}</span>` : ""}</div>
       <nav class="eb-nav" aria-label="Rubriques de l’élection"><ul>${S.electionNav.map(n =>
         `<li><a href="${esc(hrefFor(n.href, cur.id))}"${n.id === navKey ? ' aria-current="page"' : ""}>${esc(n.label)}</a></li>`).join("")}</ul></nav></div></div>`;
     const cu = bar.querySelector('.eb-nav a[aria-current="page"]'), ul = cu && cu.closest("ul");
@@ -99,7 +99,7 @@
   function chooser(target) {
     return `<div class="elec-choose"><p class="p-sub">Choisissez une élection : chaque rubrique n’affiche que les contenus de l’élection sélectionnée.</p>
       <div class="h-doors">${list.map(el => { const st = status(el);
-        return `<a class="h-door" href="${esc(hrefFor(target || "election.html", el.id))}"><span class="h-state">${esc(st.label)}${when(el) ? " · " + esc(when(el)) : ""}</span>
+        return `<a class="h-door" href="${esc(hrefFor(target || "election.html", el.id))}">${[st.label, when(el)].filter(Boolean).length ? `<span class="h-state">${[st.label, when(el)].filter(Boolean).map(esc).join(" · ")}</span>` : ""}
           <h3>${esc(name(el))}</h3>${el.description ? `<p>${window.UI ? UI.richInline(el.description) : esc(el.description)}</p>` : "<p></p>"}<span class="h-go">Ouvrir →</span></a>`; }).join("")}</div></div>`;
   }
 

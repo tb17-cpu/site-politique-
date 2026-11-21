@@ -65,14 +65,17 @@
     return `<span class="statut"${f.raw ? ` title="${e("Valeur technique : " + f.raw)}"` : ""}>${e(f.label)}</span>`; };
   U.statusText = (fmt, v) => { const f = { cand: CANDIDACY, spons: SPONSORSHIP, second: SECOND }[fmt](v);
     return f.raw && !f.known ? `<span title="${e("Valeur technique : " + f.raw)}">${e(f.label)}</span>` : e(f.label); };
-  /* Étape réelle de la candidature (carte de statut) : un seul statut, celui de la situation constatée, jamais une liste générique.
-     Qualification au second tour : prioritaire dès qu'elle est renseignée. Sans statut renseigné : rien. Renvoie { label, note } ou null. */
+  /* Statut de CANDIDATURE à afficher : { label, note, closed } ou null. Seules les valeurs de candidature sont admises (avant le vote) et les
+     fins de candidature (« closed » : retrait, désistement, invalidation, rejet). Les valeurs d'ISSUE (elected, winner, eliminated, defeated,
+     second_round, qualified_second_round, second_round_status, second_round_qualified_at) ne sont jamais une preuve : elles ne produisent
+     rien ici ; élu / qualifié / éliminé / battu ne se déduisent que des résultats (Scrutin.status). Valeur absente ou inconnue : null. */
+  const PHASE = ["declared", "unconfirmed", "rumored", "nominated", "qualified", "validated", "officially_validated", "official", "first_round"];
+  const CLOSED = ["withdrawn", "rejected", "dropped_out", "stepped_down", "invalidated"];
   U.candidacyStage = c => {
     if (!c) return null;
-    if (String(c.second_round_status || "").toLowerCase() === "qualified" || (c.second_round_qualified_at != null && String(c.second_round_qualified_at).trim() !== ""))
-      return { label: "Qualifié pour le second tour", note: c.second_round_qualified_at ? U.date(c.second_round_qualified_at) : "" };
-    const f = CANDIDACY(c.candidacy_status); if (!f.raw) return null;
-    return { label: f.label, note: norm(c.candidacy_status) === "declared" && c.announcement_date ? "annoncée le " + U.date(c.announcement_date) : "" };
+    const k = norm(c.candidacy_status), closed = CLOSED.indexOf(k) >= 0;
+    if (!closed && PHASE.indexOf(k) < 0) return null;
+    return { label: CANDIDACY(c.candidacy_status).label, note: k === "declared" && c.announcement_date ? "annoncée le " + U.date(c.announcement_date) : "", closed };
   };
   U.link = (u, label) => U.safeUrl(u) ? `<a href="${e(U.safeUrl(u))}" rel="noopener" target="_blank">${e(label || u)}</a>` : e(label || "");
 
