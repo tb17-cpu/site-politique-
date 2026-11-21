@@ -38,6 +38,8 @@
     const msl = srcList(ms, "exact_quote", "page_reference");
     h += section("Sources et références", msl ? `<details class="m-fold"><summary>Voir les sources (${ms.length})</summary>${msl}</details>` : "");
 
+    /* La méthodologie d'une analyse (colonne analyses.methodology) est une métadonnée interne : conservée en base (critères de travail,
+       reprise ultérieure), jamais affichée. La page générale methodologie.html du site est distincte et inchangée. */
     /* Analyses d'Au résultat : « Analyse · Thème · publiée le … ». Sources dans un menu déroulant, avec leurs citations, pages et notes. */
     const an = m.analyses || [];
     h += an.length ? an.map(a => {
@@ -47,7 +49,7 @@
       const srcs = srcList(a.analysis_sources || [], "evidence_excerpt"), n = (a.analysis_sources || []).length;
       return `<section class="blk blk--an"><header><b>${head}</b></header><div>
         ${a.analysis_title ? `<h3 class="an-title">${UI.richInline(a.analysis_title)}</h3>` : ""}
-        ${kv([["Évaluation générale", a.assessment], ["Faisabilité", a.feasibility_assessment], ["Effets attendus", a.expected_effects], ["Risques et limites", a.risks_and_limitations], ["Incertitudes", a.uncertainties], ["Méthodologie", a.methodology]])}
+        ${kv([["Évaluation générale", a.assessment], ["Faisabilité", a.feasibility_assessment], ["Effets attendus", a.expected_effects], ["Risques et limites", a.risks_and_limitations], ["Incertitudes", a.uncertainties]])}
         ${srcs ? `<details class="m-fold"><summary>Sources de l’analyse (${n})</summary>${srcs}</details>` : ""}
       </div></section>`;
     }).join("") : "";

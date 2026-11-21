@@ -382,3 +382,4 @@ details.m-fold[open]>summary::before{transform:rotate(90deg)}
 .res-tag{display:inline-block;margin-left:.5em;padding:0 .5em;border-radius:99px;background:var(--surface-2);font-size:.72rem;font-weight:600;color:var(--fg-2)}
 .res-tag.res-win{background:var(--accent);color:var(--on-accent,#fff)}
 .res-part{margin-top:var(--s-3)}
+.ps-now .ps-round{font-weight:600;color:var(--fg-2)}

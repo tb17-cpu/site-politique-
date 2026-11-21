@@ -12,20 +12,19 @@
   const day = iso => { const x = dmy(iso); return x ? Date.UTC(x.y, x.m, x.d) / 864e5 : null; };
 
   /* ---- Sondages ---- */
-  const key = r => [r.sources && r.sources.id || r.source_id || "", r.pollster || "", r.scenario || "", r.poll_date || "", r.fieldwork_start || ""].join("|");
+  const key = r => [r.sources && r.sources.id || r.source_id || "", r.pollster || "", r.scenario || "", r.poll_date || "", r.fieldwork_start || "", r.round == null ? "" : r.round].join("|");
   const refDate = g => g.rows[0].poll_date || g.rows[0].fieldwork_start || (g.rows[0].sources && g.rows[0].sources.publication_date) || "";
   const rank = g => [(g.rows[0].sources && g.rows[0].sources.publication_date) || "", g.rows[0].poll_date || ""];
   const cmp = (A, B) => { const a = rank(A), b = rank(B);
     return a[0] < b[0] ? 1 : a[0] > b[0] ? -1 : a[1] < b[1] ? 1 : a[1] > b[1] ? -1
       : String(A.rows[0].pollster || "").localeCompare(String(B.rows[0].pollster || "")) || String(A.rows[0].scenario || "").localeCompare(String(B.rows[0].scenario || "")) || (A.key < B.key ? -1 : A.key > B.key ? 1 : 0); };
 
-  /* Tour visé par un sondage. Aucune colonne dédiée : déduit du texte du scénario. « 0 » = indéterminé (jamais utilisé pour une estimation). */
-  const roundOf = g => {
-    const t = g.rows.map(r => [r.scenario, r.methodology, r.notes].filter(Boolean).join(" ")).join(" ");
-    if (/second\s+tour|2(?:e|nd|ème)\s+tour|duel|ballottage|face[-\s]à[-\s]face/i.test(t)) return 2;
-    if (/premier\s+tour|1(?:er)\s+tour|1re\s+tour/i.test(t)) return 1;
-    return g.rows.length >= 3 ? 1 : 0;
-  };
+  /* Tour visé par un sondage : UNIQUEMENT la colonne explicite poll_snapshots.round (migration proposée 006). Le texte du scénario n'est
+     jamais interprété. Colonne absente, NULL ou valeurs contradictoires au sein d'un même sondage : 0 = indéterminé (consultable, mais
+     jamais utilisé pour une estimation ni une moyenne). */
+  const roundOf = g => { const v = g.rows.map(r => r.round == null ? null : Number(r.round));
+    return v.every(x => Number.isInteger(x) && x >= 1 && x === v[0]) ? v[0] : 0; };
+  const roundLabel = n => n === 1 ? "Premier tour" : n === 2 ? "Second tour" : n > 2 ? "Tour " + n : "Tour non précisé";
 
   /* Sondages groupés (un sondage = même source, institut, scénario, dates), du plus récent au plus ancien. */
   const pollGroups = rows => {
@@ -40,16 +39,21 @@
     : r.entity_kind === "person" ? !!(c.people && r.person_id && r.person_id === c.people.id) : false;
   const valueOf = (g, c) => { const r = g.rows.find(x => isCand(x, c)); return r ? Number(r.value_percent) : null; };
 
-  /* Estimation du poids électoral d'un candidat pour un tour donné. Règles :
-     - uniquement des sondages dont le tour est identifié et comportant le candidat, avec une date de référence ;
-     - dernier sondage pertinent ; s'il existe d'autres instituts récents (21 jours) sur le MÊME scénario, moyenne simple du
-       dernier sondage de chaque institut ; jamais de mélange de tours ni de scénarios. Sinon : { value, date, n, mode } ou null. */
+  /* Comparabilité et moyenne. Deux sondages ne sont comparables que s'ils visent le même tour (colonne round), présentent exactement
+     le même ensemble de candidats ou listes et portent le même libellé de scénario (non vide, comparé sans casse ni espaces multiples).
+     Un institut compte une seule fois (le « pour … » du commanditaire est ignoré). Fenêtre : 21 jours avant le sondage de référence
+     (fin de terrain). Moyenne simple, non pondérée : aucune pondération par échantillon, aucun redressement. */
+  const norm = x => String(x || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const inst = g => norm(String(g.rows[0].pollster || "").replace(/\s+pour\s+.*$/i, ""));
+  const sig = g => g.rows.map(r => r.entity_kind + ":" + (r.candidacy_id || r.party_id || r.person_id || norm(r.entity_label))).sort().join("|");
+  const WINDOW_DAYS = 21;
   const estimate = (groups, c, round) => {
-    const ok = groups.filter(g => g.round === round && g.date && valueOf(g, c) != null);
+    const ok = groups.filter(g => g.round === round && g.date && day(g.date) != null && valueOf(g, c) != null);
     if (!ok.length) return null;
-    const top = ok[0], t0 = day(top.date), sc = top.rows[0].scenario || "";
-    const near = ok.filter(g => (g.rows[0].scenario || "") === sc && t0 != null && day(g.date) != null && t0 - day(g.date) <= 21 && t0 - day(g.date) >= 0);
-    const byInst = new Map(); near.forEach(g => { const p = g.rows[0].pollster || g.key; if (!byInst.has(p)) byInst.set(p, g); });
+    /* Référence : fin de terrain la plus récente ; à égalité, ordre de publication (groups est déjà trié). */
+    const top = ok.reduce((a, b) => day(b.date) > day(a.date) ? b : a), t0 = day(top.date), sc = norm(top.rows[0].scenario), sg = sig(top);
+    const comparable = sc ? ok.filter(g => norm(g.rows[0].scenario) === sc && sig(g) === sg && inst(g) && t0 - day(g.date) >= 0 && t0 - day(g.date) <= WINDOW_DAYS) : [];
+    const byInst = new Map(); comparable.forEach(g => { const k = inst(g), p = byInst.get(k); if (!p || day(g.date) > day(p.date)) byInst.set(k, g); });
     const set = [...byInst.values()];
     if (set.length >= 2) { const vals = set.map(g => valueOf(g, c)); return { value: vals.reduce((a, b) => a + b, 0) / vals.length, date: top.date, n: set.length, mode: "average" }; }
     return { value: valueOf(top, c), date: top.date, n: 1, mode: "latest", pollster: top.rows[0].pollster || "" };
@@ -80,10 +84,18 @@
       const parts = [en.percent_expressed != null ? pct(en.percent_expressed) + " des suffrages exprimés" : "", en.votes != null ? nb(en.votes) + " voix" : ""].filter(Boolean);
       if (parts.length) lines.push({ kind: "result", round: rd.round_number, label: roundName(rd.round_number), value: parts[0], detail: [parts[1], statusName(rd.result_status) && "résultats " + statusName(rd.result_status).toLowerCase(), rd.held_on && "scrutin du " + date(rd.held_on)].filter(Boolean).join(" · ") });
       if (closed) return;
-      const decided = (rd.candidates || []).some(x => x.elected || x.qualified_next_round);
-      if (en.elected) { label = "Élu"; note = "au " + roundNameLow(rd.round_number); over = true; qualified = false; }
-      else if (en.qualified_next_round) { label = "Qualifié pour le " + roundNameLow(rd.round_number + 1); note = ""; qualified = true; over = false; }
-      else if (decided) { label = rd.round_number > 1 ? "Battu" : "Éliminé au premier tour"; note = ""; over = true; qualified = false; }
+      /* Conclusion fiable : « Éliminé » / « Battu » exigent un résultat DÉFINITIF, des qualifications ou un élu renseignés pour ce tour et
+         cohérents (jamais à la fois un élu et des qualifiés). Un résultat provisoire, sans qualification saisie ou incohérent ne
+         permet aucune conclusion négative : le statut de la candidature reste inchangé. Élu / qualifié (indicateurs saisis) restent
+         affichés, avec la mention « résultats provisoires » tant que le tour n'est pas définitif. */
+      const nEl = (rd.candidates || []).filter(x => x.elected).length, nQ = (rd.candidates || []).filter(x => x.qualified_next_round).length;
+      const coherent = !(nEl > 0 && nQ > 0), final = rd.result_status === "final", prov = final ? "" : "résultats provisoires";
+      if (en.elected && coherent) { label = "Élu"; note = ["au " + roundNameLow(rd.round_number), prov].filter(Boolean).join(" · "); over = final; qualified = false; }
+      else if (en.qualified_next_round && coherent) { label = "Qualifié pour le " + roundNameLow(rd.round_number + 1); note = prov; qualified = true; over = false; }
+      else if (coherent && (nEl > 0 || nQ > 0)) {
+        if (final) { label = nEl > 0 ? "Battu" : "Éliminé au " + roundNameLow(rd.round_number); note = ""; over = true; qualified = false; }
+        else { note = "Résultats provisoires : situation à confirmer"; }
+      }
     });
     const has = n => rds.some(r => r.round_number === n && entryOf(r, c));
     const groups = pollGroups(polls && polls.rows);
@@ -97,5 +109,5 @@
     return { label: label || "", note, lines };
   };
 
-  g.Scrutin = { date, pct, nb, roundName, roundNameLow, statusName, pollGroups, roundOf, estimate, rounds, entryOf, stageCard, dmy };
+  g.Scrutin = { date, pct, nb, roundName, roundNameLow, statusName, pollGroups, roundOf, roundLabel, estimate, rounds, entryOf, stageCard, dmy };
 })(window);

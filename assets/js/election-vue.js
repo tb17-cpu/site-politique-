@@ -41,7 +41,7 @@
         ${src ? `<p class="quiet poll-note">Source : ${UI.link(src.url, src.title || "Source du sondage") || e(src.title || "Source du sondage")}${src.publisher ? ` · ${e(src.publisher)}` : ""}</p>` : ""}`;
   };
   const pollHead = () => { const g = PS.groups[PS.i], n = PS.groups.length;
-    return `<div class="ps-now"><b>${e(instOf(g))}</b> <span>${e(whenOf(g))}${PS.i === 0 ? " · le plus récent" : ""}</span></div>`; };
+    return `<div class="ps-now"><b>${e(instOf(g))}</b> <span>${e(whenOf(g))}${PS.i === 0 ? " · le plus récent" : ""}</span> <span class="ps-round">${e(Scrutin.roundLabel(g.round))}</span></div>`; };
   const pollBlock = P => {
     const none = `<h2 class="ov-h">Sondages</h2><p class="quiet">Aucun sondage publié pour cette élection.</p>`;
     /* Erreur technique : message distinct de l'absence réelle, selon la nature du problème (détail dans la console). */
