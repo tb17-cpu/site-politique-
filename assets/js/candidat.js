@@ -55,13 +55,19 @@
 
     const facts = [
       UI.safeUrl(p.official_website) ? `<span>${UI.link(p.official_website, p.official_website)}</span>` : ""].filter(Boolean).join("");
-    const stage = Scrutin.stageCard(c, c._polls, c._results);
+    /* Résultats non chargés : jamais de statut électoral brut ou trompeur (ni « déclarée », ni « qualifié »…), seulement un retrait/désistement fiable,
+       plus un message discret. Sondages non chargés : le statut et les résultats restent affichés, avec un message discret. */
+    const rErr = c._results && c._results.error, pErr = c._polls && c._polls.error;
+    let stage = null;
+    if (rErr) { const cl = UI.closedStage(c); stage = cl ? { label: cl.label, note: cl.note, lines: [], provisional: false } : null; }
+    else stage = Scrutin.stageCard(c, pErr ? { rows: [] } : c._polls, c._results);
+    const notice = rErr ? UI.loadNotice("results", rErr) : pErr ? UI.loadNotice("polls", pErr) : "";
     const stageCard = stage ? `<div class="status-card${stage.provisional ? " is-prov" : ""}" role="status">${stage.label ? `<b>${e(stage.label)}</b>` : ""}${stage.note ? `<small>${e(stage.note)}</small>` : ""}${stage.lines.length ? `<ul class="sc-lines">${stage.lines.map(l => `<li class="sc-${l.kind}"><span class="sc-k">${e(l.label)}</span> <b class="sc-v">${e(l.value)}</b><small>${l.kind === "result" ? "Résultat officiel" : "Estimation d’après sondages"}${l.detail ? " · " + e(l.detail) : ""}</small></li>`).join("")}</ul>` : ""}</div>` : "";
     let h = `<section class="cand-head${panel ? "" : " cand-head--solo"}" aria-label="Candidat">
       <div class="cand-id">${UI.avatar(c.people, true)}<div>
         <h1>${e(name)}</h1>
         ${pt ? `<p class="fh-party">${UI.partyDot(pt)}<span>${e(pt.name + (pt.acronym ? ` (${pt.acronym})` : ""))}</span>${UI.positionBlock(c)}</p>` : ""}
-        ${stageCard}${facts ? `<div class="cand-facts">${facts}</div>` : ""}</div></div>${panel}</section>
+        ${stageCard}${notice}${facts ? `<div class="cand-facts">${facts}</div>` : ""}</div></div>${panel}</section>
       ${c.description ? `<div class="cand-bio">${UI.rich(c.description)}</div>` : ""}
       ${p.biography ? `<div class="cand-bio">${UI.rich(p.biography)}</div>` : ""}`;
 
@@ -80,7 +86,7 @@
     const id = decodeURIComponent(location.hash.slice(1));
     if (!id) { $("f-name").textContent = "Fiche candidat"; $("f-lede").textContent = ""; $("f-body").innerHTML = UI.emptyHtml("Aucune candidature sélectionnée. <a href=\"candidats.html\">Voir la liste des candidats</a>."); return; }
     F = new Map();
-    UI.mount($("f-body"), async () => { const c = await DB.candidacy(id); if (c) { Election.use(c.election_id); const warn = n => err => { console.warn("[Au résultat] " + n + " indisponibles (" + DB.classify(err) + ")"); return { rows: [], rounds: [] }; }; [c._polls, c._results] = await Promise.all([DB.polls(c.election_id).catch(warn("Sondages")), DB.results(c.election_id).catch(warn("Résultats"))]); } F = await DB.formalizations(); return c; }, render, { loading: "Chargement de la fiche…", empty: "Cette candidature n’existe pas ou n’est pas publiée. <a href=\"candidats.html\">Voir la liste des candidats</a>." });
+    UI.mount($("f-body"), async () => { const c = await DB.candidacy(id); if (c) { Election.use(c.election_id); [c._polls, c._results] = await Promise.all([DB.settle(DB.polls(c.election_id), { rows: [] }, "Sondages"), DB.settle(DB.results(c.election_id), { rounds: [] }, "Résultats")]); } F = await DB.formalizations(); return c; }, render, { loading: "Chargement de la fiche…", empty: "Cette candidature n’existe pas ou n’est pas publiée. <a href=\"candidats.html\">Voir la liste des candidats</a>." });
   };
   /* Raccourcis (thèmes, « Parcourir le programme ») : défilement par script, jamais par ancre : le fragment d'URL est l'identifiant de la candidature. */
   $("f-body").addEventListener("click", ev => {

@@ -153,6 +153,16 @@
   U.emptyHtml = (msg) => `<div class="p-empty">${msg || "Aucun contenu disponible."}</div>`;
   U.errorHtml = (err) => `<div class="st st-err" role="alert"><p><b>Impossible d’afficher ce contenu.</b></p><p>${e(DB.humanMessage(err))}</p><p><button type="button" class="btn" data-retry>Réessayer</button></p></div>`;
 
+  /* Message discret quand un chargement COMPLÉMENTAIRE a échoué (distinct d'une absence réelle de données, qui n'affiche rien).
+     what : « results » (informations électorales) ou « polls » (sondages) ; kind : nature de l'erreur (DB.classify). */
+  U.loadNotice = (what, kind) => { const t = what === "polls"
+      ? (kind === "denied" ? "Les sondages ne sont pas accessibles pour le moment (accès refusé)." : "Les sondages n’ont pas pu être chargés.")
+      : (kind === "denied" ? "Les informations électorales ne sont pas accessibles pour le moment (accès refusé)." : "Les informations électorales n’ont pas pu être chargées.");
+    return `<p class="quiet load-note" role="status" data-load-error="${what}:${e(kind || "error")}">${e(t)}</p>`; };
+  /* Statut de candidature « fermé » seul (retrait, désistement…) : fiable sans résultats. Sert quand les résultats n'ont pas pu être chargés :
+     aucun autre statut électoral (déclarée, qualifié, élu…) n'est alors affiché. */
+  U.closedStage = c => { const s = U.candidacyStage(c); return s && s.closed ? s : null; };
+
   /* mount(el, load, render, {empty, isEmpty, loading}) : charge, puis rend ; gère chargement, vide, erreur. */
   U.mount = async function mount(el, load, render, o = {}) {
     if (!el) return;

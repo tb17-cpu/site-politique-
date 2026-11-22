@@ -122,11 +122,12 @@ const SHOTS = process.env.MD_SHOTS;
       if (need) {
         rep(r.n > 0 && r.strongN > 0, `${tag} : texte rédigé rendu par le moteur commun (${r.n} blocs, ${r.strongN} gras)`, r);
         rep(r.strongOk, `${tag} : gras en couleur identitaire (--accent = ${r.accent}), graisse ≥ 700`, r);
-        rep(r.nLi >= 3 && r.markerOk, `${tag} : puces = vrais marqueurs en couleur identitaire (${r.nLi} puces, ${r.nOl} numérotées)`, r);
+        /* Comparateur : seule la formulation initiale du candidat y figure désormais (plus d'objectif ni de description structurée, donc plus de listes). */
+        if (pn !== 'comparateur') rep(r.nLi >= 3 && r.markerOk, `${tag} : puces = vrais marqueurs en couleur identitaire (${r.nLi} puces, ${r.nOl} numérotées)`, r);
       }
       if (['candidat', 'mesure', 'thematiques', 'programmes', 'indicateurs'].includes(pn)) rep(r.ulType === 'disc' && r.olType === 'decimal' && r.liDisplay === 'list-item' && r.h4 && /serif|Source|Georgia/i.test(r.h4.ff) && r.indent >= 12, `${tag} : listes disc/decimal, retrait ${r.indent}px, sous-titre serif`, r);
       rep(r.dangerous === 0 && r.xss === 0 && dialogs.length === 0 && errs.length === 0, `${tag} : aucune exécution (script, onerror, javascript:), aucune alerte, aucune erreur JS`, { r, dialogs, errs });
-      if (need) rep(r.litteral === 1, `${tag} : les balises injectées sont affichées comme texte inerte (visibles, non exécutées)`);
+      if (need && pn !== 'comparateur') rep(r.litteral === 1, `${tag} : les balises injectées sont affichées comme texte inerte (visibles, non exécutées)`);
       rep(r.overflow <= 0, `${tag} : pas de débordement horizontal (${r.overflow})`, r);
       if (SHOTS && ['candidat', 'mesure', 'thematiques'].includes(pn)) { fs.mkdirSync(SHOTS, { recursive: true }); await pg.screenshot({ path: `${SHOTS}/${pn}-${th}-${vn}.png`, fullPage: true }); }
       await pg.close();

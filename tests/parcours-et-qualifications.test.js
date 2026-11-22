@@ -88,6 +88,27 @@ const OUT=/Élu|Qualifié|Éliminé|Battu/i;
   await page(w,'candidat.html#A-q1',async p=>{const c=await card(p);rep(/Qualifié pour le second tour/.test(c.t),`${T} q1 A : qualification affichée parce que le RÉSULTAT la confirme`,c.t);},th);
   await page(w,'candidats.html?e=q1',async p=>{const l=await list(p);const g=k=>l.find(x=>x.t.includes(k)).badge;rep(/Qualifié/i.test(g('Alice'))&&/Qualifié/i.test(g('Elsa'))&&!/Qualifié/i.test(g('Carla'))&&!/Qualifié/i.test(g('David')),`${T} liste q1 : qualifications issues des résultats seulement (Elsa sans déclaration : oui ; Carla déclarée sans résultat : non)`,l.map(x=>x.badge));},th);
  }
+
+ // cohérence fiche / liste : pour CHAQUE candidat de CHAQUE scrutin fictif, la pastille de la liste et le libellé de la fiche sont identiques
+ {
+  const b=await chromium.launch(); const c=await b.newContext({viewport:{width:1280,height:900}}); await c.clock.setFixedTime(new Date('2027-04-26T10:00:00Z'));
+  await c.addInitScript(()=>{try{localStorage.setItem('ar.theme','light')}catch(e){}}); await c.route(/fonts\.(googleapis|gstatic)\.com/,r=>r.abort());
+  await c.route('**/rest/v1/**',r=>{const u=new URL(r.request().url()),t=u.pathname.split('/').pop();const h={'access-control-allow-origin':'*','access-control-allow-headers':'*','content-type':'application/json','access-control-expose-headers':'content-range'};
+    let rows=D[t]||[];rows=rows.filter(x=>{for(const [k,v] of u.searchParams){if(k.includes('.')||!v.startsWith('eq.'))continue;if(k in x&&String(x[k])!==v.slice(3))return false}return true});
+    h['content-range']=`0-0/${rows.length}`;r.fulfill({status:200,headers:h,body:JSON.stringify(rows)})});
+  const p=await c.newPage(); let n=0,diff=[],withStatus=0;
+  for(const el of IDS){
+    await p.goto(B+'candidats.html?e='+el,{waitUntil:'networkidle'}); await p.waitForSelector('.cand',{timeout:5000});
+    const badges=await p.locator('.cand').evaluateAll(a=>a.map(x=>({href:x.getAttribute('href'),b:((x.querySelector('.statut')||{}).innerText||'').trim().toLowerCase()})));
+    for(const bd of badges){
+      await p.goto(B+bd.href,{waitUntil:'networkidle'}); await p.waitForSelector('.cand-id',{timeout:5000}); await p.waitForTimeout(150);
+      const lab=await p.evaluate(()=>{const b=document.querySelector('.status-card > b');return b?b.innerText.trim().toLowerCase():''});
+      n++; if(lab) withStatus++; if(lab!==bd.b) diff.push([el,bd.href,lab,bd.b]);
+    }
+  }
+  await b.close();
+  rep(n===IDS.length*5&&!diff.length&&withStatus>=25,`cohérence : fiche et liste portent le même statut pour les ${n} candidats des ${IDS.length} scrutins fictifs (${withStatus} avec statut)`,diff.slice(0,5));
+ }
  // audit (unités + diagnostic)
  await page(1280,'election.html?e=q1',async p=>{const r=await p.evaluate(async()=>{const c=await DB.candidacies('q1');const res=await DB.results('q1');const a=Scrutin.qualificationAudit(c,res);return {confirmed:a.confirmed.sort(),unconfirmed:a.unconfirmed,undeclared:a.undeclared}});
   rep(JSON.stringify(r)===JSON.stringify({confirmed:['A-q1','B-q1'],unconfirmed:['C-q1'],undeclared:['E-q1']}),'audit : A et B confirmés, C déclarée sans résultat, E résultat sans déclaration, D (not_reached) ignoré',r);});

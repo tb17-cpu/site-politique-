@@ -19,7 +19,6 @@
     $("f-name").textContent = m.title;
     const pv = m.program_versions, pg = pv && pv.programs, cd = pg && pg.candidacies, who = cd && UI.person(cd.people);
     $("f-lede").innerHTML = cd ? `Proposition de <a href="candidat.html#${encodeURIComponent(cd.id)}">${e(who || "ce candidat")}</a>${cd.parties ? " · " + e(cd.parties.name) : ""}` : "";
-    const cost = m.announced_cost != null && m.announced_cost !== "" ? `${m.announced_cost}${m.cost_currency ? " " + m.cost_currency : ""}${m.cost_period ? " · " + m.cost_period : ""}` : "";
     /* Thème de référence : le même choix déterministe que sur la fiche candidat (display_order, nom, id). */
     const num = v => (typeof v === "number" && isFinite(v)) ? v : Infinity;
     const cmpTh = (x, y) => (num(x.display_order) - num(y.display_order) || 0) || String(x.name || "").localeCompare(String(y.name || ""), "fr") || String(x.id || "").localeCompare(String(y.id || ""));
@@ -30,14 +29,10 @@
     let h = fm ? `<div class="m-meta">${fm}</div>` : "";
     h += section("Déclaré par le candidat",
       /* Texte du candidat présenté tel quel, sans mise en forme de citation : les guillemets sont réservés aux extraits exacts sourcés. */
-      (m.original_text ? `<p class="decl-text">${UI.richInline(m.original_text)}</p>` : "") +
-      kv([["Objectif annoncé", m.announced_objective], ["Coût annoncé", cost], ["Financement annoncé", m.announced_funding]]), "blk--lead");
-    /* Source de référence du statut : ajoutée à la liste si elle n'y figure pas déjà (rien n'est perdu en retirant son paragraphe). */
-    const ms = (m.measure_sources || []).slice(), has = u => ms.some(x => x.sources && x.sources.url === u);
-    if (fr && fr.source && fr.source.url && !has(fr.source.url)) ms.push({ sources: fr.source, evidence_date: fr.date || null });
-    const msl = srcList(ms, "exact_quote", "page_reference");
-    h += section("Sources et références", msl ? `<details class="m-fold"><summary>Voir les sources (${ms.length})</summary>${msl}</details>` : "");
-
+      (m.original_text ? `<p class="decl-text">${UI.richInline(m.original_text)}</p>` : ""), "blk--lead");
+    /* Présentation : statut éditorial, formulation initiale fidèle, puis directement l'analyse d'Au résultat. Les champs descriptifs de la base
+       (description, mécanisme, publics, modalités, précisions, objectif, coût et financement annoncés…) restent en base (historique) mais ne sont
+       JAMAIS affichés : ils répètent ou paraphrasent la formulation initiale. */
     /* La méthodologie d'une analyse (colonne analyses.methodology) est une métadonnée interne : conservée en base (critères de travail,
        reprise ultérieure), jamais affichée. La page générale methodologie.html du site est distincte et inchangée. */
     /* Analyses d'Au résultat : « Analyse · Thème · publiée le … ». Sources dans un menu déroulant, avec leurs citations, pages et notes. */
@@ -54,7 +49,13 @@
       </div></section>`;
     }).join("") : "";
     h += Cases.section(m.case_measure_relations);
-    return h;
+    /* Sources de référence de la mesure (rendues APRÈS les analyses, dans un volet replié, pour ne pas interrompre la lecture entre la formulation et l'analyse). Source de référence du statut : ajoutée à la liste si elle n'y figure pas déjà (rien n'est perdu en retirant son paragraphe). */
+    const ms = (m.measure_sources || []).slice(), has = u => ms.some(x => x.sources && x.sources.url === u);
+    if (fr && fr.source && fr.source.url && !has(fr.source.url)) ms.push({ sources: fr.source, evidence_date: fr.date || null });
+    const msl = srcList(ms, "exact_quote", "page_reference");
+    const refsHtml = section("Sources et références", msl ? `<details class="m-fold"><summary>Voir les sources (${ms.length})</summary>${msl}</details>` : "");
+
+    return h + refsHtml;
   };
 
   const run = () => {

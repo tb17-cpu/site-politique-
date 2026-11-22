@@ -99,7 +99,7 @@
     return k ? `<h2 class="ov-h">Calendrier</h2>${k}` : ""; };
   const resultsBlock = R => {
     /* Aucun résultat publié : rien du tout (ni bloc, ni titre, ni emplacement réservé, ni message de remplacement). */
-    if (R.error) return `<section class="res" data-results="error"><h2 class="ov-h">Résultats</h2><p class="quiet" role="status">Les résultats n’ont pas pu être chargés. Réessayez dans un instant.</p></section>`;
+    if (R.error) return `<section class="res" data-results="error"><h2 class="ov-h">Résultats</h2>${UI.loadNotice("results", R.error)}</section>`;
     RS = { rounds: Scrutin.rounds(R), i: 0 }; RS.i = RS.rounds.length - 1;
     if (!RS.rounds.length) return "";
     return `<section class="res" data-results="ok"><h2 class="ov-h">Résultats officiels</h2>
@@ -138,7 +138,7 @@
     $("p-title").textContent = Election.name(el);
     $("p-label").textContent = "Vue d’ensemble" + (st.label ? " · " + st.label : "");
     $("p-lede").innerHTML = UI.richInline(el.description) || "Candidatures, programmes, thématiques, comparateur et indicateurs de cette élection.";
-    UI.mount(mount, async () => ({ cands: await DB.candidacies(el.id), progs: await DB.programs(el.id), polls: await DB.polls(el.id).catch(err => { const kind = DB.classify(err); console.warn("[sondages] chargement impossible :", kind, err && err.message); return { error: kind, rows: [] }; }), results: await DB.results(el.id).catch(err => { const kind = DB.classify(err); console.warn("[résultats] chargement impossible :", kind, err && err.message); return { error: kind, rounds: [] }; }), dossier: await dossierOf(el) }), d => {
+    UI.mount(mount, async () => ({ cands: await DB.candidacies(el.id), progs: await DB.programs(el.id), polls: await DB.settle(DB.polls(el.id), { rows: [] }, "Sondages"), results: await DB.settle(DB.results(el.id), { rounds: [] }, "Résultats"), dossier: await dossierOf(el) }), d => {
       const nm = d.progs.reduce((n, p) => n + (p.program_versions || []).reduce((k, v) => k + (v.measures || []).length, 0), 0);
       const sections = [
         ["candidats", "Candidats", d.cands.length ? plural(d.cands.length, "candidature", "candidatures") : "Aucune candidature enregistrée"],

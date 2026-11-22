@@ -119,7 +119,7 @@ const M=[
    rep(await p.locator('.st-err').count()===0&&!/Impossible d.afficher/.test(x),`${w}px clic sur « ${first} » : la fiche s’ouvre sans erreur`);
    rep(x.includes(first)&&/Sources et références/i.test(x)&&/Programme officiel/.test(x)&&/Éditeur 1/.test(x),`${w}px fiche : sources et références (titre et éditeur de la source)`);
    rep(/Analyse X/.test(x)||/analyse/i.test(x),`${w}px fiche : analyse présente`);
-   rep(/Reformulation|Mécanisme|Objectif/.test(x),`${w}px fiche : contenu de la mesure présent`);
+   rep(/Texte original/.test(x)&&!/Reformulation|Mécanisme|Objectif annoncé|Coût annoncé|Financement annoncé/.test(x),`${w}px fiche : formulation initiale présente, rubriques descriptives supprimées (objectif, coût, financement…)`);
   });
   await page(w,{...ov,T:{...ov.T,measures:[{...M[0],case_measure_relations:rels}]}},'mesure.html?e=e1#m1',async p=>{
    const x=await txt(p);
