@@ -45,7 +45,7 @@
   const pollBlock = P => {
     /* Erreur technique : message distinct de l'absence réelle, selon la nature du problème (détail dans la console). */
     if (P.error) { const txt = P.error === "denied" ? "Les sondages ne sont pas accessibles pour le moment (accès refusé)."
-        : P.error === "missing" || P.error === "invalid" ? "Les sondages ne peuvent pas être affichés : la structure de données attendue est indisponible."
+        : P.error === "missing" || P.error === "invalid" || P.error === "schema-cache" ? "Les sondages ne peuvent pas être affichés : la structure de données attendue est indisponible."
         : "Les sondages n’ont pas pu être chargés. Réessayez dans un instant.";
       return `<h2 class="ov-h">Sondages</h2><p class="quiet" role="status" data-poll-error="${e(P.error)}">${e(txt)}</p>`; }
     PS = { groups: Scrutin.pollGroups(P.rows), i: 0 };

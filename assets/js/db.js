@@ -5,14 +5,24 @@
   const memo = new Map();
 
   class DbError extends Error {
-    constructor(kind, message, status, code) { super(message); this.kind = kind; this.status = status; this.code = code || ""; }
+    constructor(kind, message, status, code, detail) { super(message); this.kind = kind; this.status = status; this.code = code || ""; this.detail = detail || ""; }
   }
   /* Codes d'erreur PostgREST / PostgreSQL (corps JSON de la réponse), seuls fiables pour qualifier une erreur : le statut HTTP seul ne suffit pas.
-     - Table (ou vue) absente : PGRST205 (cache de schéma PostgREST) ou 42P01 (undefined_table).
-     - Autres défauts de schéma : relation d'imbrication inconnue (PGRST200), colonne inconnue (PGRST204, 42703), fonction inconnue (PGRST202, 42883). */
-  const MISSING_TABLE = ["PGRST205", "42P01"], SCHEMA_CODES = ["PGRST200", "PGRST204", "PGRST205", "PGRST202", "42P01", "42703", "42883"];
-  const isMissingTable = e => e instanceof DbError && MISSING_TABLE.includes(e.code);
+     - 42P01 (undefined_table) : PostgreSQL ne trouve pas la relation : absence CERTAINE (table réellement inexistante).
+     - PGRST205 : PostgREST ne trouve pas la table DANS SON CACHE DE SCHÉMA. Cela ne prouve PAS que la table n'existe pas : elle peut exister mais ne pas
+       être (encore) dans le cache (migration appliquée sans rechargement : NOTIFY pgrst, 'reload schema'). Le client ne peut pas trancher : jamais traité
+       comme une absence certaine (voir « schema-cache » dans classify).
+     - Autres défauts de schéma : relation d'imbrication inconnue (PGRST200), colonne inconnue (PGRST204, 42703), fonction inconnue (PGRST202, 42883).
+     « detail » rassemble message, détails et indication de PostgREST : il sert à vérifier QUELLE relation ou colonne est en cause. */
+  const SCHEMA_CODES = ["PGRST200", "PGRST204", "PGRST205", "PGRST202", "42P01", "42703", "42883"];
+  const isRelationAbsent = e => e instanceof DbError && e.code === "42P01";
+  const isSchemaCacheMiss = e => e instanceof DbError && e.code === "PGRST205";
   const isSchemaError = e => e instanceof DbError && SCHEMA_CODES.includes(e.code);
+  /* Repli de DB.elections : uniquement quand la relation election_sources (ou son lien avec sources) est en cause. */
+  const electionSourcesUnavailable = e => e instanceof DbError && ["PGRST200", "PGRST205", "42P01"].includes(e.code) && /election_sources/i.test(e.detail);
+  /* Statuts de formalisation : colonnes ou clé de jointure formalization_* absentes (schéma antérieur à la migration 003). */
+  const formalizationAbsent = e => e instanceof DbError && ["42703", "PGRST200"].includes(e.code) && /formalization/i.test(e.detail);
+
   /* Message compréhensible pour le visiteur. */
   const humanMessage = e => {
     if (!(e instanceof DbError)) return "Une erreur inattendue est survenue.";
@@ -34,7 +44,8 @@
       });
       if (!res.ok) {
         let body = null; try { body = await res.json(); } catch (_) { /* corps absent ou non JSON : code inconnu */ }
-        throw new DbError("http", `HTTP ${res.status}`, res.status, body && typeof body.code === "string" ? body.code : "");
+        const detail = body ? [body.message, body.details, body.hint].filter(x => typeof x === "string").join(" · ") : "";
+        throw new DbError("http", `HTTP ${res.status}`, res.status, body && typeof body.code === "string" ? body.code : "", detail);
       }
       return res;
     } catch (e) {
@@ -160,7 +171,7 @@
   const PARTY = "parties(id,name,acronym,website_url,political_color,political_position_label,publication_status)";
   /* Nature d'un échec, pour distinguer un droit manquant (401/403) d'une relation absente (404) ou d'une requête invalide (400). */
   const classify = e => !(e instanceof DbError) ? "error" : e.kind === "timeout" ? "timeout" : e.kind === "network" ? "network" : e.kind === "incomplete" ? "incomplete"
-    : e.status === 401 || e.status === 403 || e.code === "42501" ? "denied" : e.status === 404 ? "missing" : e.status === 400 ? "invalid" : e.status >= 500 ? "server" : "error";
+    : e.code === "PGRST205" ? "schema-cache" : e.status === 401 || e.status === 403 || e.code === "42501" ? "denied" : e.status === 404 ? "missing" : e.status === 400 ? "invalid" : e.status >= 500 ? "server" : "error";
   /* Chargement COMPLÉMENTAIRE (résultats, sondages) : en cas d'échec, retourne un objet vide portant « error » (nature : denied, network,
      timeout, invalid, missing, server, incomplete, error). L'appelant affiche alors un message discret ; l'erreur n'est JAMAIS présentée comme
      une absence de données (une liste vide sans « error » signifie une absence réelle). Tracé en console. */
@@ -168,7 +179,7 @@
     return Promise.resolve(promise).catch(err => { const kind = classify(err); console.warn("[Au résultat] " + label + " : chargement impossible (" + kind + (err && err.code ? ", " + err.code : "") + ")", err && err.message); return Object.assign({}, empty, { error: kind }); });
   }
   const D = {
-    DbError, humanMessage, classify, isMissingTable, isSchemaError, settle, rows, raw, one, count,
+    DbError, humanMessage, classify, isRelationAbsent, isSchemaCacheMiss, isSchemaError, settle, rows, raw, one, count,
 
     /* Dossiers « Comprendre le pays » : lecture indépendante du chargement des élections et des candidats.
        1) liste des dossiers publiés (sans contenu lourd), 2) contenu du dossier du pays. Les références (sources) sont
@@ -189,16 +200,19 @@
 
 
     /* Résultats officiels d'une élection, tour par tour (migration proposée 005, NON exécutée par défaut). Retourne { rounds } :
-       une liste vide signifie « aucun résultat publié ». Table réellement absente (code PGRST205 ou 42P01, avant la migration) :
-       fonctionnalité inactive, sans erreur affichée (absent: true). TOUTE autre erreur (réseau, délai, accès refusé, relation ou colonne
-       inexistante, schéma, statut HTTP 400/404 sans ces codes) est propagée : jamais présentée comme une absence de résultats.
-       Chaque tour : { round_number, held_on, result_status, …participation, sources, candidates: [lignes de score] }. */
+       une liste vide signifie « aucun résultat publié ». Trois situations distinctes pour une table inaccessible :
+       - fonctionnalité désactivée explicitement (SUPABASE_CONFIG.electionResults === false, avant la migration) : { rounds: [], disabled: true }, sans requête ni message ;
+       - table CERTAINEMENT absente (42P01) : { rounds: [], absent: true }, sans message ;
+       - PGRST205 (table introuvable dans le cache de schéma PostgREST) : NON tranché (table absente OU cache non rechargé) : erreur propagée, jamais
+         présentée comme une absence de résultats (classe « schema-cache », message discret, avertissement du diagnostic).
+       Toute autre erreur (réseau, délai, accès refusé, relation ou colonne inexistante, 400/404 sans code reconnu) est propagée. */
     results: async electionId => {
+      if (CFG.electionResults === false) return { rounds: [], disabled: true };
       let r;
       try {
         r = await rows("election_round_results", { select: `*,sources(id,title,url,publisher,publication_date,publication_status),election_candidate_results(*,candidacies(id,candidacy_status,publication_status,${PERSON},${PARTY}),${PARTY},${PERSON})`, filter: { election_id: "eq." + electionId }, order: "round_number.asc" });
       } catch (err) {
-        if (isMissingTable(err)) { console.info("[Au résultat] Résultats électoraux : table absente (" + err.code + ", migration 005 non appliquée), rubrique inactive."); return { rounds: [], absent: true }; }
+        if (isRelationAbsent(err)) { console.info("[Au résultat] Résultats électoraux : table absente (42P01, migration 005 non appliquée), rubrique inactive."); return { rounds: [], absent: true }; }
         throw err;
       }
       const ok = x => (x.entity_kind !== "candidacy" || x.candidacies) && (x.entity_kind !== "party" || x.parties) && (x.entity_kind !== "person" || x.people);
@@ -219,8 +233,8 @@
        Requête SÉPARÉE des listes de mesures : son échec ne bloque jamais une page. Retourne une Map id de mesure -> { status,
        date, note, source }. Un statut n'est retenu que s'il est complet et justifié : valeur autorisée, date de référence, source
        publiée ET associée à la mesure (measure_sources). Sinon il est ignoré (aucun badge) et le nombre d'écarts est signalé en
-       console. Colonnes absentes (400/404 avant migration) : fonctionnalité simplement inactive. Autre erreur : avertissement
-       en console, non mis en cache (nouvel essai au prochain appel). Jamais déduit de reliability_level. */
+       console. Colonnes ou clé de jointure formalization_* PROUVÉES absentes (42703 ou PGRST200 nommant formalization_*, avant la migration) : fonctionnalité inactive
+       (Map.absent, sans message). Toute autre erreur : Map vide portant .error (nature de l'erreur), avertissement en console, non mise en cache. Jamais déduit de reliability_level. */
     formalizations: () => D._fm || (D._fm = (async () => {
       const out = new Map(); let transient = false;
       try {
@@ -236,9 +250,11 @@
         });
         if (ignored) console.warn(`[statuts] ${ignored} statut(s) ignoré(s) : valeur inconnue, date manquante, source (référence documentaire) absente, non publiée ou non rattachée à la mesure.`);
       } catch (e) {
-        const k = classify(e);
-        if (k === "invalid" || k === "missing") console.info("[statuts] colonnes de statut absentes : fonctionnalité inactive (" + k + ").");
-        else { transient = true; console.warn("[statuts] lecture impossible :", k, e && e.message); }
+        /* Seule l'absence PROUVÉE des colonnes ou de la clé de jointure formalization_* (schéma antérieur à la migration 003) désactive la
+           fonctionnalité, sans message (out.absent). Toute autre erreur (réseau, délai, accès refusé, requête invalide, serveur, schéma sans
+           rapport) est signalée : out.error porte sa nature et les pages affichent un message discret ; elle n'est jamais mise en cache. */
+        if (formalizationAbsent(e)) { out.absent = true; console.info("[statuts] colonnes de statut absentes (" + e.code + ") : fonctionnalité inactive."); }
+        else { transient = true; out.error = classify(e); console.warn("[statuts] lecture impossible :", out.error, e && e.code, e && e.message); }
       }
       if (transient) D._fm = null;
       return out;
@@ -252,7 +268,7 @@
       const q = sel => rows("elections", { select: sel, order: "scheduled_date.asc.nullslast,year.asc" });
       const base = "*,countries(id,name,iso2,publication_status)";
       /* Sources de l'élection (election_sources → sources). Si la relation est indisponible, l'élection reste lisible sans ses sources. */
-      return q(base + ",election_sources(*,sources(*))").catch(e => { if (isSchemaError(e)) return q(base); throw e; });
+      return q(base + ",election_sources(*,sources(*))").catch(e => { if (!electionSourcesUnavailable(e)) throw e; console.warn("[Au résultat] Relation election_sources indisponible (" + e.code + ") : élections lues sans leurs documents de référence."); return q(base); });
     },
 
     /* Programmes publiés d'une élection, avec leurs versions et mesures. */

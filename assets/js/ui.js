@@ -154,8 +154,9 @@
   U.errorHtml = (err) => `<div class="st st-err" role="alert"><p><b>Impossible d’afficher ce contenu.</b></p><p>${e(DB.humanMessage(err))}</p><p><button type="button" class="btn" data-retry>Réessayer</button></p></div>`;
 
   /* Message discret quand un chargement COMPLÉMENTAIRE a échoué (distinct d'une absence réelle de données, qui n'affiche rien).
-     what : « results » (informations électorales) ou « polls » (sondages) ; kind : nature de l'erreur (DB.classify). */
-  U.loadNotice = (what, kind) => { const t = what === "polls"
+     what : « results » (informations électorales), « polls » (sondages) ou « statuses » (statuts éditoriaux des mesures) ; kind : nature de l'erreur (DB.classify). */
+  U.loadNotice = (what, kind) => { const t = what === "statuses" ? "Les statuts éditoriaux des mesures n’ont pas pu être chargés."
+      : what === "polls"
       ? (kind === "denied" ? "Les sondages ne sont pas accessibles pour le moment (accès refusé)." : "Les sondages n’ont pas pu être chargés.")
       : (kind === "denied" ? "Les informations électorales ne sont pas accessibles pour le moment (accès refusé)." : "Les informations électorales n’ont pas pu être chargées.");
     return `<p class="quiet load-note" role="status" data-load-error="${what}:${e(kind || "error")}">${e(t)}</p>`; };

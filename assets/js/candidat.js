@@ -72,7 +72,7 @@
       ${p.biography ? `<div class="cand-bio">${UI.rich(p.biography)}</div>` : ""}`;
 
     const counts = [nMeasures ? `${nMeasures} ${nMeasures > 1 ? "propositions" : "proposition"}` : "", nThemes ? `${nThemes} ${nThemes > 1 ? "thèmes" : "thème"}` : ""].filter(Boolean).join(" · ");
-    h += `<section class="blk" id="programme"><header><b>Programme</b>${counts ? `<span>${counts}</span>` : ""}</header><div>${UI.formalizationLegend(seen)}${progHtml}</div></section>`;
+    h += `<section class="blk" id="programme"><header><b>Programme</b>${counts ? `<span>${counts}</span>` : ""}</header><div>${F.error ? UI.loadNotice("statuses", F.error) : ""}${UI.formalizationLegend(seen)}${progHtml}</div></section>`;
 
     const cs = c.candidacy_sources || [];
     if (cs.length) h += `<section class="blk"><header><b>Sources justificatives</b><span>Documents de référence</span></header><div><details class="m-fold"><summary>Voir les sources (${cs.length})</summary><ul class="refs">${cs.map(s => `<li>${s.sources ? UI.link(s.sources.url, s.sources.title) || e(s.sources.title) : "Source"}

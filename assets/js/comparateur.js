@@ -23,7 +23,7 @@
     const F = await DB.formalizations();
     out.innerHTML = `<div class="scroll"><table class="cmp"><thead><tr><th scope="col">Champ</th>${sel.map(m => `<th scope="col"><a href="mesure.html#${encodeURIComponent(m.id)}">${e(m.title)}</a></th>`).join("")}</tr></thead><tbody>
       ${rows.map(r => `<tr><th scope="row">${e(r[0]).replace(/Au résultat/g, '<span class="brand-inline">Au résultat</span>')}${r[2] ? '<small class="decl">déclaré par le candidat</small>' : ""}</th>${sel.map(m => cell(r[1](m))).join("")}</tr>`).join("")}
-      ${sel.some(m => F.has(String(m.id))) ? `<tr><th scope="row">Statut de la proposition</th>${sel.map(m => `<td>${UI.formalization(F.get(String(m.id))) || "—"}</td>`).join("")}</tr>` : ""}</tbody></table></div>`;
+      ${sel.some(m => F.has(String(m.id))) ? `<tr><th scope="row">Statut de la proposition</th>${sel.map(m => `<td>${UI.formalization(F.get(String(m.id))) || "—"}</td>`).join("")}</tr>` : ""}</tbody></table></div>${F.error ? UI.loadNotice("statuses", F.error) : ""}`;
     const mine = sel.map(m => m.id).join(",");
     try {
       rel = await DB.relations(sel.map(m => m.id));

@@ -26,7 +26,8 @@
     const main = themes.filter(t => t.name).sort(cmpTh)[0];
     const fr = F.get(String(m.id)), fm = UI.formalization(fr);
 
-    let h = fm ? `<div class="m-meta">${fm}</div>` : "";
+    let h = F.error ? UI.loadNotice("statuses", F.error) : "";
+    h += fm ? `<div class="m-meta">${fm}</div>` : "";
     h += section("Déclaré par le candidat",
       /* Texte du candidat présenté tel quel, sans mise en forme de citation : les guillemets sont réservés aux extraits exacts sourcés. */
       (m.original_text ? `<p class="decl-text">${UI.richInline(m.original_text)}</p>` : ""), "blk--lead");

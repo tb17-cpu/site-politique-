@@ -195,6 +195,16 @@
         return bad.length ? [KO, "sans traduction (libellé de repli affiché) : " + uniq(bad).join(", ")] : [OK, "toutes les valeurs visibles sont traduites"];
       });
 
+      /* Table des résultats électoraux : 42P01 = absence certaine ; PGRST205 = introuvable dans le cache de schéma PostgREST (absente OU cache non rechargé). */
+      await guard("Résultats électoraux", "Table election_round_results visible par l’API", async () => {
+        try { const n = await DB.count("election_round_results"); return [OK, n + " tour(s) de résultats visible(s)"]; }
+        catch (e) {
+          if (e && e.code === "42P01") return [INFO, "table absente (42P01) : migration 005 non appliquée ; la rubrique résultats est inactive."];
+          if (e && e.code === "PGRST205") return [WARN, "table introuvable dans le cache de schéma PostgREST (PGRST205) : soit la migration 005 n’est pas appliquée, soit le cache n’a pas été rechargé (NOTIFY pgrst, 'reload schema'). Ne pas l’interpréter comme une absence certaine. Le site affiche alors un message discret, jamais « aucun résultat »."];
+          throw e;
+        }
+      });
+
       /* Colonnes DÉCLARATIVES de second tour : jamais une preuve ni un affichage public ; simple rapprochement informatif avec les résultats publiés. */
       await guard("Qualifications", "Colonnes déclaratives second_round_status / second_round_qualified_at", async () => {
         const c = await DB.raw("candidacies", { select: "id,election_id,second_round_status,second_round_qualified_at", limit: PAGE });
