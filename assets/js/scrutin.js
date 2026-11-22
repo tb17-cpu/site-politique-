@@ -12,7 +12,7 @@
   const day = iso => { const x = dmy(iso); return x ? Date.UTC(x.y, x.m, x.d) / 864e5 : null; };
 
   /* ---- Sondages ---- */
-  const key = r => [r.sources && r.sources.id || r.source_id || "", r.pollster || "", r.scenario || "", r.poll_date || "", r.fieldwork_start || "", r.round == null ? "" : r.round].join("|");
+  const key = r => [r.sources && r.sources.id || r.source_id || "", r.pollster || "", r.scenario || "", r.poll_date || "", r.fieldwork_start || ""].join("|");   /* identité du sondage SANS le tour : le tour est vérifié ensuite (roundOf) */
   const refDate = g => g.rows[0].poll_date || g.rows[0].fieldwork_start || (g.rows[0].sources && g.rows[0].sources.publication_date) || "";
   const rank = g => [(g.rows[0].sources && g.rows[0].sources.publication_date) || "", g.rows[0].poll_date || ""];
   const cmp = (A, B) => { const a = rank(A), b = rank(B);
@@ -26,7 +26,9 @@
     return v.every(x => Number.isInteger(x) && x >= 1 && x === v[0]) ? v[0] : 0; };
   const roundLabel = n => n === 1 ? "Premier tour" : n === 2 ? "Second tour" : n > 2 ? "Tour " + n : "Tour non précisé";
 
-  /* Sondages groupés (un sondage = même source, institut, scénario, dates), du plus récent au plus ancien. */
+  /* Sondages groupés (un sondage = même source, institut, scénario, dates, INDÉPENDAMMENT du tour), du plus récent au plus ancien. Le tour est
+     ensuite contrôlé sur l'ensemble des lignes (roundOf) : lignes contradictoires ou tour manquant sur une partie des lignes = tour indéterminé (0),
+     sondage conservé dans l'historique (« Tour non précisé ») mais exclu de toute estimation. */
   const pollGroups = rows => {
     const m = new Map();
     (rows || []).filter(r => r.value_percent != null).forEach(r => { const k = key(r); if (!m.has(k)) m.set(k, { key: k, rows: [] }); m.get(k).rows.push(r); });

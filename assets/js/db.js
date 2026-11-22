@@ -8,14 +8,15 @@
     constructor(kind, message, status, code, detail) { super(message); this.kind = kind; this.status = status; this.code = code || ""; this.detail = detail || ""; }
   }
   /* Codes d'erreur PostgREST / PostgreSQL (corps JSON de la réponse), seuls fiables pour qualifier une erreur : le statut HTTP seul ne suffit pas.
-     - 42P01 (undefined_table) : PostgreSQL ne trouve pas la relation : absence CERTAINE (table réellement inexistante).
+     - 42P01 (undefined_table) : PostgreSQL ne trouve pas une relation : absence CERTAINE de CETTE relation, à condition que le message la nomme
+       (isRelationAbsent(e, table)). Une relation absente différente (ou un 42P01 sans nom) est une erreur ordinaire, propagée.
      - PGRST205 : PostgREST ne trouve pas la table DANS SON CACHE DE SCHÉMA. Cela ne prouve PAS que la table n'existe pas : elle peut exister mais ne pas
        être (encore) dans le cache (migration appliquée sans rechargement : NOTIFY pgrst, 'reload schema'). Le client ne peut pas trancher : jamais traité
        comme une absence certaine (voir « schema-cache » dans classify).
      - Autres défauts de schéma : relation d'imbrication inconnue (PGRST200), colonne inconnue (PGRST204, 42703), fonction inconnue (PGRST202, 42883).
      « detail » rassemble message, détails et indication de PostgREST : il sert à vérifier QUELLE relation ou colonne est en cause. */
   const SCHEMA_CODES = ["PGRST200", "PGRST204", "PGRST205", "PGRST202", "42P01", "42703", "42883"];
-  const isRelationAbsent = e => e instanceof DbError && e.code === "42P01";
+  const isRelationAbsent = (e, table) => e instanceof DbError && e.code === "42P01" && (!table || new RegExp("(^|[^a-z_])" + table + "([^a-z_]|$)", "i").test(e.detail));
   const isSchemaCacheMiss = e => e instanceof DbError && e.code === "PGRST205";
   const isSchemaError = e => e instanceof DbError && SCHEMA_CODES.includes(e.code);
   /* Repli de DB.elections : uniquement quand la relation election_sources (ou son lien avec sources) est en cause. */
@@ -212,7 +213,7 @@
       try {
         r = await rows("election_round_results", { select: `*,sources(id,title,url,publisher,publication_date,publication_status),election_candidate_results(*,candidacies(id,candidacy_status,publication_status,${PERSON},${PARTY}),${PARTY},${PERSON})`, filter: { election_id: "eq." + electionId }, order: "round_number.asc" });
       } catch (err) {
-        if (isRelationAbsent(err)) { console.info("[Au résultat] Résultats électoraux : table absente (42P01, migration 005 non appliquée), rubrique inactive."); return { rounds: [], absent: true }; }
+        if (isRelationAbsent(err, "election_round_results")) { console.info("[Au résultat] Résultats électoraux : table absente (42P01, migration 005 non appliquée), rubrique inactive."); return { rounds: [], absent: true }; }
         throw err;
       }
       const ok = x => (x.entity_kind !== "candidacy" || x.candidacies) && (x.entity_kind !== "party" || x.parties) && (x.entity_kind !== "person" || x.people);

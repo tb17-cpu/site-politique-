@@ -21,7 +21,7 @@ const E={ // modes d'erreur simulés : [statut, corps]
   denied:[403,{code:'42501',message:'permission denied for table'}], rel:[400,{code:'PGRST200',message:'Could not find a relationship between tables'}],
   col:[400,{code:'42703',message:'column does not exist'}], schema:[406,{code:'PGRST106',message:'The schema must be one of the following: public'}],
   nocode400:[400,{message:'Bad Request'}], nocode404:[404,{message:'Not Found'}], server:[500,{message:'boom'}],
-  cache:[404,{code:'PGRST205',message:"Could not find the table 'public.election_round_results' in the schema cache"}], undefined42:[404,{code:'42P01',message:'relation does not exist'}]};
+  cache:[404,{code:'PGRST205',message:"Could not find the table 'public.election_round_results' in the schema cache"}], undefined42:[404,{code:'42P01',message:'relation "public.election_round_results" does not exist'}]};
 let MODE={};
 async function page(w,url,mode,fn,theme){
   MODE=mode; const b=await chromium.launch(); const c=await b.newContext({viewport:{width:w,height:900}}); const errs=[],logs=[];

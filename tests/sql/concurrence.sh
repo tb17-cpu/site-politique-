@@ -1,8 +1,8 @@
 #!/bin/sh
-# Écritures concurrentes (deux sessions psql réelles) sur la base jetable ar_test : aucune incohérence ne doit passer entre deux transactions.
-# Prérequis : base ar_test avec 002, 006, 005 (voir run.sh). PGHOST / PGPORT / PGUSER fournis par l'environnement.
+# Écritures concurrentes (deux sessions psql réelles) sur la base jetable $AR_DB : aucune incohérence ne doit passer entre deux transactions.
+# Prérequis : base AR_DB avec 002, 006, 005 (voir run.sh). PGHOST / PGPORT / PGUSER fournis par l'environnement.
 set -u
-P="psql -q -X -d ar_test"
+P="psql -q -X -d ${AR_DB:?AR_DB non défini : lancer via tests/sql/run.sh}"
 R=0; ok(){ echo "ok   $1"; }; ko(){ echo "FAIL $1"; R=1; }
 E=00000000-0000-0000-0000-0000000e0
 mk(){ # $1 = n : élection, 3 candidatures et un tour (brouillon) d'identifiants dérivés de n
