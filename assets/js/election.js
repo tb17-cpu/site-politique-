@@ -98,9 +98,9 @@
   /* ---- Choix de l'élection (aucune active) ---- */
   function chooser(target) {
     return `<div class="elec-choose"><p class="p-sub">Choisissez une élection : chaque rubrique n’affiche que les contenus de l’élection sélectionnée.</p>
-      <div class="h-doors">${list.map(el => { const st = status(el);
-        return `<a class="h-door" href="${esc(hrefFor(target || "election.html", el.id))}">${[st.label, when(el)].filter(Boolean).length ? `<span class="h-state">${[st.label, when(el)].filter(Boolean).map(esc).join(" · ")}</span>` : ""}
-          <h3>${esc(name(el))}</h3>${el.description ? `<p>${window.UI ? UI.richInline(el.description) : esc(el.description)}</p>` : "<p></p>"}<span class="h-go">Ouvrir →</span></a>`; }).join("")}</div></div>`;
+      <ul class="h-doors">${list.map(el => { const st = status(el), w = when(el);
+        return `<li><a class="h-door" href="${esc(hrefFor(target || "election.html", el.id))}"><span class="h-top">${st.label ? `<span class="h-badge h-badge--${esc(st.key)}">${esc(st.label)}</span>` : ""}${w ? `<span class="h-date">${esc(w)}</span>` : ""}</span>
+          <h3>${esc(name(el))}</h3><span class="h-foot"><span class="h-go">Ouvrir <span aria-hidden="true">→</span></span></span></a></li>`; }).join("")}</ul></div>`;
   }
 
   /* Pour les pages de rubrique : renvoie l'élection active ou affiche, dans `mount`, le choix / l'état vide / l'erreur. */

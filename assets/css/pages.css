@@ -62,3 +62,39 @@ a.p-cell:hover{background:var(--surface-hover);border-color:var(--accent-dim);te
 .defs p{font-size:14px;color:var(--fg-2)}
 .p-sec:last-of-type{padding-bottom:20px}
 .h-more{margin-top:18px;font-size:14px}
+
+/* ---------- Page élection : explication à gauche, carte calendrier à droite (au-dessus des rubriques sur mobile) ---------- */
+.e-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:var(--s-5) var(--s-6);align-items:start}
+.e-main{min-width:0}
+.cal{grid-column:2;grid-row:1;position:sticky;top:calc(var(--header-h,64px) + var(--s-3));border:1px solid var(--line-soft);border-top:4px solid var(--accent);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow);padding:var(--s-3) var(--s-4)}
+.cal-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);margin-bottom:var(--s-2)}
+.cal-head h2{font-size:1.125rem}
+.cal-dl{margin:0;display:grid}
+.cal-dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s-3);padding:6px 0;border-top:1px solid var(--line-soft)}
+.cal-dl dt{font-size:.8125rem;color:var(--muted)}
+.cal-dl dd{margin:0;font-size:.9375rem;font-weight:600;color:var(--fg);text-align:right;overflow-wrap:anywhere}
+.cal-meta{margin-top:var(--s-2)}
+.cal-meta dd{font-weight:500;color:var(--fg-2)}
+.e-main .ov-h:first-child,.e-main .res .ov-h{margin-top:var(--s-5)}
+.p-grid--rubriques{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:var(--s-2)}
+.p-grid--rubriques .p-cell{padding:var(--s-3) var(--s-4)}
+.p-grid--rubriques .p-cell h3{font-size:1rem;margin:2px 0 0;line-height:1.25}
+@media (max-width:900px){
+  .e-grid{grid-template-columns:minmax(0,1fr)}
+  .cal{grid-column:1;grid-row:1;position:static}
+  .cal-dates{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:var(--s-4)}
+  .cal-dates>div{flex-direction:column;align-items:flex-start;gap:0}
+  .cal-dates dd{text-align:left}
+  .cal-meta{grid-template-columns:repeat(auto-fit,minmax(110px,1fr));column-gap:var(--s-4)}
+  .cal-meta>div{flex-direction:column;align-items:flex-start;gap:0}
+  .cal-meta dd{text-align:left}
+}
+@media (max-width:560px){.p-grid--rubriques{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ---------- Densité générale (modérée) ---------- */
+.p-head{padding-block:var(--s-4) var(--s-4)}
+.p-head h1{font-size:clamp(1.625rem,4vw,2.5rem);margin-top:6px}
+.p-lede{margin-top:8px;font-size:1rem}
+.crumb{padding-top:10px}
+.p-sec{padding-block:var(--s-5) var(--s-2)}
+@media (max-width:700px){.p-head{padding-block:var(--s-3)}.p-sec{padding-block:var(--s-4) var(--s-2)}}

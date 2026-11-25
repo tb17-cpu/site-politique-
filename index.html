@@ -14,10 +14,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap">
 <link rel="stylesheet" href="assets/css/tokens.css?v=0c6f7365">
-<link rel="stylesheet" href="assets/css/base.css?v=6aee513e">
+<link rel="stylesheet" href="assets/css/base.css?v=03fb88df">
 <link rel="stylesheet" href="assets/css/markdown.css?v=99b19935">
-<link rel="stylesheet" href="assets/css/home.css?v=6c6f60cf">
-<link rel="stylesheet" href="assets/css/data.css?v=aac97bf0">
+<link rel="stylesheet" href="assets/css/home.css?v=ab66e652">
+<link rel="stylesheet" href="assets/css/data.css?v=136a93e7">
 </head>
 <body data-page="home">
 <a class="skip" href="#contenu">Aller au contenu</a>
@@ -25,17 +25,35 @@
 
 <main id="contenu">
 
-  <!-- 1. Identité, promesse et recherche -->
+  <!-- 1. Titre court -->
   <section class="h-hero" aria-labelledby="intro-h">
     <div class="wrap">
-      <p class="label" id="h-meta">Plateforme indépendante · programmes politiques et politiques publiques</p>
-      <h1 id="intro-h"><span>Comprendre les programmes.</span> <span>Comparer les propositions.</span> <span>Évaluer les politiques publiques.</span></h1>
-      <p class="h-lede"><span class="brand-inline">Au résultat</span> analyse les programmes politiques et les politiques publiques : ce que proposent les candidats, comment leurs mesures fonctionneraient et ce qu’ont donné des politiques comparables menées ailleurs.</p>
-      <p class="h-status">Chaque information renvoie à sa source, dont la nature est toujours indiquée : document officiel, déclaration, entretien ou article de presse.</p>
+      <h1 id="intro-h">Comprendre les programmes, comparer les propositions.</h1>
+      <p class="h-lede"><span class="brand-inline">Au résultat</span> présente, pour chaque élection, les candidats, leurs programmes et leurs mesures, avec leurs sources.</p>
+    </div>
+  </section>
+
+  <!-- 2. Élections : cœur de la page -->
+  <section class="h-elec" id="elections" aria-labelledby="elections-h">
+    <div class="wrap">
+      <h2 id="elections-h" class="h-h2">Élections</h2>
+      <div id="h-elections"></div>
+    </div>
+  </section>
+
+  <!-- 3. Accès directs et recherche -->
+  <section class="h-quick" id="acces" aria-label="Accès directs et recherche">
+    <div class="wrap">
+      <ul class="h-chips" id="h-chips">
+        <li><a href="candidats.html">Candidats</a></li>
+        <li><a href="programmes.html">Programmes</a></li>
+        <li><a href="comparateur.html">Mesures</a></li>
+        <li><a href="thematiques.html">Thématiques</a></li>
+      </ul>
       <div class="h-search" id="h-search" role="search">
         <form id="h-search-form" autocomplete="off">
           <label class="skip" for="h-q">Rechercher</label>
-          <input id="h-q" type="search" placeholder="Rechercher un candidat, une mesure ou une thématique…" aria-controls="h-results" aria-expanded="false">
+          <input id="h-q" type="search" placeholder="Candidat, mesure, thématique…" aria-controls="h-results" aria-expanded="false">
           <button type="submit">Rechercher</button>
         </form>
         <div class="h-results" id="h-results" role="region" aria-live="polite" hidden></div>
@@ -44,73 +62,52 @@
     </div>
   </section>
 
-  <!-- 2. Choix de l’élection -->
-  <section class="h-band" id="elections" aria-labelledby="elections-h">
+  <!-- 4. Thématiques (cartes compactes) -->
+  <section class="h-band" id="thematiques" aria-labelledby="thematiques-h">
     <div class="wrap">
-      <header class="h-sec-head">
-        <p class="label">Par où commencer</p>
-        <h2 id="elections-h">Choisir une élection</h2>
-        <p class="h-sec-sub">Sélectionnez une élection pour accéder aux candidats, à leurs programmes, aux propositions et aux indicateurs du pays. Le menu en haut de page permet de passer d’un scrutin à l’autre.</p>
-      </header>
-      <div id="h-elections"></div>
-    </div>
-  </section>
-
-  <!-- 3. Thématiques -->
-  <section class="h-band h-band--surface" id="thematiques" aria-labelledby="thematiques-h">
-    <div class="wrap">
-      <header class="h-sec-head">
-        <p class="label">Thématiques</p>
-        <h2 id="thematiques-h">Explorer par grande politique publique</h2>
-        <p class="h-sec-sub" id="h-themes-sub">Les mesures de tous les candidats sont classées selon la même grille de politiques publiques.</p>
-      </header>
+      <div class="h-sec-row">
+        <h2 id="thematiques-h" class="h-h2">Thématiques</h2>
+        <a href="thematiques.html">Tout voir →</a>
+      </div>
+      <p class="h-sec-sub" id="h-themes-sub">Les mesures de tous les candidats sont classées selon la même grille.</p>
       <div class="h-themes" id="h-themes"></div>
-      <p class="h-more"><a href="thematiques.html">Voir toutes les thématiques et leurs sous-thèmes →</a></p>
     </div>
   </section>
 
-  <!-- 4. Méthode et indépendance -->
-  <section class="h-band" id="methode" aria-labelledby="methode-h">
+  <!-- 5. Pour aller plus loin : méthode et ressources, repliées -->
+  <section class="h-band h-band--surface" id="methode" aria-labelledby="ressources-h">
     <div class="wrap">
-      <header class="h-sec-head">
-        <p class="label">Méthode et indépendance</p>
-        <h2 id="methode-h">Les règles que le site s’impose</h2>
-        <p class="h-sec-sub">Évaluer les politiques sur leurs mécanismes et leurs résultats, pas sur leurs étiquettes politiques.</p>
-      </header>
-      <ol class="h-principles">
-        <li><span class="mono">01</span><b>Même grille pour tous</b><p>Mêmes champs, même exigence pour chaque candidat et chaque famille politique.</p></li>
-        <li><span class="mono">02</span><b>Sources traçables</b><p>Chaque chiffre et chaque affirmation importante renvoie à une source accessible.</p></li>
-        <li><span class="mono">03</span><b>Faits, déclarations, estimations</b><p>Ce qui est vérifié, ce qui est annoncé et ce qui est estimé ne sont jamais mélangés.</p></li>
-        <li><span class="mono">04</span><b>Des mécanismes, pas des slogans</b><p>Une mesure est décrite par ce qu’elle fait, ce qu’elle coûte et à quelles conditions.</p></li>
-        <li><span class="mono">05</span><b>Résultats et limites</b><p>Les effets observés ailleurs sont présentés avec leurs limites et leurs différences de contexte.</p></li>
-        <li><span class="mono">06</span><b>Contexte national et international</b><p>Une politique se juge par rapport à la situation de départ et à la tendance du pays.</p></li>
-      </ol>
-      <p class="h-more"><a href="methodologie.html">Lire la méthodologie complète →</a></p>
-    </div>
-  </section>
-
-  <!-- 5. Ressources complémentaires -->
-  <section class="h-band h-band--surface" id="ressources" aria-labelledby="ressources-h">
-    <div class="wrap">
-      <header class="h-sec-head">
-        <p class="label">Pour approfondir</p>
-        <h2 id="ressources-h">Ressources complémentaires</h2>
-      </header>
-      <div class="h-res">
-        <div>
-          <p class="label">Analyses internationales</p>
-          <h3>Des études de cas pour éclairer les propositions</h3>
-          <p id="h-res-an"></p>
-          <ul id="h-dossiers"></ul>
-          <a href="analyses-internationales.html">Ouvrir la bibliothèque d’analyses →</a>
-        </div>
-        <div>
-          <p class="label">Indicateurs</p>
-          <h3>Des données sourcées pour situer les pays</h3>
-          <p id="h-res-in"></p>
-          <ul id="h-domains"></ul>
-          <a href="indicateurs.html">Voir les indicateurs →</a>
-        </div>
+      <h2 id="ressources-h" class="h-h2">Pour aller plus loin</h2>
+      <div class="h-folds">
+        <details class="h-fold" id="ressources">
+          <summary>Analyses internationales et indicateurs</summary>
+          <div class="h-res">
+            <div>
+              <p class="label">Analyses internationales</p>
+              <p id="h-res-an"></p>
+              <ul id="h-dossiers"></ul>
+              <a href="analyses-internationales.html">Ouvrir la bibliothèque d’analyses →</a>
+            </div>
+            <div>
+              <p class="label">Indicateurs</p>
+              <p id="h-res-in"></p>
+              <ul id="h-domains"></ul>
+              <a href="indicateurs.html">Voir les indicateurs →</a>
+            </div>
+          </div>
+        </details>
+        <details class="h-fold" id="methode-fold">
+          <summary>Nos règles de méthode</summary>
+          <ol class="h-principles">
+            <li><span class="mono">01</span><b>Même grille pour tous</b><p>Mêmes champs, même exigence pour chaque candidat.</p></li>
+            <li><span class="mono">02</span><b>Sources traçables</b><p>Chaque chiffre important renvoie à une source accessible.</p></li>
+            <li><span class="mono">03</span><b>Faits, déclarations, estimations</b><p>Ce qui est vérifié, annoncé ou estimé n’est jamais mélangé.</p></li>
+            <li><span class="mono">04</span><b>Des mécanismes, pas des slogans</b><p>Une mesure est décrite par ce qu’elle fait et ce qu’elle coûte.</p></li>
+            <li><span class="mono">05</span><b>Résultats et limites</b><p>Les effets observés ailleurs sont présentés avec leurs limites.</p></li>
+            <li><span class="mono">06</span><b>Contexte national et international</b><p>Une politique se juge par rapport à la situation de départ.</p></li>
+          </ol>
+          <p class="h-more"><a href="methodologie.html">Lire la méthodologie complète →</a></p>
+        </details>
       </div>
     </div>
   </section>
@@ -124,13 +121,13 @@
 <script src="assets/js/utils.js?v=4f6dde50"></script>
 <script src="assets/js/layout.js?v=0e770fba"></script>
 <script src="assets/js/supabase-config.js?v=77957553"></script>
-<script src="assets/js/db.js?v=e68b9df1"></script>
+<script src="assets/js/db.js?v=920af3e1"></script>
 <script src="assets/js/markdown.js?v=3c86658f"></script>
-<script src="assets/js/ui.js?v=478032fa"></script>
-<script src="assets/js/election.js?v=ba70a711"></script>
+<script src="assets/js/ui.js?v=0d03a4fd"></script>
+<script src="assets/js/election.js?v=696cc9b3"></script>
 <script src="assets/js/data-analyses.js?v=10afe209"></script>
 <script src="assets/js/data-gauche.js?v=f952f74d"></script>
 <script src="assets/js/search.js?v=bfb70db7"></script>
-<script src="assets/js/home.js?v=9d649935"></script>
+<script src="assets/js/home.js?v=f978a2df"></script>
 </body>
 </html>

@@ -67,12 +67,13 @@
       <div class="cand-id">${UI.avatar(c.people, true)}<div>
         <h1>${e(name)}</h1>
         ${pt ? `<p class="fh-party">${UI.partyDot(pt)}<span>${e(pt.name + (pt.acronym ? ` (${pt.acronym})` : ""))}</span>${UI.positionBlock(c)}</p>` : ""}
-        ${stageCard}${notice}${facts ? `<div class="cand-facts">${facts}</div>` : ""}</div></div>${panel}</section>
-      ${c.description ? `<div class="cand-bio">${UI.rich(c.description)}</div>` : ""}
-      ${p.biography ? `<div class="cand-bio">${UI.rich(p.biography)}</div>` : ""}`;
+        ${stageCard}${notice}${facts ? `<div class="cand-facts">${facts}</div>` : ""}</div></div>${panel}</section>`;
 
     const counts = [nMeasures ? `${nMeasures} ${nMeasures > 1 ? "propositions" : "proposition"}` : "", nThemes ? `${nThemes} ${nThemes > 1 ? "thèmes" : "thème"}` : ""].filter(Boolean).join(" · ");
     h += `<section class="blk" id="programme"><header><b>Programme</b>${counts ? `<span>${counts}</span>` : ""}</header><div>${F.error ? UI.loadNotice("statuses", F.error) : ""}${UI.formalizationLegend(seen)}${progHtml}</div></section>`;
+
+    /* Parcours, origine, carrière : repliés par défaut, après le programme. Rien n'est affiché sans contenu. */
+    if (c.description || p.biography) h += `<details class="cand-info"><summary>Informations sur le candidat</summary><div class="cand-info-body">${c.description ? `<div class="cand-bio">${UI.rich(c.description)}</div>` : ""}${p.biography ? `<div class="cand-bio">${UI.rich(p.biography)}</div>` : ""}</div></details>`;
 
     const cs = c.candidacy_sources || [];
     if (cs.length) h += `<section class="blk"><header><b>Sources justificatives</b><span>Documents de référence</span></header><div><details class="m-fold"><summary>Voir les sources (${cs.length})</summary><ul class="refs">${cs.map(s => `<li>${s.sources ? UI.link(s.sources.url, s.sources.title) || e(s.sources.title) : "Source"}
