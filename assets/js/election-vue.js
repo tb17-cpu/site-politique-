@@ -96,10 +96,10 @@
   const calendar = (el, st) => {
     const row = ([l, v]) => v ? `<div><dt>${e(l)}</dt><dd>${e(v)}</dd></div>` : "";
     const dates = [["Date du scrutin", UI.date(el.scheduled_date)], ["Date effective", UI.date(el.actual_date)], ["Second tour", UI.date(el.second_round_date)], ["Date limite des parrainages", UI.date(el.sponsorship_deadline)]].map(row).join("");
-    const meta = [["Pays", el.countries && el.countries.name], ["Type de scrutin", UI.humanize(el.election_type)], ["Année", el.year]].map(row).join("");
+    const meta = [el.countries && el.countries.name, UI.humanize(el.election_type), el.year].filter(Boolean).map(e).join(" · ");
     if (!dates && !meta && !st.label) return "";
     return `<aside class="cal" aria-labelledby="cal-h"><div class="cal-head"><h2 id="cal-h">Calendrier</h2>${st.label ? `<span class="h-badge h-badge--${e(st.key)}">${e(st.label)}</span>` : ""}</div>
-      ${dates ? `<dl class="cal-dl cal-dates">${dates}</dl>` : ""}${meta ? `<dl class="cal-dl cal-meta">${meta}</dl>` : ""}</aside>`; };
+      ${dates ? `<dl class="cal-dl cal-dates">${dates}</dl>` : ""}${meta ? `<p class="cal-meta" aria-label="Pays, type de scrutin et année">${meta}</p>` : ""}</aside>`; };
   const resultsBlock = R => {
     /* Aucun résultat publié : rien du tout (ni bloc, ni titre, ni emplacement réservé, ni message de remplacement). */
     if (R.error) return `<section class="res" data-results="error"><h2 class="ov-h">Résultats</h2>${UI.loadNotice("results", R.error)}</section>`;

@@ -4,7 +4,7 @@
    thématiques compactes, méthode et ressources repliées. Chaque bloc est indépendant (réordonnable dans index.html).
    ========================================================================== */
 .h-hero{padding-block:var(--s-5) var(--s-3)}
-.h-hero h1{font-size:clamp(1.625rem,3.6vw,2.5rem);line-height:1.1;max-width:24ch}
+.h-hero h1{font-size:clamp(1.625rem,3.6vw,2.5rem);line-height:1.1;max-width:none}
 .h-lede{margin-top:var(--s-2);max-width:62ch;color:var(--fg-2);font-size:1rem;line-height:1.5}
 .h-h2{font-size:clamp(1.25rem,2.4vw,1.625rem)}
 .h-elec{padding-block:var(--s-3) var(--s-4)}

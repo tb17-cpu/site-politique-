@@ -73,8 +73,7 @@ a.p-cell:hover{background:var(--surface-hover);border-color:var(--accent-dim);te
 .cal-dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s-3);padding:6px 0;border-top:1px solid var(--line-soft)}
 .cal-dl dt{font-size:.8125rem;color:var(--muted)}
 .cal-dl dd{margin:0;font-size:.9375rem;font-weight:600;color:var(--fg);text-align:right;overflow-wrap:anywhere}
-.cal-meta{margin-top:var(--s-2)}
-.cal-meta dd{font-weight:500;color:var(--fg-2)}
+.cal-meta{margin:var(--s-2) 0 0;padding-top:var(--s-2);border-top:1px solid var(--line-soft);font-size:.8125rem;color:var(--muted)}
 .e-main .ov-h:first-child,.e-main .res .ov-h{margin-top:var(--s-5)}
 .p-grid--rubriques{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:var(--s-2)}
 .p-grid--rubriques .p-cell{padding:var(--s-3) var(--s-4)}
@@ -85,9 +84,6 @@ a.p-cell:hover{background:var(--surface-hover);border-color:var(--accent-dim);te
   .cal-dates{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:var(--s-4)}
   .cal-dates>div{flex-direction:column;align-items:flex-start;gap:0}
   .cal-dates dd{text-align:left}
-  .cal-meta{grid-template-columns:repeat(auto-fit,minmax(110px,1fr));column-gap:var(--s-4)}
-  .cal-meta>div{flex-direction:column;align-items:flex-start;gap:0}
-  .cal-meta dd{text-align:left}
 }
 @media (max-width:560px){.p-grid--rubriques{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
