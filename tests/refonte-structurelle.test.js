@@ -57,6 +57,11 @@ const open = async (br, url, { w, th, route = D.route }) => {
     rep(c.prog && c.info && c.order, `${T} candidat : programme avant les informations`, c);
     rep(c.sum === 'Informations sur le candidat' && c.open === false, `${T} candidat : section repliable fermée par défaut`, c.sum);
     rep(!/Source de la photo|Photo : CRED/.test(c.txt) && c.dot, `${T} candidat : crédit photo non affiché explicitement (pastille discrète)`, c.dot);
+    const lk = await pg.evaluate(() => { const a = document.querySelector('.cand-info-link'); return a && { t: a.textContent, h: a.getAttribute('href'), top: a.getBoundingClientRect().top, vh: innerHeight }; });
+    rep(lk && /Informations sur le candidat/.test(lk.t) && lk.h === '#cand-info' && lk.top < lk.vh, `${T} candidat : lien d'accès rapide près de l'en-tête`, lk);
+    await pg.click('.cand-info-link'); await pg.waitForTimeout(900);
+    const sc = await pg.evaluate(() => { const d = document.querySelector('details.cand-info'), r = d.getBoundingClientRect(); return { open: d.open, inView: r.top >= 0 && r.top < innerHeight * 0.6 }; });
+    rep(sc.inView && sc.open === false, `${T} candidat : le lien descend à la section, qui reste fermée`, sc);
     await pg.click('details.cand-info > summary');
     rep(await pg.evaluate(() => document.querySelector('details.cand-info').open && document.querySelector('.cand-info-body').offsetHeight > 0), `${T} candidat : s'ouvre au clic`);
     await pg.focus('details.cand-info > summary'); await pg.keyboard.press('Enter');
