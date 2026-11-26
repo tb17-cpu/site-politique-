@@ -1,25 +1,31 @@
 /* ==========================================================================
    PAGE D’ACCUEIL
-   Ordre : promesse + recherche, trois portes d’entrée, thématiques, méthode,
-   ressources complémentaires. Chaque bloc est indépendant (réordonnable dans index.html).
+   Ordre : titre court, élections (cartes entières cliquables, styles dans base.css), accès directs + recherche,
+   thématiques compactes, méthode et ressources repliées. Chaque bloc est indépendant (réordonnable dans index.html).
    ========================================================================== */
-.h-hero{padding-block:var(--s-8) var(--s-7);border-bottom:1px solid var(--line-soft)}
-.h-hero h1{font-size:clamp(30px,4.6vw,52px);line-height:1.08;max-width:none;margin-top:16px}
-.h-hero h1 span{display:block}
-.h-hero h1 span+span{color:var(--fg-2)}
-.h-lede{margin-top:22px;max-width:64ch;color:var(--fg-2);font-size:17px;line-height:1.55}
-.h-status{margin-top:14px;max-width:64ch;font-size:13px;color:var(--muted);padding:10px 12px;border-radius:var(--r);background:var(--accent-soft);color:var(--accent-soft-fg)}
+.h-hero{padding-block:var(--s-5) var(--s-3)}
+.h-hero h1{font-size:clamp(1.625rem,3.6vw,2.5rem);line-height:1.1;max-width:none}
+.h-lede{margin-top:var(--s-2);max-width:62ch;color:var(--fg-2);font-size:1rem;line-height:1.5}
+.h-h2{font-size:clamp(1.25rem,2.4vw,1.625rem)}
+.h-elec{padding-block:var(--s-3) var(--s-4)}
+.h-elec .h-h2{margin-bottom:var(--s-3)}
 
-/* Recherche centrale */
-.h-search{margin-top:34px;max-width:720px;position:relative}
-.h-search form{display:flex;border:1px solid var(--control-line);border-radius:var(--r);overflow:hidden;background:var(--surface);box-shadow:var(--shadow)}
+/* Accès directs + recherche : discrets, sous les élections */
+.h-quick{padding-block:var(--s-2) var(--s-5)}
+.h-quick .wrap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s-3) var(--s-5);align-items:center}
+.h-chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:var(--s-2)}
+.h-chips a{display:flex;align-items:center;min-height:var(--tap);padding:0 var(--s-4);border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--fg);font-size:.9375rem;font-weight:500;text-decoration:none}
+.h-chips a:hover{border-color:var(--accent);color:var(--accent);text-decoration:none}
+.h-search{position:relative;min-width:0}
+.h-search form{display:flex;border:1px solid var(--control-line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
 .h-search form:focus-within{border-color:var(--accent);outline:3px solid var(--focus);outline-offset:2px}
-.h-search input{flex:1;min-width:0;background:transparent;border:0;color:var(--fg);font:inherit;font-size:16px;padding:15px 16px}
+.h-search input{flex:1;min-width:0;background:transparent;border:0;color:var(--fg);font:inherit;font-size:16px;padding:0 var(--s-3);min-height:var(--tap)}
 .h-search input::placeholder{color:var(--muted)}
 .h-search input:focus-visible{outline:none}
-.h-search button{border:0;border-left:0;background:var(--btn-bg);color:var(--btn-fg);min-height:48px;font:inherit;font-size:14px;font-weight:500;padding:0 20px;cursor:pointer}
-.h-search button:hover{background:var(--btn-hover)}
-.h-search-note{font-size:12.5px;color:var(--muted);margin-top:10px}
+.h-search button{border:0;background:var(--surface-2);color:var(--fg);min-height:var(--tap);font:inherit;font-size:.875rem;font-weight:500;padding:0 var(--s-4);cursor:pointer;border-left:1px solid var(--line-soft)}
+.h-search button:hover{background:var(--surface-hover);color:var(--accent)}
+.h-search-note{font-size:12.5px;color:var(--muted);margin-top:6px}
+.h-search-note:empty{display:none}
 .h-results{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-pop);z-index:20;max-height:420px;overflow:auto}
 .h-results[hidden]{display:none}
 .h-results h4{margin:0;padding:10px 14px 6px;font-family:var(--f-mono);font-size:10.5px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
@@ -27,50 +33,42 @@
 .h-results a:hover,.h-results a:focus-visible{background:var(--surface-2);text-decoration:none}
 .h-results a small{display:block;color:var(--muted);font-size:12px}
 .h-results p{padding:12px 14px;font-size:13.5px;color:var(--fg-2)}
+@media (max-width:760px){.h-quick .wrap{grid-template-columns:minmax(0,1fr)}.h-chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.h-chips a{justify-content:center}}
 
-.h-band{padding-block:var(--s-7)}
+.h-band{padding-block:var(--s-5)}
 .h-band--surface{background:var(--surface);border-block:1px solid var(--line-soft)}
-.h-sec-head{margin-bottom:28px;max-width:70ch}
-.h-sec-head h2{font-size:clamp(26px,3.4vw,38px);margin-top:8px}
-.h-sec-sub{color:var(--fg-2);margin-top:8px}
+.h-sec-row{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s-3)}
+.h-sec-row a{font-size:.875rem;white-space:nowrap}
+.h-sec-sub{color:var(--muted);font-size:.875rem;margin:2px 0 var(--s-3)}
+.h-band--surface .h-h2{margin-bottom:var(--s-3)}
 
-/* Trois portes d’entrée */
-.h-doors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.h-door{display:flex;flex-direction:column;gap:10px;padding:var(--s-5);border:1px solid var(--line-soft);box-shadow:var(--shadow);border-radius:var(--r);background:var(--surface);color:inherit;text-decoration:none;min-width:0}
-.h-door:hover{background:var(--surface-hover);border-color:var(--accent-dim);text-decoration:none}
-.h-door h3{font-size:25px}
-.h-door p{font-size:14.5px;color:var(--fg-2);flex:1}
-.h-door .h-go{font-family:var(--f-mono);font-size:12px;color:var(--accent);letter-spacing:.04em}
-.h-door .h-state{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-@media (max-width:860px){.h-doors{grid-template-columns:minmax(0,1fr)}}
-
-/* Thématiques */
-.h-themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
-.h-theme{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line-soft);box-shadow:var(--shadow);border-radius:var(--r);background:var(--surface);padding:var(--s-4) var(--s-5);min-width:0;color:inherit;text-decoration:none}
+/* Thématiques : cartes basses, deux colonnes sur mobile */
+.h-themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:var(--s-2)}
+.h-theme{display:flex;flex-direction:column;gap:2px;justify-content:center;min-height:var(--tap);border:1px solid var(--line-soft);border-radius:var(--r);background:var(--surface);padding:var(--s-2) var(--s-3);min-width:0;color:inherit;text-decoration:none}
 .h-theme:hover{background:var(--surface-hover);border-color:var(--accent-dim);text-decoration:none}
-.h-theme h3{font-size:20px}
-.h-theme p{font-size:13px;color:var(--muted)}
-.h-theme .h-n{font-family:var(--f-mono);font-size:11px;color:var(--accent)}
-.h-more{margin-top:18px;font-size:14px}
+.h-theme h3{font-size:1rem;line-height:1.2}
+.h-theme .h-n{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+@media (max-width:560px){.h-themes{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-/* Méthode et indépendance */
-.h-principles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 32px}
-.h-principles li{border-top:1px solid var(--line);padding:14px 0 20px}
+/* Méthode et ressources : repliées */
+.h-folds{display:grid;gap:var(--s-2)}
+.h-fold{border:1px solid var(--line-soft);border-radius:var(--r);background:var(--bg)}
+.h-fold>summary{cursor:pointer;padding:0 var(--s-4);font-weight:600;font-size:.9375rem}
+.h-fold[open]>summary{border-bottom:1px solid var(--line-soft)}
+.h-fold>*:not(summary){margin:var(--s-3) var(--s-4)}
+.h-principles{list-style:none;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-3) var(--s-5)}
 .h-principles .mono{color:var(--accent);font-size:12px}
-.h-principles b{display:block;font-family:var(--f-display);font-size:20px;font-weight:600;margin:4px 0 6px;line-height:1.2}
-.h-principles p{font-size:14px;color:var(--fg-2)}
+.h-principles b{display:block;font-size:.9375rem;margin:2px 0}
+.h-principles p{font-size:.875rem;color:var(--fg-2)}
+.h-more{font-size:.875rem}
 @media (max-width:860px){.h-principles{grid-template-columns:minmax(0,1fr)}}
-
-/* Ressources complémentaires */
-.h-res{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 40px}
-.h-res>div{border-top:1px solid var(--line);padding-top:16px}
-.h-res h3{font-size:22px;margin:6px 0 8px}
-.h-res p{font-size:14.5px;color:var(--fg-2);margin-bottom:12px}
-.h-res ul{list-style:none;margin:0 0 14px;padding:0;font-size:14px}
-.h-res li{padding:5px 0;border-top:1px solid var(--line-soft);color:var(--fg-2)}
+.h-res{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-4) var(--s-6)}
+.h-res p{font-size:.875rem;color:var(--fg-2);margin-bottom:var(--s-2)}
+.h-res p.label{color:var(--muted);margin-bottom:2px;font-size:12px}
+.h-res ul{list-style:none;margin:0 0 var(--s-2);padding:0;font-size:.875rem}
+.h-res li{padding:3px 0;color:var(--fg-2)}
 .h-res li b{color:var(--fg);font-weight:500}
-@media (max-width:760px){.h-res{grid-template-columns:minmax(0,1fr);gap:28px}}
+.h-res a{font-size:.875rem}
+@media (max-width:760px){.h-res{grid-template-columns:minmax(0,1fr)}}
 
 .nojs{padding:16px;border:1px dashed var(--line);color:var(--fg-2);margin-block:24px}
-@media (max-width:760px){.h-hero{padding-block:42px 38px}.h-search button{padding:0 14px}}
-.h-door .h-count{font-size:13px;color:var(--fg-2)}

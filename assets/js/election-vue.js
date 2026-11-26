@@ -93,10 +93,13 @@
       <p class="quiet poll-note">Résultats officiels : votes réellement exprimés, à ne pas confondre avec les sondages.${src ? ` Source : ${UI.link(src.url, src.title || "Source") || e(src.title || "Source")}${src.publisher ? ` · ${e(src.publisher)}` : ""}` : ""}</p>`;
   };
   /* Calendrier : uniquement les dates et informations renseignées ; aucune donnée -> ni titre ni message. */
-  const calendar = (el, st) => { const k = kv([["Pays", el.countries && el.countries.name], ["Type de scrutin", UI.humanize(el.election_type)], ["Année", el.year],
-      ["Date du scrutin", UI.date(el.scheduled_date)], ["Date effective", UI.date(el.actual_date)], ["Second tour", UI.date(el.second_round_date)],
-      ["Date limite des parrainages", UI.date(el.sponsorship_deadline)], ["Situation", st.label]]);
-    return k ? `<h2 class="ov-h">Calendrier</h2>${k}` : ""; };
+  const calendar = (el, st) => {
+    const row = ([l, v]) => v ? `<div><dt>${e(l)}</dt><dd>${e(v)}</dd></div>` : "";
+    const dates = [["Date du scrutin", UI.date(el.scheduled_date)], ["Date effective", UI.date(el.actual_date)], ["Second tour", UI.date(el.second_round_date)], ["Date limite des parrainages", UI.date(el.sponsorship_deadline)]].map(row).join("");
+    const meta = [el.countries && el.countries.name, UI.humanize(el.election_type), el.year].filter(Boolean).map(e).join(" · ");
+    if (!dates && !meta && !st.label) return "";
+    return `<aside class="cal" aria-labelledby="cal-h"><div class="cal-head"><h2 id="cal-h">Calendrier</h2>${st.label ? `<span class="h-badge h-badge--${e(st.key)}">${e(st.label)}</span>` : ""}</div>
+      ${dates ? `<dl class="cal-dl cal-dates">${dates}</dl>` : ""}${meta ? `<p class="cal-meta" aria-label="Pays, type de scrutin et année">${meta}</p>` : ""}</aside>`; };
   const resultsBlock = R => {
     /* Aucun résultat publié : rien du tout (ni bloc, ni titre, ni emplacement réservé, ni message de remplacement). */
     if (R.error) return `<section class="res" data-results="error"><h2 class="ov-h">Résultats</h2>${UI.loadNotice("results", R.error)}</section>`;
@@ -147,9 +150,8 @@
         ["comparateur", "Comparateur", "Comparer les mesures de candidats différents"],
         ["indicateurs", "Indicateurs", "Données et sources du pays"]].concat(d.dossier ? [["pays", "Comprendre le pays", "Le contexte politique, économique et institutionnel"]] : []);
       const hrefs = { candidats: "candidats.html", programmes: "programmes.html", thematiques: "thematiques.html", comparateur: "comparateur.html", indicateurs: "indicateurs.html", pays: "pays.html" };
-      return `<div class="p-grid">${sections.map(s => `<a class="p-cell" href="${hrefs[s[0]]}"><span class="tag">${e(s[1])}</span><h3>${e(s[2])}</h3></a>`).join("")}</div>
-        ${calendar(el, st)}
-        ${resultsBlock(d.results)}${pollBlock(d.polls)}${refsBlock(el)}`;
+      return `<div class="e-grid"><div class="e-main"><div class="p-grid p-grid--rubriques">${sections.map(s => `<a class="p-cell" href="${hrefs[s[0]]}"><span class="tag">${e(s[1])}</span><h3>${e(s[2])}</h3></a>`).join("")}</div>
+        ${resultsBlock(d.results)}${pollBlock(d.polls)}${refsBlock(el)}</div>${calendar(el, st)}</div>`;
     }, { loading: "Chargement de l’élection…", isEmpty: () => false, after: el => { pollWire(el); resWire(el); } });
   });
 })();

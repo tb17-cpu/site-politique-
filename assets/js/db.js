@@ -204,8 +204,8 @@
        une liste vide signifie « aucun résultat publié ». Trois situations distinctes pour une table inaccessible :
        - fonctionnalité désactivée explicitement (SUPABASE_CONFIG.electionResults === false, avant la migration) : { rounds: [], disabled: true }, sans requête ni message ;
        - table CERTAINEMENT absente (42P01) : { rounds: [], absent: true }, sans message ;
-       - PGRST205 (table introuvable dans le cache de schéma PostgREST) : NON tranché (table absente OU cache non rechargé) : erreur propagée, jamais
-         présentée comme une absence de résultats (classe « schema-cache », message discret, avertissement du diagnostic).
+       - PGRST205 sur cette table (cache de schéma) : rubrique inactive, SANS message public (aucun résultat n'existe) ;
+         { rounds: [], absent: true, unconfirmed: true }, trace console, avertissement conservé dans le diagnostic.
        Toute autre erreur (réseau, délai, accès refusé, relation ou colonne inexistante, 400/404 sans code reconnu) est propagée. */
     results: async electionId => {
       if (CFG.electionResults === false) return { rounds: [], disabled: true };
@@ -214,6 +214,9 @@
         r = await rows("election_round_results", { select: `*,sources(id,title,url,publisher,publication_date,publication_status),election_candidate_results(*,candidacies(id,candidacy_status,publication_status,${PERSON},${PARTY}),${PARTY},${PERSON})`, filter: { election_id: "eq." + electionId }, order: "round_number.asc" });
       } catch (err) {
         if (isRelationAbsent(err, "election_round_results")) { console.info("[Au résultat] Résultats électoraux : table absente (42P01, migration 005 non appliquée), rubrique inactive."); return { rounds: [], absent: true }; }
+        /* PGRST205 : rubrique pas encore disponible côté base. Aucun résultat n'existe donc : rien n'est affiché au public
+           (trace console ; le diagnostic le signale toujours en avertissement). Les vraies erreurs restent propagées. */
+        if (isSchemaCacheMiss(err) && /election_round_results/.test(String(err.detail || ""))) { console.warn("[Au résultat] Résultats électoraux : table absente du cache de schéma (PGRST205), rubrique inactive."); return { rounds: [], absent: true, unconfirmed: true }; }
         throw err;
       }
       const ok = x => (x.entity_kind !== "candidacy" || x.candidacies) && (x.entity_kind !== "party" || x.parties) && (x.entity_kind !== "person" || x.people);

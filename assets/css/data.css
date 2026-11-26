@@ -389,3 +389,16 @@ details.m-fold[open]>summary::before{transform:rotate(90deg)}
 .statut--prov{border-style:dashed}
 .res-tag.res-prov{background:transparent;border:1px dashed currentColor;color:var(--fg-2)}
 .res-tag.res-win.res-prov{background:transparent;color:var(--accent);border-color:var(--accent)}
+
+/* ---------- Fiche candidat : informations biographiques repliées, crédit photo discret ---------- */
+.cand-info{margin:var(--s-4) 0 0;border:1px solid var(--line-soft);border-radius:var(--r);background:var(--surface)}
+.cand-info>summary{cursor:pointer;padding:0 var(--s-4);font-weight:600;font-size:.9375rem;color:var(--fg)}
+.cand-info[open]>summary{border-bottom:1px solid var(--line-soft)}
+.cand-info-body{padding:var(--s-3) var(--s-4)}
+.cand-info-body .cand-bio+.cand-bio{margin-top:var(--s-3)}
+.portrait-box{position:relative}
+.credit-dot{position:absolute;right:4px;bottom:4px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--surface);color:var(--muted);border:1px solid var(--line);font:600 11px/1 var(--f-body);text-decoration:none;opacity:.8}
+a.credit-dot:hover,.credit-dot:focus-visible{opacity:1;color:var(--accent);text-decoration:none}
+.ov-h{margin-top:var(--s-5)}
+.cand-info-link{display:inline-flex;align-items:center;min-height:var(--tap);margin-top:var(--s-1);font-size:.875rem;font-weight:500}
+.cand-info{scroll-margin-top:calc(var(--header-h,64px) + 56px)}

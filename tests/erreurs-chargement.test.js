@@ -41,7 +41,7 @@ async function page(w,url,mode,fn,theme){
 const notes=p=>p.evaluate(()=>[...document.querySelectorAll('[data-load-error]')].map(x=>x.getAttribute('data-load-error')+'|'+x.innerText));
 const card=async p=>{await p.waitForSelector('.cand-id',{timeout:5000}).catch(()=>{});return p.evaluate(()=>{const c=document.querySelector('.status-card');return {has:!!c,t:c?c.innerText:'',all:document.querySelector('#f-body').innerText}})};
 const list=async p=>{await p.waitForSelector('.cand',{timeout:5000});return p.locator('.cand').evaluateAll(a=>a.map(x=>({t:x.innerText,badge:(x.querySelector('.statut')||{}).innerText||''})))};
-const RES_ERR=['cache','denied','rel','col','schema','nocode400','nocode404','server','network'];
+const RES_ERR=['denied','rel','col','schema','nocode400','nocode404','server','network'];
 (async()=>{
  for(const [w,th] of [[1280,'light'],[400,'dark']]){
   const T=`${th} ${w}px`;
@@ -49,7 +49,7 @@ const RES_ERR=['cache','denied','rel','col','schema','nocode400','nocode404','se
   await page(w,'candidat.html#A-x1',{},async p=>{const c=await card(p),n=await notes(p);rep(/Élu/.test(c.t)&&!n.length,`${T} fiche, résultats chargés : « Élu », aucun message`,{c:c.t,n});},th);
   await page(w,'candidat.html#A-x1',{results:'empty'},async p=>{const c=await card(p),n=await notes(p);rep(c.has&&/déclarée/i.test(c.t)&&!n.length,`${T} fiche, ABSENCE réelle de résultats (liste vide) : statut de candidature, aucun message d'erreur`,{c:c.t,n});},th);
   await page(w,'candidat.html#A-x1',{results:'undefined42'},async p=>{const c=await card(p),n=await notes(p);rep(c.has&&/déclarée/i.test(c.t)&&!n.length,`${T} fiche, table CERTAINEMENT absente (42P01) : fonctionnalité inactive, aucun message`,{c:c.t,n});},th);
-  await page(w,'candidat.html#A-x1',{results:'cache'},async p=>{const c=await card(p),n=await notes(p);rep(n.length===1&&/^results:schema-cache/.test(n[0])&&!/Élu|Qualifié|Battu|Éliminé|déclarée/i.test(c.t),`${T} fiche, PGRST205 (cache de schéma, absence NON prouvée) : message discret, aucun statut trompeur`,{c:c.t,n});},th);
+  await page(w,'candidat.html#A-x1',{results:'cache'},async p=>{const c=await card(p),n=await notes(p);rep(n.length===0&&!/Élu|Qualifié|Battu|Éliminé/i.test(c.t),`${T} fiche, PGRST205 (rubrique inactive) : aucun message, aucun statut de résultat inventé`,{c:c.t,n});},th);
   await page(w,'candidat.html#A-x2',{},async p=>{const c=await card(p),n=await notes(p);rep(/Intentions de vote/.test(c.t)&&!n.length,`${T} fiche, sondages chargés : estimation affichée, aucun message`,{c:c.t,n});},th);
   await page(w,'candidat.html#A-x2',{polls:'empty'},async p=>{const c=await card(p),n=await notes(p);rep(c.has&&!/Intentions/.test(c.t)&&!n.length,`${T} fiche, ABSENCE réelle de sondages : aucune estimation, aucun message d'erreur`,{c:c.t,n});},th);
   // ---- erreurs de résultats : jamais un faux « aucun résultat », jamais un statut trompeur
@@ -68,7 +68,7 @@ const RES_ERR=['cache','denied','rel','col','schema','nocode400','nocode404','se
   await page(w,'candidats.html?e=x1',{},async p=>{const l=await list(p),n=await notes(p);const g=k=>l.find(x=>x.t.includes(k)).badge;rep(/^Élu/i.test(g('Alice'))&&/Battu/i.test(g('Bruno'))&&!n.length,`${T} liste, résultats chargés : Élu / Battu, aucun message`,{b:l.map(x=>x.badge),n});},th);
   await page(w,'candidats.html?e=x1',{results:'empty'},async p=>{const l=await list(p),n=await notes(p);rep(l.length===3&&!n.length,`${T} liste, absence réelle de résultats : aucun message`,n);},th);
   await page(w,'candidats.html?e=x1',{results:'undefined42'},async p=>{const l=await list(p),n=await notes(p);rep(l.length===3&&!n.length,`${T} liste, table certainement absente (42P01) : aucun message`,n);},th);
-  await page(w,'candidats.html?e=x1',{results:'cache'},async p=>{const l=await list(p),n=await notes(p);rep(l.length===3&&n.length===1&&/^results:schema-cache/.test(n[0])&&l.every(x=>!/déclarée/i.test(x.badge)),`${T} liste, PGRST205 : message discret, aucune pastille de candidature trompeuse`,n);},th);
+  await page(w,'candidats.html?e=x1',{results:'cache'},async p=>{const l=await list(p),n=await notes(p);rep(l.length===3&&n.length===0,`${T} liste, PGRST205 (rubrique inactive) : aucun message`,n);},th);
   for(const m of RES_ERR){
    await page(w,'candidats.html?e=x1',{results:m},async p=>{const l=await list(p),n=await notes(p);const g=k=>l.find(x=>x.t.includes(k)).badge;
      rep(l.length===3&&n.length===1&&/^results:/.test(n[0])&&g('Alice')===''&&g('Bruno')===''&&/retir/i.test(g('Wilma')),`${T} liste, résultats en erreur (${m}) : message discret, aucune pastille électorale (retrait conservé)`,{b:l.map(x=>x.badge),n});},th);
@@ -77,7 +77,7 @@ const RES_ERR=['cache','denied','rel','col','schema','nocode400','nocode404','se
   await page(w,'election.html?e=x1',{},async p=>{const n=await notes(p),ok=await p.locator('[data-results=ok]').count();rep(ok===1&&!n.length,`${T} élection, résultats chargés : rubrique « Résultats officiels », aucun message`,{ok,n});},th);
   await page(w,'election.html?e=x1',{results:'empty'},async p=>{const n=await notes(p),any=await p.locator('[data-results]').count();rep(any===0&&!n.length,`${T} élection, absence réelle de résultats : rien du tout (ni bloc ni message)`,{any,n});},th);
   await page(w,'election.html?e=x1',{results:'undefined42'},async p=>{const n=await notes(p),any=await p.locator('[data-results]').count();rep(any===0&&!n.length,`${T} élection, table certainement absente (42P01) : rien du tout`,{any,n});},th);
-  await page(w,'election.html?e=x1',{results:'cache'},async p=>{const n=await notes(p),e=await p.locator('[data-results=error]').count();rep(e===1&&n.length===1&&/^results:schema-cache/.test(n[0]),`${T} élection, PGRST205 : message discret dans la rubrique (jamais « aucun résultat »)`,{e,n});},th);
+  await page(w,'election.html?e=x1',{results:'cache'},async p=>{const n=await notes(p),e=await p.locator('[data-results=error]').count();rep(e===0&&n.length===0,`${T} élection, PGRST205 (rubrique inactive) : aucun bloc ni message`,{e,n});},th);
   for(const m of RES_ERR) await page(w,'election.html?e=x1',{results:m},async p=>{const n=await notes(p),e=await p.locator('[data-results=error]').count(),ok=await p.locator('[data-results=ok]').count();
      rep(e===1&&ok===0&&n.length===1&&/^results:/.test(n[0]),`${T} élection, résultats en erreur (${m}) : message discret dans la rubrique, pas de faux « aucun résultat »`,{e,ok,n});},th);
   await page(w,'election.html?e=x2',{polls:'empty'},async p=>{const n=await notes(p),pe=await p.locator('[data-poll-error]').count();rep(!pe&&!n.length,`${T} élection, absence réelle de sondages : rien`,{pe,n});},th);
@@ -96,7 +96,7 @@ const RES_ERR=['cache','denied','rel','col','schema','nocode400','nocode404','se
   rep(r.cache[0]&&!r.cache[1]&&!r.cache[2],'isSchemaCacheMiss : PGRST205 seulement',r.cache);
   rep(JSON.stringify(r.cls)==='["schema-cache","missing","invalid","denied","missing"]','classify : PGRST205 → « schema-cache » (distinct d\'une absence), 404/400 sans code → missing/invalid, 42501 → denied',r.cls);
   rep(r.schema[0]&&r.schema[1]&&!r.schema[2]&&!r.schema[3],'isSchemaError : défauts de schéma seulement',r.schema);});
- for(const [m,exp] of [['undefined42','absent'],['empty','vide'],['cache','erreur'],['denied','erreur'],['rel','erreur'],['col','erreur'],['schema','erreur'],['nocode400','erreur'],['nocode404','erreur'],['network','erreur']])
+ for(const [m,exp] of [['undefined42','absent'],['empty','vide'],['cache','absent'],['denied','erreur'],['rel','erreur'],['col','erreur'],['schema','erreur'],['nocode400','erreur'],['nocode404','erreur'],['network','erreur']])
   await page(1280,'election.html?e=x1',{results:m},async p=>{const r=await p.evaluate(async()=>{try{const x=await DB.results('x1');return {ok:true,n:x.rounds.length,absent:!!x.absent}}catch(e){return {ok:false,kind:DB.classify(e),code:e.code||''}}});
    const good=exp==='erreur'?(!r.ok):exp==='absent'?(r.ok&&r.n===0&&r.absent):(r.ok&&r.n===0&&!r.absent);
    rep(good,`DB.results (${m}) : ${exp==='erreur'?'exception propagée':exp==='absent'?'absence certaine : { rounds: [], absent }':'vide réel : { rounds: [] } sans « absent »'}`,r);});

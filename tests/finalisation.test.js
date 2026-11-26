@@ -19,7 +19,7 @@ let res = 0, bad = 0; const rep = (ok, n, i) => { res++; if (!ok) bad++; console
   r = await call(['42P01', 'relation "public.sources" does not exist']); rep(!r.ok, 'DB.results : 42P01 sur la table sources : erreur propagée', r);
   r = await call(['42P01', 'relation does not exist']); rep(!r.ok, 'DB.results : 42P01 sans nom de table : erreur propagée (absence non avérée)', r);
   r = await call(['42501', 'permission denied for table election_round_results']); rep(!r.ok && r.kind === 'denied', 'DB.results : permission refusée : erreur propagée', r);
-  r = await call(['PGRST205', "Could not find the table 'public.election_round_results' in the schema cache"]); rep(!r.ok && r.kind === 'schema-cache', 'DB.results : PGRST205 : erreur propagée (non tranché)', r);
+  r = await call(['PGRST205', "Could not find the table 'public.election_round_results' in the schema cache"]); rep(r.ok && r.absent && r.n === 0, 'DB.results : PGRST205 sur election_round_results : rubrique inactive, sans message', r);
   // regroupement des sondages
   const g = await p.evaluate(() => {
     const row = (id, round, v, extra) => Object.assign({ id, candidacy_id: 'c' + id, entity_kind: 'candidacy', value_percent: v, pollster: 'Inst', scenario: 'S', poll_date: '2027-03-01', fieldwork_start: '2027-02-27', source_id: 's1', round }, extra || {});

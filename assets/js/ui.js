@@ -224,8 +224,11 @@
     /* Crédit et source de la photographie : affichés quand ils sont renseignés (fiche détaillée). */
     const credit = has && lg && p.photo_credit ? e(p.photo_credit) : "", src = has && lg && U.safeUrl(p.photo_source_url);
     const cap = !has ? "Photographie non disponible" : "";
-    const tail = (credit || src) ? `<figcaption class="credit">${credit ? "Photo : " + credit : ""}${credit && src ? " · " : ""}${src ? `<a href="${e(src)}" target="_blank" rel="noopener">Source de la photo</a>` : ""}</figcaption>` : (cap ? `<figcaption>${e(cap)}</figcaption>` : "");
-    return `<figure class="portrait ${lg ? "portrait--lg" : "portrait--sm"}"><div class="portrait-box">${img}</div>${tail}</figure>`;
+    /* Crédit discret : pastille « © » sur la photo (texte dans le titre et le nom accessible), plus de légende sous l'image. */
+    const lab = credit ? "Photo : " + credit : "Source de la photo";
+    const dot = (credit || src) ? (src ? `<a class="credit-dot" href="${e(src)}" target="_blank" rel="noopener" title="${e(lab)}" aria-label="${e(lab + (src ? " (source, nouvel onglet)" : ""))}">©</a>` : `<span class="credit-dot" role="img" title="${e(lab)}" aria-label="${e(lab)}">©</span>`) : "";
+    const tail = cap ? `<figcaption>${e(cap)}</figcaption>` : "";
+    return `<figure class="portrait ${lg ? "portrait--lg" : "portrait--sm"}"><div class="portrait-box">${img}${dot}</div>${tail}</figure>`;
   };
   U.avatar = (p, big) => U.portrait(p, big ? "lg" : "sm");
 
